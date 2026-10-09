@@ -8,6 +8,8 @@ import unittest
 
 from arcaderecomp.i960_cpp import emit_cpp
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def words(*items):
     return struct.pack("<" + "I" * len(items), *items)
@@ -22,7 +24,7 @@ def compile_and_run(source, harness):
         cpp = root / "generated.cpp"
         program = root / "generated_test"
         cpp.write_text(source + "\n" + harness, encoding="utf-8")
-        result = subprocess.run([compiler, "-std=c++17", "-O2", "-Wall",
+        result = subprocess.run([compiler, "-std=c++17", "-O2", "-Wall", "-I", str(ROOT / "runtime"),
                                  str(cpp), "-o", str(program)],
                                 capture_output=True, text=True, timeout=30)
         if result.returncode != 0:
@@ -96,16 +98,18 @@ int main() {
 }
 """)
 
-    def test_unimplemented_call_fails_closed(self):
-        # No fake call-stack implementation; stop at the call opcode.
+    def test_local_call_fails_closed_without_boot_frame(self):
+        # A native call needs a correctly initialized i960 stack frame.
         synthetic = words(0x09000008, 0x0a000000, 0x0a000000)
         source, report = emit_cpp(synthetic, 0)
-        self.assertIn(0, report.unsupported)
+        self.assertEqual(report.unsupported, ())
+        self.assertEqual(report.translated, 3)
         compile_and_run(source, """
 int main() {
     using namespace arcaderecomp_generated;
     CPU cpu{}; Bus bus{}; cpu.ip = 0;
     if (step(cpu, bus) || cpu.stop_ip != 0) return 1;
+    if (cpu.stop_code != StopCode::frame_uninitialized) return 2;
     return 0;
 }
 """)
