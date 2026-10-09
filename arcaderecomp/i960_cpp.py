@@ -59,6 +59,9 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
     op = ins.mnemonic
     word = ins.word
     target = f"0x{ins.target:08x}u" if ins.target is not None else None
+    if ins.form in ("MEMA", "MEMB") and op == "callx":
+        return f"return frame_call(cpu, bus, {_addr(ins, word, image)}, 0x{ins.next_pc:08x}u);"
+
     if ins.form in ("MEMA", "MEMB") and op in ("lda", "ld", "st"):
         address = _addr(ins, word, image)
         dest = (word >> 19) & 31
@@ -110,6 +113,10 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                 f"if ({b} {predicate} {a}) {{ cpu.ip = {target}; return true; }}")
 
     if ins.form == "CTRL":
+        if op == "call":
+            return f"return frame_call(cpu, bus, {target}, 0x{ins.next_pc:08x}u);"
+        if op == "ret":
+            return "return frame_return(cpu, bus);"
         if op == "b":
             return f"cpu.ip = {target}; return true;"
         condition = {
@@ -127,9 +134,9 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
 def emit_cpp(image: bytes, entry: int, max_instructions: int = 256) -> tuple[str, TranslationReport]:
     """Translate reachable, ROM-resident instructions into a native C++ stepper.
 
-    Memory is supplied through explicit device/bus callbacks. CALL/RET,
-    interrupt frames, cycle timing and unimplemented opcodes are intentionally
-    unsupported. The generated source is game-derived; keep it out of Git.
+    Memory is supplied through explicit device/bus callbacks. Local CALL,
+    CALLX and RET are modeled with four cached register frames. Supervisor/fault
+    returns, interrupt frames, exact cycles and unimplemented opcodes stop safely. The generated source is game-derived; keep it out of Git.
     """
     graph = discover(image, entry, limit=max_instructions)
     translated = 0
@@ -142,32 +149,19 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256) -> tuple[str
             body = "return stop(cpu);"
         else:
             translated += 1
-            if not (body.endswith("return true;") or body.endswith("return stop(cpu);")):
-                body += f" cpu.ip = 0x{ins.next_pc:08x}u; return true;"
+            if body.startswith("return frame_"):
+                pass  # CALL/RET helper sets the next IP itself
             elif body.startswith("if (") and "return true;" in body and body.endswith("}"):
-                # Conditional branch: emit the false path after the closing brace.
+                body += f" cpu.ip = 0x{ins.next_pc:08x}u; return true;"
+            elif not (body.endswith("return true;") or body.endswith("return stop(cpu);")):
                 body += f" cpu.ip = 0x{ins.next_pc:08x}u; return true;"
         bodies.append(f"      case 0x{pc:08x}u: {{ {body} }}")
     result = """// GENERATED — private ROM-derived translation output; do not redistribute.
 // Original source and opcode bytes are NOT embedded. Only translated operations.
 #include <cstdint>
+#include "i960_frame_runtime.hpp"
 
 namespace arcaderecomp_generated {
-struct CPU {
-    std::uint32_t r[32]{};
-    std::uint32_t ip = 0;
-    int cc = 0;               // Transitional compare state; not full AC register
-    std::uint32_t stop_ip = 0; // First unsupported translated operation
-};
-struct Bus {
-    void* ctx = nullptr;
-    std::uint32_t (*read32)(void*, std::uint32_t) = nullptr;
-    void (*write32)(void*, std::uint32_t, std::uint32_t) = nullptr;
-};
-static inline bool stop(CPU& cpu) {
-    cpu.stop_ip = cpu.ip;
-    return false;
-}
 static inline bool step(CPU& cpu, const Bus& bus) {
     switch (cpu.ip) {
 """ + "\n".join(bodies) + """
