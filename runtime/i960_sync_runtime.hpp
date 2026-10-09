@@ -19,6 +19,31 @@ namespace arcaderecomp_generated {
 static constexpr std::uint32_t I960_LOCAL_IAC = 0xff000010u;
 static constexpr std::uint32_t I960_IAC_REINITIALIZE = 0x93u;
 
+static constexpr std::uint32_t I960_LOCAL_ICR = 0xff000004u;
+
+// Intel 80960KB SYNMOV transfers one word from [src] to [dst], waits for
+// synchronous completion, and sets AC.cc to 0b010 on success. The on-chip
+// interrupt-control register is a documented special destination at
+// 0xFF000004. No ordinary peripheral writes are modeled as successful here.
+static inline bool sync_move_word(CPU& cpu, const Bus& bus,
+                                  std::uint32_t destination,
+                                  std::uint32_t source) {
+    const std::uint32_t aligned_dst = destination & ~3u;
+    const std::uint32_t aligned_src = source & ~3u;
+    if (aligned_dst != I960_LOCAL_ICR)
+        return stop(cpu, StopCode::synchronous_device_unimplemented);
+    if (!bus.read32)
+        return stop(cpu, StopCode::missing_bus);
+    // Resolve source before modifying the CPU; an unmapped read must not
+    // make the interrupt register appear to have been updated.
+    const std::uint32_t value = bus.read32(bus.ctx, aligned_src);
+    cpu.interrupt_control_register = value;
+    cpu.cc = 2;
+    cpu.cc_defined = true;
+    return true;
+}
+
+
 static inline bool sync_move_quad(CPU& cpu, const Bus& bus,
                                   std::uint32_t destination,
                                   std::uint32_t source) {
