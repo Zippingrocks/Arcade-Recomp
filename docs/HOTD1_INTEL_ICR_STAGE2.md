@@ -50,6 +50,8 @@ old_icr=0xff000000 success=1
 ip=0x6d8 new_icr=0xf0e0d0c cc=2
 ```
 
+The **exact public repository tool** `tools/hotd1_icr_probe.cpp`, compiled against the ROM-free GitHub Actions source bundle and a private AOT translation generated from the original 2-MiB ROM, independently reproduced this outcome with **process exit code 0**. The reconstructed original ROM SHA-256 matched `da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75`. In that isolated codegen experiment, **31 of 32 discovered nearby instruction addresses** emitted native code; these numbers are local to this test root only.
+
 This is direct execution of the actual ROM's **compiled** `SYNMOV`, with a strict ROM-backed source memory read. It **does not** mean original arcade execution has passed the preceding `0x00F80000` board access. We deliberately did **not** skip or fake that address to reach the ICR.
 
 ## Reproduction (PRIVATE local user ROM)
