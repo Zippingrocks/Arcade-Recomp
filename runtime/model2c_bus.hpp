@@ -120,14 +120,7 @@ public:
     }
 
     std::uint32_t read(std::uint32_t address, unsigned width) const {
-        const auto reg = classify(address);
-        validate_access(address, width, false, reg);
-        const auto* array = readable_bytes(address, reg);
-        const std::size_t base = region_offset(address, reg);
-        std::uint32_t result = 0;
-        for (unsigned i = 0; i < width; ++i)
-            result |= std::uint32_t(array[base + i]) << (8u * i);
-        return result;
+        return read_value(address, width);
     }
 
     void write(std::uint32_t address, unsigned width, std::uint32_t value) {
