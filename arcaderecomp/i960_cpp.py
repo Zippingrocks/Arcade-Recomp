@@ -130,7 +130,7 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     f"const std::uint32_t rhs = {b}; "
                     f"cpu.cc = ({ordered_a} < {ordered_b}) ? 4 : "
                     f"({ordered_a} > {ordered_b}) ? 1 : 2; "
-                    f"cpu.r[{dst}] = rhs - 1u; }}")
+                    f"cpu.r[{dst}] = rhs - 1u; cpu.cc_defined = true; }}")
         if op in ("and", "or", "xor"):
             symbol = {"and": "&", "or": "|", "xor": "^"}[op]
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} {a});"
@@ -149,7 +149,8 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             # implementation-defined uint32-to-int32 conversions.
             left = f"({a} ^ 0x80000000u)" if op == "cmpi" else a
             right = f"({b} ^ 0x80000000u)" if op == "cmpi" else b
-            return f"cpu.cc = ({left} < {right}) ? 4 : ({left} > {right}) ? 1 : 2;"
+            return (f"cpu.cc = ({left} < {right}) ? 4 : ({left} > {right}) ? 1 : 2; "
+                    "cpu.cc_defined = true;")
         return None
 
     if ins.form == "COBR" and (op.startswith("cmpib") or op.startswith("cmpob")):
@@ -171,6 +172,7 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         mask = masks[test]
         taken = f"cpu.cc == 0" if mask == 0 else f"(cpu.cc & {mask}) != 0"
         return (f"cpu.cc = ({left} < {right}) ? 4 : ({left} > {right}) ? 1 : 2; "
+                f"cpu.cc_defined = true; "
                 f"if ({taken}) {{ cpu.ip = {target}; return true; }}")
 
     if ins.form == "CTRL":
@@ -185,7 +187,8 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         if op in masks:
             mask = masks[op]
             condition = "cpu.cc == 0" if mask == 0 else f"(cpu.cc & {mask}) != 0"
-            return f"if ({condition}) {{ cpu.ip = {target}; return true; }}"
+            return (f"if (!cpu.cc_defined) return stop(cpu, StopCode::undefined_condition_code); "
+                    f"if ({condition}) {{ cpu.ip = {target}; return true; }}")
         return None
 
     return None
