@@ -39,3 +39,45 @@ All timings, interrupts, geometry FIFO behavior, lightgun calibration, and the c
 - Related Intel instruction description (HTML): https://manualzz.com/doc/7197351/intel-i960-ca-cf-microprocessor-user%E2%80%99s-manual
 
 These references are cited for documented facts. ArcadeRecomp's translator is an original implementation and does not include MAME's emulator code or Daytona's recompilation code.
+
+
+## HOTD1's first I/O initialization target (original ROM)
+
+The independently verified original `hotdo` program contains a direct i960
+`CALL` at **0x0000068C**, with target **0x000A3750**. At that destination,
+the instructions begin with an address load of `0x01C00000`, followed by a
+byte store of `0xFF` to **0x01C00014**. These are static ROM findings,
+not a claim that an accurate hardware startup trace has reached this code.
+
+The modern MAME Model 2C map documents `0x01C00000..0x01C0001F` as
+the **Sega 315-5649 serial I/O controller**, with byte-lane masking.
+Its serial-channel attachments are involved in lightgun input handling.
+The older driver names some game-specific lightgun operations directly,
+but the current device decomposition is a better starting point for an
+independent hardware-interface specification.
+
+**Progress consequence:** our strict native CPU bus now identifies this as
+`serial_io` and throws `DeviceAccessFault` instead of treating the
+register as generic RAM or always returning zero. A usable I/O implementation
+requires separate documentation, device state-machine tests, and original
+cabinet behavior measurements. Synthetic tests prove the fault boundary
+works, **not** that the actual game is booting.
+
+References:
+- [Public ROM layout and Sega I/O chip map](https://github.com/mamedev/mame/blob/master/src/mame/sega/model2.cpp)
+- [Independent strict bus](../runtime/model2c_bus.hpp)
+- [Synthetic native bus test](../tests/test_model2c_bus.py)
+- [Synthetic strict bootstrap integration](../tests/test_strict_boot_probe.py)
+
+### Bus fidelity constraints
+
+Only the following **partially modeled** CPU-visible regions are implemented
+in `StrictBus`: original i960 program ROM; main work RAM; preliminary
+backing storage for CPU wait-state control; and user-supplied main game-data
+ROM. A second published data-ROM address window maps the upper 16 MiB
+of the reconstructed data region.
+
+**Every other hardware access fails closed.** The wait-state backing store
+does not actually delay a CPU cycle. Reset contents and unaligned transfers
+still need validation against original Model 2C behavior. Neither the bus
+nor the current AOT translator constitutes completed board support.
