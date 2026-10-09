@@ -2,6 +2,12 @@
 
 Target: **original `hotdo` Sega Model 2C arcade program**. No Saturn, PC or Revision A code was used.
 
+> **Historical bootstrap milestone.** The original 107-instruction experiment below
+> has now been **superseded** by the reproducible
+> [1,910-instruction original-ROM native I/O experiment](HOTD1_ORIGINAL_NATIVE_TRACE.md).
+> That later result genuinely reaches the 315-5649 serial status read, but
+> **Model 2C is still incomplete and the original game does not boot to play**.
+
 ## What was actually demonstrated
 
 A private, ROM-derived set of native C++ operations was generated from the earliest reachable section of the original Intel i960 program. Compiled with a standard C++17 compiler, it executed the first **107 instructions** across **29 distinct instruction addresses**, observed **17 bus writes**, and stopped at the first CPU **call** instruction at **0x0000068C** (relative target **0x000A3750**). The CPU began at the actual ROM boot address **0x000005F0**.
@@ -10,7 +16,7 @@ The initial writes go to **0x00E00000**, which the published Model 2 board map d
 
 **PASS:** Generated native host code can execute a verified original-game startup slice with no runtime decoding of i960 opwords.
 
-**NOT YET PASS:** Accurate hardware reset, i960 call/register frames, real wait-state effects, graphics output, audio, interrupts or full game execution.
+**Not achieved in that historical test:** Accurate hardware reset, i960 call/register frames, real wait-state effects, graphics output, audio, interrupts or full game execution. Some CPU-frame semantics were added subsequently; see the latest trace for current status.
 
 This experiment is not a ROM-independent executable game and is not a claim that the original arcade game boots. The private machine-code inputs, emitted ROM-derived C++ and memory images are not in Git.
 
@@ -24,7 +30,7 @@ python -m arcaderecomp audit --layout targets/hotd1/original.json --rom /private
 python -m arcaderecomp build --layout targets/hotd1/original.json --rom /private/hotdo.7z --region maincpu --output build/hotd1
 python -m arcaderecomp inspect --layout targets/hotd1/original.json --rom /private/hotdo.7z --count 40
 python -m arcaderecomp translate --layout targets/hotd1/original.json --rom /private/hotdo.7z --output build/hotd1/hotd1_i960.cpp --limit 512
-c++ -std=c++17 -O2 -Ibuild/hotd1 tools/hotd1_boot_probe.cpp -o build/hotd1/boot_probe
+c++ -std=c++17 -O2 -Iruntime -Ibuild/hotd1 tools/hotd1_boot_probe.cpp -o build/hotd1/boot_probe
 build/hotd1/boot_probe build/hotd1/maincpu.bin 500
 ```
 
@@ -66,10 +72,19 @@ in this callee, a `STOB` addresses `0x01C00014` — inside the Sega
 315-5649 I/O controller window. Synthetic tests show our strict bus rejects
 that address with a typed device fault.
 
-**Crucial distinction:** the corrected and extended native recompiler
-has NOT yet been conclusively retested end-to-end against the original
-game archive. Thus we do NOT claim it has executed that specific original
-IO write, nor that we have reached authentic arcade boot.
+**Original-ROM test now complete for this early segment:** the corrected
+native recompiler was run against the verified original `hotdo` archive.
+Its strict mode executes **1,904** compiled instructions before refusing
+the original first serial TX. Enabling documented serial TX only allows
+**1,910** compiled original instructions, records `0xff` (TX2) and
+`0x01` (TX1), and then halts at `0x000a372c` on serial status.
+Newly supported bit and compare-decrement opcodes brought this early graph
+to **129 of 130** translated instruction addresses. The one remaining
+`synmovq` operation still needs CPU/device investigation.
+See [the full measured trace](HOTD1_ORIGINAL_NATIVE_TRACE.md).
+
+**This is actual early original program execution, not proof of full arcade
+boot, complete CPU behavior or a working Model 2C platform.**
 
 To run the updated strict experiment locally, after generating the
 private ROM and translated C++ files using the commands below:
@@ -78,6 +93,7 @@ private ROM and translated C++ files using the commands below:
 c++ -std=c++17 -O2 -Iruntime -Ibuild/hotd1 \
   tools/hotd1_strict_boot_probe.cpp -o build/hotd1/strict_probe
 build/hotd1/strict_probe build/hotd1/maincpu.bin 10000
+build/hotd1/strict_probe build/hotd1/maincpu.bin 10000 --serial-tx
 ```
 
 The strict probe intentionally returns exit code **3** on an
