@@ -91,6 +91,16 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     f"bus.write{suffix}(bus.ctx, {address}, "
                     f"static_cast<std::uint{suffix}_t>(cpu.r[{dest}]));")
 
+    if ins.form == "REG" and op == "synmovq":
+        # Both operands are register pointers: src1 is destination, src2 source.
+        # Literal / special encodings are unsupported for this K-series opcode.
+        if word & (0x20 | 0x40 | 0x800 | 0x1000):
+            return None
+        dest_register = word & 31
+        src_register = (word >> 14) & 31
+        return (f"return sync_move_quad(cpu, bus, cpu.r[{dest_register}], "
+                f"cpu.r[{src_register}]);")
+
     if ins.form == "REG":
         # Special function registers and the full i960 local-register frame
         # model have not been implemented in this tranche.
@@ -199,7 +209,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256) -> tuple[str
             body = "return stop(cpu);"
         else:
             translated += 1
-            if body.startswith("return frame_"):
+            if body.startswith(("return frame_", "return sync_move_quad(")):
                 pass  # CALL/RET helper sets the next IP itself
             elif body.startswith("if (") and "return true;" in body and body.endswith("}"):
                 body += f" cpu.ip = 0x{ins.next_pc:08x}u; return true;"
@@ -210,6 +220,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256) -> tuple[str
 // Original source and opcode bytes are NOT embedded. Only translated operations.
 #include <cstdint>
 #include "i960_frame_runtime.hpp"
+#include "i960_sync_runtime.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {
