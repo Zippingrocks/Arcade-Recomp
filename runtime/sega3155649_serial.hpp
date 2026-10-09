@@ -15,6 +15,7 @@
 //
 // This isn't a full chip, a lightgun emulator, or a complete Model 2C runtime.
 #pragma once
+#include "sega3155649_events.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -58,13 +59,29 @@ public:
 
     // RX needs a real hardware trace, explicit user/controller input, or a
     // trusted deterministic test fixture. By default it refuses to respond.
-    void set_serial_rx(SerialRead callback) { serial_rx_ = std::move(callback); }
+    // Mutually exclusive backend: observed buffer events OR legacy providers.
+    // Merely selecting this backend does NOT declare a power-on state.
+    SerialEventState& use_observed_events() {
+        if (serial_rx_ || status_source_ || !events_.empty())
+            throw std::logic_error("cannot mix serial providers or change backend midstream");
+        observed_events_enabled_ = true;
+        return observed_events_;
+    }
+    SerialEventState& observed_events() {
+        if (!observed_events_enabled_) throw std::logic_error("event backend disabled");
+        return observed_events_;
+    }
+    void set_serial_rx(SerialRead callback) {
+        if (observed_events_enabled_) throw std::logic_error("event backend owns serial receive data");
+        serial_rx_ = std::move(callback);
+    }
     void set_serial_tx_observer(SerialWrite callback) { serial_tx_ = std::move(callback); }
 
     // Status is externally supplied by a hardware link or an explicitly
     // labeled test fixture. Never fabricate the historically common 0x0c
     // "always receive-ready" value.
     void set_serial_status_source(StatusRead callback) {
+        if (observed_events_enabled_) throw std::logic_error("event backend owns status");
         status_source_ = std::move(callback);
     }
 
@@ -75,6 +92,10 @@ public:
         const unsigned channel = (reg == SERIAL_TX1) ? 1u : 2u;
         // HOTD1 uses channel 2 for a lightgun mux command. We preserve the
         // transmitted byte; its detailed effect is external to this chip.
+        if (observed_events_enabled_) {
+            try { observed_events_.transmit(channel, value); }
+            catch (const std::logic_error& e) { throw Unsupported(absolute_address, true, e.what()); }
+        }
         last_tx_[channel - 1u] = value;
         events_.push_back({channel, value, ++sequence_, absolute_address});
         if (serial_tx_) serial_tx_(value, channel);
@@ -83,15 +104,23 @@ public:
     std::uint8_t read_bus_byte(std::uint32_t absolute_address) const {
         unsigned reg = resolve_register(absolute_address, false);
         if (reg == SERIAL_STATUS) {
+            if (observed_events_enabled_) {
+                try { return observed_events_.status(); }
+                catch (const std::logic_error& e) { throw Unsupported(absolute_address, false, e.what()); }
+            }
             if (!status_source_)
                 throw Unsupported(absolute_address, false, "serial status source not configured");
             return status_source_();
         }
         if (reg != SERIAL_RX1 && reg != SERIAL_RX2)
             throw Unsupported(absolute_address, false, "device status/port read not implemented");
+        const unsigned channel = (reg == SERIAL_RX1) ? 1u : 2u;
+        if (observed_events_enabled_) {
+            try { return observed_events_.read_receive(channel); }
+            catch (const std::logic_error& e) { throw Unsupported(absolute_address, false, e.what()); }
+        }
         if (!serial_rx_)
             throw Unsupported(absolute_address, false, "serial receive source not configured");
-        const unsigned channel = (reg == SERIAL_RX1) ? 1u : 2u;
         // Channel 2 mux selection was provided by its own TX last byte.
         // Channel 1 likewise owns independent selection state.
         return serial_rx_(last_tx_[channel - 1u], channel);
@@ -112,6 +141,8 @@ private:
     SerialRead serial_rx_{};
     SerialWrite serial_tx_{};
     StatusRead status_source_{};
+    bool observed_events_enabled_ = false;
+    mutable SerialEventState observed_events_{}; // Reading RX consumes a byte.
 
     static unsigned resolve_register(std::uint32_t absolute_address, bool write) {
         if (absolute_address < BASE || absolute_address >= BASE + 0x20u)

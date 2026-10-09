@@ -75,6 +75,18 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                 "cpu.ip = branch_target & ~3u; return true;")
 
     if ins.form in ("MEMA", "MEMB") and op in (
+        "ldl", "ldt", "ldq", "stl", "stt", "stq"
+    ):
+        count = {"l": 2, "t": 3, "q": 4}[op[-1]]
+        first = (word >> 19) & 31
+        alignment = 2 if count == 2 else 4
+        if first % alignment or first % 16 + count > 16:
+            return None
+        operation = "load" if op.startswith("ld") else "store"
+        return (f"if (!transfer_{operation}(cpu, bus, {_addr(ins, word, image)}, "
+                f"{first}u, {count}u)) return false;")
+
+    if ins.form in ("MEMA", "MEMB") and op in (
         "lda", "ld", "st", "ldob", "ldib", "ldos", "ldis", "stob", "stos"
     ):
         address = _addr(ins, word, image)
@@ -147,6 +159,20 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         a = _operand(word & 31, bool(word & 0x800))
         b = _operand((word >> 14) & 31, bool(word & 0x1000))
         dst = (word >> 19) & 31
+        if op in ("movl", "movt", "movq"):
+            count = {"movl": 2, "movt": 3, "movq": 4}[op]
+            source = word & 31
+            literal = bool(word & 0x800)
+            alignment = 2 if count == 2 else 4
+            if dst % alignment or dst % 16 + count > 16:
+                return None
+            if not literal:
+                if source % alignment or source % 16 + count > 16:
+                    return None
+                if source < dst + count and dst < source + count:
+                    return None
+            return (f"if (!transfer_move(cpu, {source}u, {dst}u, {count}u, "
+                    f"{'true' if literal else 'false'})) return false;")
         if op in ("setbit", "clrbit", "notbit"):
             # Intel documented bit-position modulo 32. All uint32 shifts
             # are masked to avoid host-C++ undefined behavior.
@@ -173,9 +199,8 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} {a});"
         if op == "mov":
             return f"cpu.r[{dst}] = {a};"
-        if op in ("shlo", "shro"):
-            symbol = "<<" if op == "shlo" else ">>"
-            return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} ({a} & 31u));"
+        if op in ("shlo", "shro", "shri", "shrdi"):
+            return f"cpu.r[{dst}] = kb_{op}({a}, {b});"
         if op in ("cmpo", "cmpi"):
             # Intel i960 AC.cc[2:0]: L=0b100, E=0b010, G=0b001,
             # measured as src1 compared with src2, NOT src2 vs src1.
@@ -265,9 +290,11 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include <cstdint>
 #include "i960_frame_runtime.hpp"
 #include "i960_sync_runtime.hpp"
+#include "i960_transfer_shift.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {
+    (void)bus; // A pure-register translation need not access the bus.
     switch (cpu.ip) {
 """ + "\n".join(bodies) + """
       default: return stop(cpu);

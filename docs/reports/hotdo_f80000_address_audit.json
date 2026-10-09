@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "image_size": 2097152,
+  "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "target_address": "0x00f80000",
+  "roots": [
+    "0x000005f0",
+    "0x000006b0"
+  ],
+  "graph_limit_reached": false,
+  "literal_count": 6,
+  "absolute_memory_operand_count": 3,
+  "hits": [
+    {
+      "literal_offset": "0x000006b8",
+      "classification": "absolute_memory_operand",
+      "site": "0x000006b4",
+      "mnemonic": "st",
+      "in_selected_graph": true,
+      "register_index": 22,
+      "access": "write",
+      "width_bytes": 4
+    },
+    {
+      "literal_offset": "0x00008b8c",
+      "classification": "absolute_memory_operand",
+      "site": "0x00008b88",
+      "mnemonic": "st",
+      "in_selected_graph": false,
+      "register_index": 7,
+      "access": "write",
+      "width_bytes": 4
+    },
+    {
+      "literal_offset": "0x00008ba4",
+      "classification": "absolute_memory_operand",
+      "site": "0x00008ba0",
+      "mnemonic": "st",
+      "in_selected_graph": false,
+      "register_index": 30,
+      "access": "write",
+      "width_bytes": 4
+    },
+    {
+      "literal_offset": "0x000fe250",
+      "classification": "literal_only"
+    },
+    {
+      "literal_offset": "0x0016f2fc",
+      "classification": "literal_only"
+    },
+    {
+      "literal_offset": "0x00173790",
+      "classification": "literal_only"
+    }
+  ],
+  "evidence_boundary": "Static candidates, not executed code or a physical device identification."
+}
