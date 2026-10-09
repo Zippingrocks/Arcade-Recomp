@@ -190,8 +190,11 @@ int main() {
         report = run_cpp(stream(), r"""
 int main() { return 0; }
 """)
-        self.assertEqual(report.discovered, 2)
-        self.assertEqual(report.unsupported, ())
+        # AOT CFG also records the two sentinel invalid words that terminate
+        # each artificial entry stream. They are never executed in the test.
+        self.assertEqual(report.discovered, 4)
+        self.assertEqual(report.translated, 2)
+        self.assertEqual(report.unsupported, (4, 0x44))
 
 
 if __name__ == "__main__":
