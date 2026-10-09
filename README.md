@@ -21,7 +21,7 @@ Revision A uses `epr-19696a.15` and `epr-19697a.16` instead. **Archive names alo
 
 ### Current stage
 
-**M0 verified; M1 in progress.** A user-supplied original `hotdo` arcade archive passed all 29 chip hash checks. Our independent Intel i960 decoder discovers control flow, emits native C++ for a limited instruction subset, and now has synthetic-tested normal CALL/CALLX/RET register-frame handling, including four-frame spills/reloads. Generated code can now run against either the earlier simplified diagnostic bus or a strict, partial Model 2C memory bus that explicitly rejects unsupported hardware accesses. **This is not a playable game or completed Model 2C runtime.** Fault/interrupt frames, complete instruction coverage, real hardware devices, MB86235/TGPx4, sound and graphics remain unimplemented or incomplete.
+**M0 authenticated; M1 underway; Model 2C NOT COMPLETE.** The user-supplied original `hotdo` ROM set passed all 29 chip fingerprints. The independent Intel i960 decoder and C++ emitter now translate **129 of 130 reachable unique instruction addresses in the verified original game's early startup control-flow graph** (not 129 of the game's entire codebase). The **actual original ROM** executed **1,910 native translated instructions**, including correct channel-2 `0xff` and channel-1 `0x01` serial transmissions, then our strict bus intentionally stopped on the unknown 315-5649 serial status at `0x01c0001a`. The remaining uncovered early instruction is `synmovq`. CALL/CALLX/RET register frames, four-frame spill/reload, width-specific I/O and conditional branches have synthetic compiled tests. **No authentic gameplay boot has occurred.** Timers, real I/O responses, accurate CPU-control timing, fault/interrupt frames, MB86235/TGPx4, sound and graphics remain incomplete. See the [measured original-ROM native trace](docs/HOTD1_ORIGINAL_NATIVE_TRACE.md).
 
 ### Non-negotiable goals
 
@@ -40,7 +40,7 @@ python -m unittest discover -s tests -v
 python -m arcaderecomp audit --layout targets/hotd1/original.json --rom /path/to/hotdo.7z
 python -m arcaderecomp build --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --region maincpu --output build/hotd1
 python -m arcaderecomp inspect --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --count 40
-python -m arcaderecomp translate --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --output build/hotd1/hotd1_i960.cpp --limit 512
+python -m arcaderecomp translate --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --output build/hotd1/hotd1_i960.cpp --limit 8192
 c++ -std=c++17 -O2 -Ibuild/hotd1 -Iruntime tools/hotd1_boot_probe.cpp -o build/hotd1/boot_probe
 build/hotd1/boot_probe build/hotd1/maincpu.bin 500
 
@@ -48,6 +48,8 @@ build/hotd1/boot_probe build/hotd1/maincpu.bin 500
 c++ -std=c++17 -O2 -Iruntime -Ibuild/hotd1 \
   tools/hotd1_strict_boot_probe.cpp -o build/hotd1/strict_probe
 build/hotd1/strict_probe build/hotd1/maincpu.bin 10000
+# Allow only independently documented Sega serial TRANSMITS; status stays strict.
+build/hotd1/strict_probe build/hotd1/maincpu.bin 10000 --serial-tx
 ```
 
 The parent archive is optional when the supplied archive contains all 29 original ROM chips. ZIP files are supported through the Python standard library. Direct 7z support uses the **system libarchive shared library** (available in many Linux distributions; other systems may require a separate install). If libarchive is unavailable, extract the 7z locally and repack as ZIP for auditing. Audit is an identity check, not an arcade emulator. **The strict native probe deliberately exits with code 3 when it reaches unimplemented hardware.** Code 4 denotes an unsupported translated CPU operation. Neither is evidence of arcade boot.
@@ -60,4 +62,4 @@ The parent archive is optional when the supplied archive contains all 29 origina
 
 **Completion is not subjective:** see [binding Model 2C definition of done](docs/MODEL2C_DEFINITION_OF_DONE.md). We will explicitly announce verified Gate A (CPU), Gate B (integrated platform), and Gate C (faithful original full-game completion), with the exact “SEGA MODEL 2C RECOMPILATION SUCCESSFULLY COMPLETED!” announcement reserved for Gate C.
 
-Further: [original ROM audit](docs/HOTD1_ORIGINAL_AUDIT.md), [first native bootstrap experiment](docs/HOTD1_NATIVE_BOOT.md), [i960 KB procedure-frame research](docs/I960_FRAMES.md), [hardware research](docs/MODEL2C_HARDWARE.md), [strict Model 2C bus](runtime/model2c_bus.hpp), [provenance](docs/PROVENANCE.md) and [roadmap](docs/ROADMAP.md).
+Further: [verified original-ROM 1,910-step native execution](docs/HOTD1_ORIGINAL_NATIVE_TRACE.md), [Sega serial I/O](docs/SEGA_IO3155649.md), [original ROM audit](docs/HOTD1_ORIGINAL_AUDIT.md), [first native bootstrap experiment](docs/HOTD1_NATIVE_BOOT.md), [i960 KB procedure-frame research](docs/I960_FRAMES.md), [hardware research](docs/MODEL2C_HARDWARE.md), [strict Model 2C bus](runtime/model2c_bus.hpp), [provenance](docs/PROVENANCE.md) and [roadmap](docs/ROADMAP.md).
