@@ -85,15 +85,16 @@ int main() {
     def test_direct_conditional_branch_uses_comparison_result(self):
         # cmpo literal 2,g1; bl +8 (branch based on unsigned g1 < 2)
         cmp = (0x5a << 24) | (17 << 14) | (1 << 13) | (1 << 11) | 2
-        synthetic = words(cmp, 0x14000008, 0xffffffff, 0x0a000000)
+        synthetic = words(cmp, 0x11000008, 0xffffffff, 0x0a000000)
         source, report = emit_cpp(synthetic, 0)
         self.assertIn(8, report.unsupported)
         compile_and_run(source, """
 int main() {
     using namespace arcaderecomp_generated;
     CPU cpu{}; Bus bus{}; cpu.ip = 0; cpu.r[17] = 1;
-    if (!step(cpu, bus) || cpu.cc != -1) return 1;
-    if (!step(cpu, bus) || cpu.ip != 12) return 2;
+    // cmpo 2,g1 -> CC = greater (0b001), since src1 > src2.
+    if (!step(cpu, bus) || cpu.cc != 1) return 1;
+    if (!step(cpu, bus) || cpu.ip != 12) return 2; // bg must branch
     return 0;
 }
 """)
