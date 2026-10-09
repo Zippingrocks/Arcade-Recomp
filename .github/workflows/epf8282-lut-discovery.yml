@@ -1,0 +1,92 @@
+name: EPF8282 LUT layout hypothesis audit
+on:
+  push:
+    branches: [research/epf8282-lut-hypotheses]
+    paths: [.github/workflows/epf8282-lut-discovery.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Evaluate bounded hypotheses, not recovered circuit claims
+        run: |
+          mkdir -p build/research
+          python - <<'PY'
+          import hashlib,itertools,json,urllib.request
+          from pathlib import Path
+          from arcaderecomp.flex8000_sram import rcs_binary_head,parse_sof,TOTAL_BITS
+          from arcaderecomp.flex8000_compare import REPOSITORY,COMMIT,DIRECTORY,MAX_FILE,git_blob_sha1
+          sources={'testmux.sof,v':'4bd945df501d848d9fc4fd512945336ec7c24fca',
+                   'testmux.rpt,v':'88deb079d565b038b1bc4a71e015fd324dddd3ab'}
+          data={}
+          for path,sha in sources.items():
+              url=f'https://raw.githubusercontent.com/{REPOSITORY}/{COMMIT}/{DIRECTORY}{path}'
+              with urllib.request.urlopen(url,timeout=20) as response: raw=response.read(MAX_FILE+1)
+              assert len(raw)<=MAX_FILE and git_blob_sha1(raw)==sha
+              data[path]=rcs_binary_head(raw)[1]
+          parsed=parse_sof(data['testmux.sof,v'])
+          rpt=data['testmux.rpt,v'].decode('ascii')
+          assert 'Device: '+parsed['device'] in rpt and 'Total logic cells required:                      8' in rpt
+          # Functional classes from the pinned fitted-equation report. This
+          # tests a hypothesis about regular LUT fields; it does not assert it.
+          funcs=[lambda a,b,c,d: (not a) and d and ((not b) or (not c)),
+                 lambda a,b,c,d:a and b and c and d,
+                 lambda a,b,c,d:a or b,
+                 lambda a,b,c,d:a,
+                 lambda a,b,c,d:True]
+          def orbit(f):
+              result=set()
+              for perm in itertools.permutations(range(4)):
+                  for inv in range(16):
+                      w=0
+                      for n in range(16):
+                          args=[((n>>perm[j])&1)^((inv>>j)&1) for j in range(4)]
+                          w|=int(bool(f(*args)))<<n
+                      result.update((w,w^65535))
+              return result
+          classes=[orbit(f) for f in funcs]
+          vector=int.from_bytes(parsed['packed'],'little')
+          bits=[(vector>>i)&1 for i in range(TOTAL_BITS)]
+          strides=[1,2,4,8,16,26,104,106,177,208,212]
+          result=[]
+          for bit_stride in strides:
+              sets=[set() for _ in classes]
+              for start in range(TOTAL_BITS-15*bit_stride):
+                  v=sum(bits[start+j*bit_stride]<<j for j in range(16))
+                  for k,c in enumerate(classes):
+                      if v in c:sets[k].add(start)
+              nontrivial=0;full=0;examples=[]
+              for start in sorted(sets[0]):
+                  for cell_stride in range(-512,513):
+                      if not cell_stride:continue
+                      # LC1 complex AND/OR; LC2 AND4; LC3 OR2; LC7 OR2.
+                      if (start+cell_stride not in sets[1] or start+2*cell_stride not in sets[2]
+                          or start+6*cell_stride not in sets[2]):continue
+                      nontrivial+=1
+                      # LC4,5,8 buffers; LC6 VCC-input DFF's data function.
+                      if (any(start+n*cell_stride not in sets[3] for n in (3,4,7))
+                          or start+5*cell_stride not in sets[4]):continue
+                      full+=1
+                      if len(examples)<32:examples.append({'first_lut_bit':start,'cell_stride':cell_stride})
+              result.append({'lut_bit_stride':bit_stride,'class_window_counts':[len(s) for s in sets],
+                             'nontrivial_four_cell_candidates':nontrivial,'full_eight_cell_candidates':full,'examples':examples})
+          report={'source_commit':COMMIT,'source_blobs':sources,'device':parsed['device'],
+                  'vector_bits':TOTAL_BITS,'npn_class_sizes':[len(s) for s in classes],
+                  'cell_strides_inclusive':[-512,512],'results':result,
+                  'meaning':'Candidate hypotheses, not a recovered netlist; report association is not controlled recompilation.',
+                  'fpga_logic_decoded':False,'sega_data_used':False}
+          Path('build/research/lut-discovery.json').write_text(json.dumps(report,indent=2)+'\n')
+          print(json.dumps(report,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: epf8282-lut-discovery-metadata
+          path: build/research/lut-discovery.json
+          retention-days: 7
