@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+build/
+roms/
+*.zip
+*.7z
+*.bin
+*.rom
+*.chd
+*.iso
+*.exe
+*.elf
