@@ -62,14 +62,34 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
     if ins.form in ("MEMA", "MEMB") and op == "callx":
         return f"return frame_call(cpu, bus, {_addr(ins, word, image)}, 0x{ins.next_pc:08x}u);"
 
-    if ins.form in ("MEMA", "MEMB") and op in ("lda", "ld", "st"):
+    if ins.form in ("MEMA", "MEMB") and op in (
+        "lda", "ld", "st", "ldob", "ldib", "ldos", "ldis", "stob", "stos"
+    ):
         address = _addr(ins, word, image)
         dest = (word >> 19) & 31
         if op == "lda":
             return f"cpu.r[{dest}] = {address};"
         if op == "ld":
-            return f"if (!bus.read32) return stop(cpu); cpu.r[{dest}] = bus.read32(bus.ctx, {address});"
-        return f"if (!bus.write32) return stop(cpu); bus.write32(bus.ctx, {address}, cpu.r[{dest}]);"
+            return (f"if (!bus.read32) return stop(cpu, StopCode::missing_bus); "
+                    f"cpu.r[{dest}] = bus.read32(bus.ctx, {address});")
+        if op == "st":
+            return (f"if (!bus.write32) return stop(cpu, StopCode::missing_bus); "
+                    f"bus.write32(bus.ctx, {address}, cpu.r[{dest}]);")
+        if op in ("ldob", "ldib", "ldos", "ldis"):
+            width = 8 if op.endswith("b") else 16
+            suffix = "8" if width == 8 else "16"
+            check = "0x80u" if width == 8 else "0x8000u"
+            fill = "0xffffff00u" if width == 8 else "0xffff0000u"
+            expression = ("value" if op.startswith("ldo") else
+                          f"((value & {check}) ? (value | {fill}) : value)")
+            return (f"if (!bus.read{suffix}) return stop(cpu, StopCode::missing_bus); "
+                    f"{{ const std::uint32_t value = bus.read{suffix}(bus.ctx, {address}); "
+                    f"cpu.r[{dest}] = {expression}; }}")
+        if op in ("stob", "stos"):
+            suffix = "8" if op.endswith("b") else "16"
+            return (f"if (!bus.write{suffix}) return stop(cpu, StopCode::missing_bus); "
+                    f"bus.write{suffix}(bus.ctx, {address}, "
+                    f"static_cast<std::uint{suffix}_t>(cpu.r[{dest}]));")
 
     if ins.form == "REG":
         # Special function registers and the full i960 local-register frame
