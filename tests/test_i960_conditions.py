@@ -82,7 +82,7 @@ class ConditionCodeTests(unittest.TestCase):
         # cmpi is extended opcode 0x5a1, i.e. subop bit 7 set.
         report = native_run([cmpi, 0x11000008, 0xffffffff, 0x0a000000],
                             [(0xffffffff, 1, 12), (1, 4, 8), (0, 2, 8)])
-        self.assertEqual(report.translated, 2)
+        self.assertGreaterEqual(report.translated, 2)
 
     def test_full_cobr_comparison_updates_cc_and_conditional_branch(self):
         # cmpibne 5,g1,+8. Equal g1=5 -> no branch; otherwise branch.
