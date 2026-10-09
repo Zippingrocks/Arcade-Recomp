@@ -62,6 +62,9 @@ struct CPU {
     std::uint32_t fault_table_address = 0;
     std::uint32_t process_controls = 0;
     std::uint32_t trace_controls = 0;
+    // Intel 80960KB internal interrupt-pin vector routing (synmov/synld
+    // at 0xFF000004). Initialized to FF000000h by processor reset.
+    std::uint32_t interrupt_control_register = 0xff000000u;
     bool cc_defined = true;  // Set false by i960KB reinitialization.
     bool prcb_loaded = false;
     std::uint32_t reinitialize_count = 0;
@@ -104,6 +107,7 @@ static inline bool frame_init(CPU& cpu, std::uint32_t initial_fp,
     cpu.frame_initialized = true;
     cpu.frame_depth = 0;
     cpu.stop_code = StopCode::none;
+    cpu.interrupt_control_register = 0xff000000u;
     for (unsigned slot = 0; slot < 4; ++slot)
         cpu.saved_valid[slot] = false;
     return true;
