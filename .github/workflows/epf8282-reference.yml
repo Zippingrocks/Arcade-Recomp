@@ -1,0 +1,40 @@
+name: Independent EPF8282 reference audit
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/epf8282-reference.yml
+      - arcaderecomp/flex8000_compare.py
+      - arcaderecomp/upload_framing.py
+      - tests/test_flex8000_compare.py
+permissions:
+  contents: read
+jobs:
+  reference-metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Validate parser on synthetic non-game inputs
+        run: python -m unittest discover -s tests -p test_flex8000_compare.py -v
+      - name: Read two hash-pinned public compiler outputs; no Sega inputs
+        run: python -m arcaderecomp.flex8000_compare --fetch-pinned --output build/reference/epf8282-reference.json
+      - name: Record exact source revision
+        if: always()
+        run: |
+          mkdir -p build/reference
+          git rev-parse HEAD > build/reference/source-commit.txt
+      - name: Publish only research metadata, never configuration bytes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: epf8282-reference-metadata
+          path: |
+            build/reference/epf8282-reference.json
+            build/reference/source-commit.txt
+          if-no-files-found: error
+          retention-days: 7
