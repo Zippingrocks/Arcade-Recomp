@@ -27,6 +27,8 @@ def main(argv=None):
         if name == "translate":
             cmd.add_argument("--output", type=Path, required=True, help="Generated C++ (must stay private)")
             cmd.add_argument("--limit", type=int, default=512, help="CFG discovery instruction cap")
+            cmd.add_argument("--extra-entry", action="append", type=lambda x: int(x, 0),
+                             default=[], help="Explicit additional i960 IP root, e.g. 0x6b0")
     args = parser.parse_args(argv)
     try:
         layout = load_layout(args.layout)
@@ -60,7 +62,8 @@ def main(argv=None):
                         break
                     pc = ins.next_pc
             else:
-                source, detail = emit_cpp(image, boot["initial_ip"], args.limit)
+                source, detail = emit_cpp(image, boot["initial_ip"], args.limit,
+                                          additional_entries=tuple(args.extra_entry))
                 args.output.parent.mkdir(parents=True, exist_ok=True)
                 args.output.write_text(source, encoding="utf-8")
                 print(json.dumps({"discovered": detail.discovered,
