@@ -50,6 +50,6 @@ We will **not** make that announcement because a ROM is identified, native instr
 
 We will report clearly when Gates A, B, or C are achieved. **The exact success declaration is reserved for Gate C**, with links to actual test logs and a full-game validation report.
 
-Current state: authenticated original `hotdo` ROM set, preliminary ROM-map tooling, i960 decoder and *limited* ahead-of-time C++ emission. Local-call frame code and synthetic deep-call regression testing are under development. Geometry, sound, platform-level interrupts and fully faithful gameplay have **not** been completed.
+Current state: authenticated original `hotdo` ROM set; 61 synthetic/CI tests passing; first 1,910 strict original-ROM native instruction steps verified to the serial-status hardware boundary. An **opt-in, explicitly simulated serial-input** test has executed 91,118 original-ROM translated instruction steps, installed the Intel `0x93` RAM PRCB and begun the second startup stage at `0x000006B0`, where it correctly halts on unknown Model 2C hardware at `0x00F80000`. This is meaningful original-game CPU progress but **NOT** arcade-reference verification, complete CPU support, a playable game, or Model 2C completion. True serial status, accurate device timing, geometry, sound, interrupts and faithful gameplay remain unresolved.
 
 This is independent from the later original-versus-Revision-A and prototype milestones. Prototypes expand the preservation roadmap but are not prerequisites for authentic retail HOTD1 completion.
