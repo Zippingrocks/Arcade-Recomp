@@ -75,7 +75,7 @@ For **strict behavior**, continue using `tools/hotd1_strict_boot_probe.cpp` inst
 
 ## Additional findings and remaining work
 
-The genuine ROM code at `0x6B0` begins with `mov 2,g6`, followed by a store to **`0x00F80000`** at `0x6B4`. This device's function is **unknown and not implemented**; do not classify it as a watchdog or controller solely from its address. A subsequent, currently unreached `SYNMOV` uses Intel's special local interrupt-control register address `0xFF000004`; its device effects also require independent implementation.
+The genuine ROM code at `0x6B0` begins with `mov 2,g6`, followed by a store to **`0x00F80000`** at `0x6B4`. This device's function is **unknown and not implemented**; do not classify it as a watchdog or controller solely from its address. The subsequent `SYNMOV` at `0x000006D4` targeting Intel's on-chip interrupt-control register `0xFF000004` is **now implemented and tested in isolation against the verified original arcade ROM**: it installs ICR `0x0F0E0D0C` and advances to IP `0x000006D8`. This is not a claim that the authentic execution path passed the still-unmapped **`0x00F80000`** board write at `0x000006B4`. See [native Intel ICR test report](HOTD1_INTEL_ICR_STAGE2.md).
 
 **Unresolved fidelity gates:** original 315-5649 serial timing/RX values, exact i960KB reinitialize register undefined-state semantics, SAT validations, external interrupt latch behavior, original board timing, `0x00F80000` register identity, ICR writes, dynamic-code discovery, MB86235 graphics, SCSP audio and all gameplay.
 
