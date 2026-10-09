@@ -103,6 +103,24 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         a = _operand(word & 31, bool(word & 0x800))
         b = _operand((word >> 14) & 31, bool(word & 0x1000))
         dst = (word >> 19) & 31
+        if op in ("setbit", "clrbit", "notbit"):
+            # Intel documented bit-position modulo 32. All uint32 shifts
+            # are masked to avoid host-C++ undefined behavior.
+            mask = f"(1u << ({a} & 31u))"
+            expr = {"setbit": f"({b} | {mask})",
+                    "clrbit": f"({b} & ~{mask})",
+                    "notbit": f"({b} ^ {mask})"}[op]
+            return f"cpu.r[{dst}] = static_cast<std::uint32_t>({expr});"
+        if op in ("cmpdeci", "cmpdeco"):
+            # Compare src1 with ORIGINAL src2, then decrement src2
+            # into dst. Temporaries preserve src1/src2 when registers alias.
+            ordered_a = "(lhs ^ 0x80000000u)" if op == "cmpdeci" else "lhs"
+            ordered_b = "(rhs ^ 0x80000000u)" if op == "cmpdeci" else "rhs"
+            return (f"{{ const std::uint32_t lhs = {a}; "
+                    f"const std::uint32_t rhs = {b}; "
+                    f"cpu.cc = ({ordered_a} < {ordered_b}) ? 4 : "
+                    f"({ordered_a} > {ordered_b}) ? 1 : 2; "
+                    f"cpu.r[{dst}] = rhs - 1u; }}")
         if op in ("and", "or", "xor"):
             symbol = {"and": "&", "or": "|", "xor": "^"}[op]
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} {a});"
