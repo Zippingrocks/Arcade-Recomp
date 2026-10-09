@@ -82,7 +82,7 @@ int main() {
 
     def test_direct_conditional_branch_uses_comparison_result(self):
         # cmpo literal 2,g1; bl +8 (branch based on unsigned g1 < 2)
-        cmp = (0x5a << 24) | (17 << 14) | (1 << 11) | 2
+        cmp = (0x5a << 24) | (17 << 14) | (1 << 13) | (1 << 11) | 2
         synthetic = words(cmp, 0x14000008, 0xffffffff, 0x0a000000)
         source, report = emit_cpp(synthetic, 0)
         self.assertIn(8, report.unsupported)
