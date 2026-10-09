@@ -51,6 +51,19 @@ explicitly injected **synthetic inputs**, not original-cabinet events.
 Unknown writes, byte-lane accesses and devices still halt strictly.
 [Full evidence and limitations](docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md).
 
+### Widened original-ROM codegen inventory
+
+Using the verified original `hotdo` i960 program and two explicit
+startup roots (`0x5F0`, `0x6B0`), the compiler discovered **3,051
+candidate instruction addresses**: **2,950** currently emit native
+operations and **101** intentionally fail closed. **These are static
+candidate addresses, not verified dynamic execution, full-game
+coverage, or a 96.7%-complete game.** See the
+[widened coverage audit](docs/HOTD1_WIDENED_I960_COVERAGE.md) and
+[next CPU backend Issue #9](https://github.com/Zippingrocks/Arcade-Recomp/issues/9).
+The real original-ROM strict startup remains at the documented
+serial-status boundary; no unknown Model 2C hardware has been bypassed.
+
 ### Non-negotiable goals
 
 - Preserve original arcade timing, gameplay, branching, enemy AI, gun input, video, music, sound, and presentation.
