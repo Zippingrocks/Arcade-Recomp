@@ -91,6 +91,18 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     f"bus.write{suffix}(bus.ctx, {address}, "
                     f"static_cast<std::uint{suffix}_t>(cpu.r[{dest}]));")
 
+    if ins.form == "REG" and op == "synmov":
+        # Intel KB: src1 register contains destination byte address;
+        # src2 register contains source byte address. The sync helper
+        # recognizes only documented on-chip ICR until bus completion
+        # semantics for other addresses are independently established.
+        if word & (0x20 | 0x40 | 0x800 | 0x1000):
+            return None
+        destination_register = word & 31
+        source_register = (word >> 14) & 31
+        return (f"if (!sync_move_word(cpu, bus, cpu.r[{destination_register}], "
+                f"cpu.r[{source_register}])) return false;")
+
     if ins.form == "REG" and op == "synmovq":
         # Both operands are register pointers: src1 is destination, src2 source.
         # Literal / special encodings are unsupported for this K-series opcode.
