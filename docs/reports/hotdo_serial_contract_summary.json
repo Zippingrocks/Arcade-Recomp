@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "base_commit": "93532cf5f4dc6ef75c0298ebdca3396df1ea5061",
+  "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "evidence_level": "isolated_native_routine_with_synthetic_inputs",
+  "not_hardware_validation": true,
+  "entry": "0xa3750",
+  "return_site": "0xa38b8",
+  "upload": {
+    "begin": "0xa3a00",
+    "end_exclusive": "0xa4e00",
+    "size": 5120,
+    "sha256": "de6e298436c243dd11bc725592b99cf9e87bde6d305583ef0aec511610ec76c1",
+    "all_bytes_match_in_each_sample": true,
+    "identity": "unidentified; not established as firmware or configuration"
+  },
+  "rx1_samples": [0, 255],
+  "rx2_samples_inclusive": [0, 255],
+  "cases_per_compiler": 512,
+  "compilers_tested": ["GCC", "Clang"],
+  "compiler_reports_identical": true,
+  "scope": "Constant values per run; not all time-varying reply sequences",
+  "steps_per_case": 89199,
+  "tx1_writes_per_case": 5132,
+  "tx2_writes_per_case": 5125,
+  "rx1_reads_per_case": 5132,
+  "rx2_reads_per_case": 5132,
+  "synthetic_status_reads_per_case": 5132,
+  "nonupload_command_sequence": [1, 8, 129, 136, 129, 1, 129, 1, 130, 130, 8, 136],
+  "feedback_data": [
+    {"nonupload_command_index": 5, "and_mask": 254, "or_bits": 0},
+    {"nonupload_command_index": 7, "and_mask": 254, "or_bits": 1}
+  ],
+  "data_same_for_two_tested_rx1_values": true,
+  "runtime_hardware_semantics_changed": false,
+  "physical_serial_behavior_completed": false,
+  "model2c_complete": false
+}

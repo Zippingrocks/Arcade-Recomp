@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "evidence_level": "static_pointer_and_instruction_analysis",
+  "menu_title": "MEMORY TEST",
+  "menu_pointer_table": "0xa8830",
+  "test_pointer_table": "0x8ae0",
+  "group_count": 8,
+  "descriptor_count": 17,
+  "blank_display_label_count": 2,
+  "groups": [
+    {"table": "0x8880", "entries": 1, "address_fields": ["0x200000"]},
+    {"table": "0x88b0", "entries": 8, "address_fields": ["0x548000", "0x1d00000", "0x1000000", "0x1080000", "0x1800000", "0x1810000", "0x1814000", "0x1818000"]},
+    {"table": "0x8990", "entries": 1, "address_fields": ["0x900010"]},
+    {"table": "0x89c0", "entries": 1, "address_fields": ["0x11000000"]},
+    {"table": "0x89f0", "entries": 1, "address_fields": ["0x11080000"]},
+    {"table": "0x8a20", "entries": 1, "address_fields": ["0x11200000"]},
+    {"table": "0x8a50", "entries": 1, "address_fields": ["0x11280000"]},
+    {"table": "0x8a80", "entries": 3, "address_fields": ["0x11400000", "0x10a00000", "0x10c00000"]}
+  ],
+  "board_store_sites": [
+    {"site": "0x6b4", "source_register_index": 22},
+    {"site": "0x8b88", "source_register_index": 7},
+    {"site": "0x8ba0", "source_register_index": 30}
+  ],
+  "physical_00f80000_device_identified": false,
+  "memory_test_execution_claimed": false,
+  "runtime_memory_map_changed": false
+}
