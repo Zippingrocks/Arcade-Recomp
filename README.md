@@ -21,7 +21,7 @@ Revision A uses `epr-19696a.15` and `epr-19697a.16` instead. **Archive names alo
 
 ### Current stage
 
-**M0 — hardware and ROM research.** This repository is not a working recompiler or playable port. The initial independent utilities audit user-supplied ROM files, verify their chip hashes, and reconstruct known memory regions using documented chip wiring. Intel i960 translation, Fujitsu MB86235/TGPx4 support, original audio and native graphics execution remain future milestones.
+**M0 verified; M1 started.** A user-supplied original `hotdo` arcade archive passed all 29 chip hash checks. Our independent Intel i960 decoder now discovers control flow and can emit native C++ for a limited instruction subset. Generated code runs against a deliberately simplified diagnostic memory bus. **This is not a playable game or working Model 2C runtime.** i960 procedure calls, register frames, interrupts, accurate bus devices, MB86235/TGPx4, sound and graphics remain unimplemented or incomplete.
 
 ### Non-negotiable goals
 
@@ -33,12 +33,16 @@ Revision A uses `epr-19696a.15` and `epr-19697a.16` instead. **Archive names alo
 
 ### ROM integrity check
 
-Requirements: Python 3.10+ (standard library only). User supplies their own arcade ROM archive; it is never uploaded to the public repository.
+Requirements: Python 3.10+ (standard library for ZIP, system libarchive for direct 7z). Native translation experiments additionally need a C++17 compiler. User supplies their own ROM archive; it is never uploaded to the public repository.
 
 ```bash
 python -m unittest discover -s tests -v
 python -m arcaderecomp audit --layout targets/hotd1/original.json --rom /path/to/hotdo.7z
-python -m arcaderecomp build --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --output build/original
+python -m arcaderecomp build --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --region maincpu --output build/hotd1
+python -m arcaderecomp inspect --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --count 40
+python -m arcaderecomp translate --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --output build/hotd1/hotd1_i960.cpp --limit 512
+c++ -std=c++17 -O2 -Ibuild/hotd1 tools/hotd1_boot_probe.cpp -o build/hotd1/boot_probe
+build/hotd1/boot_probe build/hotd1/maincpu.bin 500
 ```
 
 The parent archive is optional when the supplied archive contains all 29 original ROM chips. ZIP files are supported through the Python standard library. Direct 7z support uses the **system libarchive shared library** (available in many Linux distributions; other systems may require a separate install). If libarchive is unavailable, extract the 7z locally and repack as ZIP for auditing. Audit is an identity check, not an arcade emulator.
@@ -49,4 +53,4 @@ The parent archive is optional when the supplied archive contains all 29 origina
 - [Arcade Museum original set inventory](https://www.arcade-museum.com/tech-center/machine/hotdo) documents chip IDs and checksums.
 - [Sega arcade history](https://www.sega.jp/history/arcade/) dates the original arcade game's launch to March 1997.
 
-See `docs/PROVENANCE.md`, `docs/HOTD1_ORIGINAL_AUDIT.md`, and `docs/ROADMAP.md`.
+See [original ROM audit](docs/HOTD1_ORIGINAL_AUDIT.md), [first native bootstrap experiment](docs/HOTD1_NATIVE_BOOT.md), [hardware research](docs/MODEL2C_HARDWARE.md), [provenance](docs/PROVENANCE.md) and [roadmap](docs/ROADMAP.md).
