@@ -1,0 +1,81 @@
+{
+  "schema": "hotdo-bit-compare-isolated-v1",
+  "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "synthetic_cpu_state": true,
+  "continuous_boot": false,
+  "hardware_verified": false,
+  "rom_data_exported": false,
+  "original_site_count": 17,
+  "vectors_per_site": {
+    "0x00013904": 16,
+    "0x00013ad4": 181,
+    "0x0001565c": 181,
+    "0x000158c0": 181,
+    "0x000158cc": 181,
+    "0x000158d4": 181,
+    "0x00015940": 181,
+    "0x00015a38": 181,
+    "0x00016bd0": 181,
+    "0x00016c38": 181,
+    "0x0001a9b8": 181,
+    "0x0001e9ec": 181,
+    "0x00033b50": 181,
+    "0x000a1bf4": 181,
+    "0x000a1c48": 181,
+    "0x000a36cc": 181,
+    "0x000a3700": 181
+  },
+  "instruction_families": {
+    "test": 1,
+    "chkbit": 2,
+    "bbc": 5,
+    "not": 3,
+    "andnot": 2,
+    "cmpinco": 3,
+    "bbs": 1
+  },
+  "graph": {
+    "candidates": 3051,
+    "translated": 3042,
+    "unsupported": [
+      "0x000005c0",
+      "0x00000bfc",
+      "0x00001034",
+      "0x0000103c",
+      "0x00001060",
+      "0x000011cc",
+      "0x00001384",
+      "0x00013d80",
+      "0x000334d8"
+    ],
+    "limit_reached": false
+  },
+  "compilers": [
+    {
+      "version": "g++ (Debian 14.2.0-19) 14.2.0",
+      "flags": [
+        "-std=c++17",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-fsanitize=undefined",
+        "-fno-sanitize-recover=all"
+      ],
+      "passed_vectors": 2912,
+      "stderr_empty": true
+    },
+    {
+      "version": "clang version 17.0.0 (https://github.com/swiftlang/llvm-project.git 10999b6d034fe318f3d56c83bddb6572593a8bb0)",
+      "flags": [
+        "-std=c++17",
+        "-O2",
+        "-Wall",
+        "-Wextra",
+        "-fsanitize=undefined",
+        "-fno-sanitize-recover=all"
+      ],
+      "passed_vectors": 2912,
+      "stderr_empty": true
+    }
+  ]
+}

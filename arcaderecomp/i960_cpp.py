@@ -154,7 +154,7 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return None
         # The destination-mode field is irrelevant for compare-only REG
         # instructions. Some legitimate ROM instructions set it.
-        if word & 0x2000 and op not in ("cmpo", "cmpi"):
+        if word & 0x2000 and op not in ("cmpo", "cmpi", "chkbit"):
             return None
         a = _operand(word & 31, bool(word & 0x800))
         b = _operand((word >> 14) & 31, bool(word & 0x1000))
@@ -181,16 +181,27 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     "clrbit": f"({b} & ~{mask})",
                     "notbit": f"({b} ^ {mask})"}[op]
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({expr});"
-        if op in ("cmpdeci", "cmpdeco"):
-            # Compare src1 with ORIGINAL src2, then decrement src2
+        if op in ("cmpdeci", "cmpdeco", "cmpinci", "cmpinco"):
+            # Compare src1 with ORIGINAL src2, then increment/decrement src2
             # into dst. Temporaries preserve src1/src2 when registers alias.
-            ordered_a = "(lhs ^ 0x80000000u)" if op == "cmpdeci" else "lhs"
-            ordered_b = "(rhs ^ 0x80000000u)" if op == "cmpdeci" else "rhs"
+            ordered_a = "(lhs ^ 0x80000000u)" if op.endswith("i") else "lhs"
+            ordered_b = "(rhs ^ 0x80000000u)" if op.endswith("i") else "rhs"
+            adjustment = "+" if op.startswith("cmpinc") else "-"
             return (f"{{ const std::uint32_t lhs = {a}; "
                     f"const std::uint32_t rhs = {b}; "
                     f"cpu.cc = ({ordered_a} < {ordered_b}) ? 4 : "
                     f"({ordered_a} > {ordered_b}) ? 1 : 2; "
-                    f"cpu.r[{dst}] = rhs - 1u; cpu.cc_defined = true; }}")
+                    f"cpu.r[{dst}] = rhs {adjustment} 1u; cpu.cc_defined = true; }}")
+        if op == "chkbit":
+            # Intel KB 11-31: replace the complete condition code with 010
+            # for a set bit or 000 for a clear bit. Position is modulo 32.
+            return (f"cpu.cc = ({b} & (1u << ({a} & 31u))) ? 2 : 0; "
+                    "cpu.cc_defined = true;")
+        if op == "not":
+            return f"cpu.r[{dst}] = static_cast<std::uint32_t>(~({a}));"
+        if op == "andnot":
+            # Operand order matters: src2 AND NOT src1 (Intel KB 11-11).
+            return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} & ~({a}));"
         if op in ("and", "or", "xor"):
             symbol = {"and": "&", "or": "|", "xor": "^"}[op]
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} {a});"
@@ -211,6 +222,32 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return (f"cpu.cc = ({left} < {right}) ? 4 : ({left} > {right}) ? 1 : 2; "
                     "cpu.cc_defined = true;")
         return None
+
+    if ins.form == "COBR" and op.startswith("test"):
+        # TEST uses src1 as a destination register. The m1 literal-mode bit
+        # is ignored for this instruction (Intel KB Appendix B, B-4).
+        # Preserve the existing conservative policy on reserved COBR bit 0.
+        if word & 1:
+            return None
+        masks = {"testno": 0, "testg": 1, "teste": 2, "testge": 3,
+                 "testl": 4, "testne": 5, "testle": 6, "testo": 7}
+        if op not in masks:
+            return None
+        mask = masks[op]
+        condition = "cpu.cc == 0" if mask == 0 else f"(cpu.cc & {mask}) != 0"
+        dst = (word >> 19) & 31
+        return ("if (!cpu.cc_defined) return stop(cpu, StopCode::undefined_condition_code); "
+                f"cpu.r[{dst}] = ({condition}) ? 1u : 0u;")
+
+    if ins.form == "COBR" and op in ("bbc", "bbs"):
+        if word & 1:
+            return None
+        bitpos = _operand((word >> 19) & 31, bool(word & 0x2000))
+        value = f"cpu.r[{(word >> 14) & 31}]"
+        taken = "cpu.cc == 0" if op == "bbc" else "cpu.cc != 0"
+        return (f"cpu.cc = ({value} & (1u << ({bitpos} & 31u))) ? 2 : 0; "
+                "cpu.cc_defined = true; "
+                f"if ({taken}) {{ cpu.ip = {target}; return true; }}")
 
     if ins.form == "COBR" and (op.startswith("cmpib") or op.startswith("cmpob")):
         # For Intel KB compare-and-branch: src1 compared with src2.
