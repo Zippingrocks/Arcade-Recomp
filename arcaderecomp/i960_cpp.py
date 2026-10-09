@@ -59,8 +59,20 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
     op = ins.mnemonic
     word = ins.word
     target = f"0x{ins.target:08x}u" if ins.target is not None else None
-    if ins.form in ("MEMA", "MEMB") and op == "callx":
-        return f"return frame_call(cpu, bus, {_addr(ins, word, image)}, 0x{ins.next_pc:08x}u);"
+    if ins.form in ("MEMA", "MEMB") and op in ("callx", "bx", "balx"):
+        # These all use a computed *effective address* as an instruction
+        # pointer, not as a pointer to memory holding the branch target.
+        # BALX must resolve that address BEFORE writing its link register,
+        # since target and link destination are permitted to alias.
+        address = _addr(ins, word, image)
+        if op == "callx":
+            return f"return frame_call(cpu, bus, {address}, 0x{ins.next_pc:08x}u);"
+        if op == "bx":
+            return f"cpu.ip = ({address}) & ~3u; return true;"
+        dst = (word >> 19) & 31
+        return (f"const std::uint32_t branch_target = {address}; "
+                f"cpu.r[{dst}] = 0x{ins.next_pc:08x}u; "
+                "cpu.ip = branch_target & ~3u; return true;")
 
     if ins.form in ("MEMA", "MEMB") and op in (
         "lda", "ld", "st", "ldob", "ldib", "ldos", "ldis", "stob", "stos"
@@ -194,6 +206,11 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return "return frame_return(cpu, bus);"
         if op == "b":
             return f"cpu.ip = {target}; return true;"
+        if op == "bal":
+            # The Intel KB branch-and-link instruction uses global g14,
+            # unlike CALL: no local register frame is created.
+            return (f"cpu.r[30] = 0x{ins.next_pc:08x}u; "
+                    f"cpu.ip = {target}; return true;")
         masks = {"bg": 1, "be": 2, "bge": 3, "bl": 4,
                  "bne": 5, "ble": 6, "bo": 7, "bno": 0}
         if op in masks:
