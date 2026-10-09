@@ -10,6 +10,7 @@
 #pragma once
 #include "i960_frame_runtime.hpp"
 #include "sega3155649_serial.hpp"
+#include "model2c_irq_registers.hpp"
 
 #include <cstdint>
 #include <iomanip>
@@ -27,6 +28,7 @@ enum class Region {
     cpu_control,
     game_data_rom,
     serial_io,
+    irq_registers,
     unmapped
 };
 
@@ -37,6 +39,7 @@ static inline const char* region_name(Region region) {
     case Region::cpu_control: return "CPU wait-state control (timing pending)";
     case Region::game_data_rom: return "game data ROM";
     case Region::serial_io: return "Sega 315-5649 I/O controller (serial partial)";
+    case Region::irq_registers: return "Model 2C IRQ request/enable registers (partial)";
     case Region::unmapped: return "unmapped or unimplemented Model 2C device";
     }
     return "unknown";
@@ -108,6 +111,12 @@ public:
     void enable_partial_serial_io(bool enabled = true) {
         serial_io_enabled_ = enabled;
     }
+    // Opt-in research registers: NO real interrupt events or CPU delivery.
+    void enable_partial_irq_registers(bool enabled = true) {
+        irq_enabled_ = enabled;
+    }
+    PartialIRQRegisters& irq_registers() { return irq_; }
+    const PartialIRQRegisters& irq_registers() const { return irq_; }
     IO3155649& serial_device() { return io_; }
     const IO3155649& serial_device() const { return io_; }
 
@@ -124,6 +133,8 @@ public:
         if (inside(address, kWorkStart, kWorkSize)) return Region::work_ram;
         if (inside(address, kControlStart, kControlSize)) return Region::cpu_control;
         if (inside(address, kIOStart, kIOSize)) return Region::serial_io;
+        if (inside(address, PartialIRQRegisters::REQUEST, 8u))
+            return Region::irq_registers;
         if (inside(address, kDataStart, kDataSize) ||
             inside(address, kExtraStart, kExtraSize)) return Region::game_data_rom;
         return Region::unmapped;
@@ -136,6 +147,17 @@ public:
     void write(std::uint32_t address, unsigned width, std::uint32_t value) {
         const auto reg = classify(address);
         validate_access(address, width, true, reg);
+        if (reg == Region::irq_registers) {
+            if (address == PartialIRQRegisters::REQUEST)
+                irq_.acknowledge(value);
+            else if (address == PartialIRQRegisters::ENABLE)
+                irq_.request_enable_update(value);
+            else
+                throw DeviceAccessFault(address, width, true, reg,
+                                        "unsupported IRQ register address");
+            writes_.push_back({address, value, width, reg});
+            return;
+        }
         if (reg == Region::serial_io) {
             try {
                 io_.write_bus_byte(address, static_cast<std::uint8_t>(value));
@@ -169,6 +191,8 @@ private:
     std::size_t pending_timing_writes_ = 0;
     bool serial_io_enabled_ = false;
     IO3155649 io_{};
+    bool irq_enabled_ = false;
+    PartialIRQRegisters irq_{};
 
     static bool inside(std::uint32_t address, std::uint32_t start,
                        std::uint32_t length) {
@@ -195,6 +219,8 @@ private:
         case Region::work_ram: return kWorkSize - (address - kWorkStart);
         case Region::cpu_control: return kControlSize - (address - kControlStart);
         case Region::serial_io: return kIOSize - (address - kIOStart);
+        case Region::irq_registers:
+            return 8u - (address - PartialIRQRegisters::REQUEST);
         case Region::game_data_rom:
             if (inside(address, kExtraStart, kExtraSize))
                 return kExtraSize - (address - kExtraStart);
@@ -211,6 +237,13 @@ private:
         // uncertain misaligned bus behavior rather than returning a guess.
         if (width > 1 && (address % width) != 0)
             throw DeviceAccessFault(address, width, write, reg, "unaligned transfer unsupported");
+        if (reg == Region::irq_registers) {
+            if (!irq_enabled_ || width != 4u ||
+                (address != PartialIRQRegisters::REQUEST &&
+                 address != PartialIRQRegisters::ENABLE))
+                throw DeviceAccessFault(address, width, write, reg,
+                                        "IRQ controller disabled/unknown width");
+        }
         if (reg == Region::serial_io) {
             if (!serial_io_enabled_ || width != 1u)
                 throw DeviceAccessFault(address, width, write, reg,
@@ -241,6 +274,14 @@ private:
     std::uint32_t read_value(std::uint32_t address, unsigned width) const {
         const auto reg = classify(address);
         validate_access(address, width, false, reg);
+        if (reg == Region::irq_registers) {
+            if (address == PartialIRQRegisters::REQUEST)
+                return irq_.request();
+            if (address == PartialIRQRegisters::ENABLE)
+                return irq_.enable();
+            throw DeviceAccessFault(address, width, false, reg,
+                                    "unsupported IRQ register address");
+        }
         if (reg == Region::serial_io) {
             try {
                 return io_.read_bus_byte(address);
