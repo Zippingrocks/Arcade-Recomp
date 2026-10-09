@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <stdexcept>
 #include <iterator>
 #include <string>
 #include <unordered_map>
@@ -52,12 +53,17 @@ struct ShadowBus {
         ++bus.writes;
     }
 
-    std::uint32_t boot_ip() const {
-        if (program.size() < 16)
-            throw std::runtime_error("Program is smaller than an i960 boot record");
-        return std::uint32_t(program[12]) | std::uint32_t(program[13]) << 8 |
-               std::uint32_t(program[14]) << 16 | std::uint32_t(program[15]) << 24;
+    std::uint32_t boot_word(std::size_t offset) const {
+        if (offset > program.size() || program.size() - offset < 4)
+            throw std::runtime_error("i960 boot record or PRCB outside program image");
+        return std::uint32_t(program[offset]) |
+               std::uint32_t(program[offset + 1]) << 8 |
+               std::uint32_t(program[offset + 2]) << 16 |
+               std::uint32_t(program[offset + 3]) << 24;
     }
+
+    std::uint32_t boot_ip() const { return boot_word(12); }
+    std::uint32_t boot_prcb() const { return boot_word(4); }
 };
 
 } // namespace
@@ -96,7 +102,19 @@ int main(int argc, char** argv) {
 
     arcaderecomp_generated::CPU cpu{};
     try {
-        cpu.ip = shadow.boot_ip();
+        const std::uint32_t prcb = shadow.boot_prcb();
+        // Intel 80960KB reset obtains its initial FP from PRCB + 24.
+        // No arcade peripheral behavior is emulated by this boot probe.
+        if (prcb > shadow.program.size() ||
+            shadow.program.size() - prcb < 28) {
+            std::cerr << "PRCB frame pointer lies outside program ROM\n";
+            return 2;
+        }
+        const std::uint32_t initial_fp = shadow.boot_word(prcb + 24u);
+        if (!arcaderecomp_generated::frame_init(cpu, initial_fp, shadow.boot_ip())) {
+            std::cerr << "Failed to initialize i960 local register frame\n";
+            return 2;
+        }
     } catch (const std::exception& error) {
         std::cerr << error.what() << "\n";
         return 2;
@@ -112,6 +130,10 @@ int main(int argc, char** argv) {
               << "stop_ip=0x" << std::hex << cpu.ip << "\n"
               << "shadow_bus_reads=" << std::dec << shadow.reads << "\n"
               << "shadow_bus_writes=" << shadow.writes << "\n"
-              << "limit_reached=" << (executed == limit ? "true" : "false") << "\n";
+              << "limit_reached=" << (executed == limit ? "true" : "false") << "\n"
+              << "frame_depth=" << cpu.frame_depth << "\n"
+              << "frame_spills=" << cpu.frame_spills << "\n"
+              << "frame_reloads=" << cpu.frame_reloads << "\n"
+              << "stop_code=" << static_cast<unsigned>(cpu.stop_code) << "\n";
     return 0;
 }
