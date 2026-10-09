@@ -20,6 +20,7 @@
 #include <functional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace arcaderecomp_model2c {
@@ -70,7 +71,7 @@ public:
         if (serial_tx_) serial_tx_(value, channel);
     }
 
-    std::uint8_t read_bus_byte(std::uint32_t absolute_address) {
+    std::uint8_t read_bus_byte(std::uint32_t absolute_address) const {
         unsigned reg = resolve_register(absolute_address, false);
         if (reg != SERIAL_RX1 && reg != SERIAL_RX2)
             throw Unsupported(absolute_address, false, "device status/port read not implemented");
