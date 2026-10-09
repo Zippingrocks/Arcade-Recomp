@@ -25,7 +25,10 @@ enum class StopCode : std::uint32_t {
     unsupported_trace = 7,
     return_without_caller = 8,
     frame_cache_mismatch = 9,
-    stack_address_wrap = 10
+    stack_address_wrap = 10,
+    iac_reinitialize_pending = 11,
+    unsupported_iac_message = 12,
+    synchronous_device_unimplemented = 13
 };
 
 struct CPU {
@@ -44,6 +47,8 @@ struct CPU {
     bool saved_valid[4]{};
     std::uint32_t frame_spills = 0;
     std::uint32_t frame_reloads = 0;
+    std::uint32_t pending_iac[4]{};
+    bool pending_iac_valid = false;
 };
 
 struct Bus {
