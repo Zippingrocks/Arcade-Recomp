@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "evidence_level": "candidate_layout_from_one_archival_function_class_reference",
+  "code_commit_tested": "cd8cd767830be538a1dcfb1bd9f5376e17700f86",
+  "configuration_bits": 37524,
+  "shape_count": 580,
+  "four_cell_discovery_candidates": 2047,
+  "eight_cell_nonoverlapping_candidates": 1,
+  "reference_device": "EPF8282ALC84-2",
+  "source_repository": "fayaw/spearlegacyLLRF",
+  "source_commit": "6a0d68153d731518f07e98762f82d25e042838a8",
+  "source_blobs": {
+    "testmux.sof,v": "4bd945df501d848d9fc4fd512945336ec7c24fca",
+    "testmux.rpt,v": "88deb079d565b038b1bc4a71e015fd324dddd3ab",
+    "buff_with_clk.sof,v": "224eeb4b8023f9fc0a16166f9e72d224ba32b57b",
+    "buff_with_clk.rpt,v": "5baeecf6381f5a8d746da4c99b56875a52e4fa75"
+  },
+  "reference_configuration_sha256": "a795d14efc43ac3f6a2f42a24b8c2e357f513d0f3ac74fbc79145f1ce0e40226",
+  "candidate": {
+    "first_bit": 22138,
+    "cell_stride": 1416,
+    "rows": 8,
+    "row_pitch": 177,
+    "column_step": 1,
+    "selected_bits": 128,
+    "minimum_selected_bit": 22138,
+    "maximum_selected_bit": 33290
+  },
+  "separate_design_validation": "REJECTED: buff_with_clk report targets EPM5130QC; SOF targets EPF8282ALC84-2",
+  "physical_layout_verified": false,
+  "independent_compiler_validation": false,
+  "netlist_recovered": false,
+  "original_hotdo_function_equivalence_verified": false,
+  "runtime_changed": false,
+  "local_tests": 197,
+  "ci_tests": 197,
+  "ci_suite_run": 37995290401,
+  "ci_reference_run": 37995290410,
+  "reference_artifact_sha256": "856e7c0bc56326f88e2bba8bf042f4c01c649d4f000c6658c5bd0552e8c0a2d6",
+  "original_image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "original_configuration_sha256": "5144cf9b156a27a41e53e17a31aa6efb098fcce448fbf9eed1de9a1bc6733f09",
+  "original_regression": {
+    "strict_steps": 1904,
+    "tx_enabled_steps": 1910,
+    "exit_codes": [3, 3],
+    "synthetic_rx_enabled": false
+  },
+  "model2c_complete": false
+}
