@@ -23,6 +23,10 @@ Revision A uses `epr-19696a.15` and `epr-19697a.16` instead. **Archive names alo
 
 **M0 authenticated; M1 in progress; Sega Model 2C NOT COMPLETE.** The original `hotdo` archive passed all **29** chip fingerprints. Our independent Intel i960KB translator now handles local calls, a strict partial Model 2C bus, serial TX and an **opt-in Intel IAC `0x93` PRCB reinitialization** into the next ahead-of-time compiled entry. The **highest-confidence strict original-ROM execution** remains **1,910 translated native instructions**: TX2 `0xFF`, TX1 `0x01`, then an intentional stop at missing Sega 315-5649 receive status. Under **explicitly fabricated serial responses**, the genuine original game code executed **91,118 native instructions**, applied one IAC reinitialization to PRCB `0x00510E00`, entered `0x000006B0`, and correctly stopped at an unmapped `0x00F80000` word write in the next stage. The simulated-input run **does not demonstrate authentic arcade boot or gameplay**. I960 fault/interrupt handling, accurate IAC timing, real serial RX, other devices, MB86235/TGPx4 graphics, sound and full gameplay remain incomplete. See [measured stage-two findings](docs/HOTD1_IAC_REINITIALIZATION_STAGE2.md) and [strict original-ROM trace](docs/HOTD1_ORIGINAL_NATIVE_TRACE.md).
 
+### New original-ROM CPU result — Intel ICR
+
+The original program's `SYNMOV` at `0x000006D4` now executes as compiled native code in a **separate original-ROM instruction test**, updating the Intel 80960KB interrupt-control register from its documented reset value `0xFF000000` to HOTD1's original `0x0F0E0D0C`, and advancing to `0x000006D8`. The test is reproducible through `tools/hotd1_icr_probe.cpp`. The preceding board-level write at `0x00F80000` remains unknown and **is not bypassed in the faithful runtime**. This original-ROM result is intentionally isolated, not proof of seamless arcade startup. See [the independent ICR research and tests](docs/HOTD1_INTEL_ICR_STAGE2.md).
+
 ### Non-negotiable goals
 
 - Preserve original arcade timing, gameplay, branching, enemy AI, gun input, video, music, sound, and presentation.
@@ -56,6 +60,12 @@ build/hotd1/strict_probe build/hotd1/maincpu.bin 10000 --serial-tx
 c++ -std=c++17 -O2 -Iruntime -Ibuild/hotd1 tools/hotd1_iac_probe.cpp -o build/hotd1/iac_probe
 build/hotd1/iac_probe build/hotd1/maincpu.bin
 
+# Independently verify ONE original Intel ICR write at IP 0x6D4.
+# Use a new AOT translation containing --extra-entry 0x6d4.
+python -m arcaderecomp translate --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --output build/hotd1/hotd1_i960.cpp --limit 16384 --extra-entry 0x6d4
+c++ -std=c++17 -O2 -Iruntime -Ibuild/hotd1 tools/hotd1_icr_probe.cpp -o build/hotd1/icr_probe
+build/hotd1/icr_probe build/hotd1/maincpu.bin
+
 # Optional experimental stage-two CPU research, with explicitly FAKE
 # Sega serial RX/status. NOT a faithful arcade game startup!
 c++ -std=c++17 -O1 -Iruntime -Ibuild/hotd1 \
@@ -73,4 +83,4 @@ The parent archive is optional when the supplied archive contains all 29 origina
 
 **Completion is not subjective:** see [binding Model 2C definition of done](docs/MODEL2C_DEFINITION_OF_DONE.md). We will explicitly announce verified Gate A (CPU), Gate B (integrated platform), and Gate C (faithful original full-game completion), with the exact “SEGA MODEL 2C RECOMPILATION SUCCESSFULLY COMPLETED!” announcement reserved for Gate C.
 
-Further: [verified processor reinitialization, limitations, stage-two hardware blocker](docs/HOTD1_IAC_REINITIALIZATION_STAGE2.md), [Intel 80960KB SYNMOVQ / original reinit IAC](docs/HOTD1_SYN_MOV_IAC.md), [verified original-ROM 1,910-step native execution](docs/HOTD1_ORIGINAL_NATIVE_TRACE.md), [Sega serial I/O](docs/SEGA_IO3155649.md), [original ROM audit](docs/HOTD1_ORIGINAL_AUDIT.md), [first native bootstrap experiment](docs/HOTD1_NATIVE_BOOT.md), [i960 KB procedure-frame research](docs/I960_FRAMES.md), [hardware research](docs/MODEL2C_HARDWARE.md), [strict Model 2C bus](runtime/model2c_bus.hpp), [provenance](docs/PROVENANCE.md) and [roadmap](docs/ROADMAP.md).
+Further: [original Intel ICR isolated native experiment](docs/HOTD1_INTEL_ICR_STAGE2.md), [verified processor reinitialization, limitations, stage-two hardware blocker](docs/HOTD1_IAC_REINITIALIZATION_STAGE2.md), [Intel 80960KB SYNMOVQ / original reinit IAC](docs/HOTD1_SYN_MOV_IAC.md), [verified original-ROM 1,910-step native execution](docs/HOTD1_ORIGINAL_NATIVE_TRACE.md), [Sega serial I/O](docs/SEGA_IO3155649.md), [original ROM audit](docs/HOTD1_ORIGINAL_AUDIT.md), [first native bootstrap experiment](docs/HOTD1_NATIVE_BOOT.md), [i960 KB procedure-frame research](docs/I960_FRAMES.md), [hardware research](docs/MODEL2C_HARDWARE.md), [strict Model 2C bus](runtime/model2c_bus.hpp), [provenance](docs/PROVENANCE.md) and [roadmap](docs/ROADMAP.md).
