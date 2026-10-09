@@ -9,6 +9,7 @@
 // commercial game data.
 #pragma once
 #include "i960_frame_runtime.hpp"
+#include "sega3155649_serial.hpp"
 
 #include <cstdint>
 #include <iomanip>
@@ -35,7 +36,7 @@ static inline const char* region_name(Region region) {
     case Region::work_ram: return "i960 work RAM";
     case Region::cpu_control: return "CPU wait-state control (timing pending)";
     case Region::game_data_rom: return "game data ROM";
-    case Region::serial_io: return "Sega 315-5649 I/O controller (unimplemented)";
+    case Region::serial_io: return "Sega 315-5649 I/O controller (serial partial)";
     case Region::unmapped: return "unmapped or unimplemented Model 2C device";
     }
     return "unknown";
@@ -102,6 +103,14 @@ public:
             throw std::invalid_argument("Optional game-data region must be exactly 32 MiB");
     }
 
+    // Opt-in *partial* serial register access. Unknown IO and unprovided
+    // serial receive bytes remain hard faults. Defaults to disabled.
+    void enable_partial_serial_io(bool enabled = true) {
+        serial_io_enabled_ = enabled;
+    }
+    IO3155649& serial_device() { return io_; }
+    const IO3155649& serial_device() const { return io_; }
+
     arcaderecomp_generated::Bus callbacks() {
         return arcaderecomp_generated::Bus{
             this, &bridge_read32, &bridge_write32, &bridge_read8,
@@ -126,6 +135,15 @@ public:
     void write(std::uint32_t address, unsigned width, std::uint32_t value) {
         const auto reg = classify(address);
         validate_access(address, width, true, reg);
+        if (reg == Region::serial_io) {
+            try {
+                io_.write_bus_byte(address, static_cast<std::uint8_t>(value));
+            } catch (const IO3155649::Unsupported& error) {
+                throw DeviceAccessFault(address, width, true, reg, error.what());
+            }
+            writes_.push_back({address, value, width, reg});
+            return;
+        }
         if (reg != Region::work_ram && reg != Region::cpu_control)
             throw DeviceAccessFault(address, width, true, reg, "read-only or unimplemented device");
         auto& array = reg == Region::work_ram ? work_ : control_;
@@ -148,6 +166,8 @@ private:
     std::vector<std::uint8_t> game_data_;
     std::vector<BusWrite> writes_;
     std::size_t pending_timing_writes_ = 0;
+    bool serial_io_enabled_ = false;
+    IO3155649 io_{};
 
     static bool inside(std::uint32_t address, std::uint32_t start,
                        std::uint32_t length) {
@@ -190,8 +210,11 @@ private:
         // uncertain misaligned bus behavior rather than returning a guess.
         if (width > 1 && (address % width) != 0)
             throw DeviceAccessFault(address, width, write, reg, "unaligned transfer unsupported");
-        if (reg == Region::serial_io)
-            throw DeviceAccessFault(address, width, write, reg, "device behavior not implemented");
+        if (reg == Region::serial_io) {
+            if (!serial_io_enabled_ || width != 1u)
+                throw DeviceAccessFault(address, width, write, reg,
+                                        "partial serial device disabled or unsupported width");
+        }
         if (reg == Region::unmapped)
             throw DeviceAccessFault(address, width, write, reg, "unmapped access");
         if (region_remaining(address, reg) < width)
@@ -217,6 +240,13 @@ private:
     std::uint32_t read_value(std::uint32_t address, unsigned width) const {
         const auto reg = classify(address);
         validate_access(address, width, false, reg);
+        if (reg == Region::serial_io) {
+            try {
+                return io_.read_bus_byte(address);
+            } catch (const IO3155649::Unsupported& error) {
+                throw DeviceAccessFault(address, width, false, reg, error.what());
+            }
+        }
         const auto* array = readable_bytes(address, reg);
         const auto base = region_offset(address, reg);
         std::uint32_t result = 0;
