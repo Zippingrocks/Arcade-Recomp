@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "evidence_level": "isolated_original_native_host_with_synthetic_inputs",
+  "physical_hardware_verified": false,
+  "upload_cases_per_compiler": 192,
+  "wait_cases_per_compiler": 256,
+  "compilers_tested": ["GCC", "Clang"],
+  "clang_undefined_behavior_sanitizer": true,
+  "metadata_identical_between_compilers": true,
+  "variable_reply_seeds": 16,
+  "delay_pairs_in_status_polls": [[0,0],[1,0],[0,2],[4,7],[7,4],[9,9]],
+  "non_ready_status_bits_varied": true,
+  "uploaded_bytes_per_case": 5120,
+  "all_upload_bytes_match_original": true,
+  "transactions_per_upload_case": 5132,
+  "steps_range": [89199,366327],
+  "wait_return_condition": "(status & 0x0c) == 0x0c",
+  "wait_returned_cases": 64,
+  "wait_bounded_nonreturn_cases": 192,
+  "wait_step_bound": 128,
+  "feedback": [
+    {"output_control_index":5,"rx2_transaction_index":4,"and_mask":254,"or_bits":0},
+    {"output_control_index":7,"rx2_transaction_index":6,"and_mask":255,"or_bits":1}
+  ],
+  "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "upload_sha256": "de6e298436c243dd11bc725592b99cf9e87bde6d305583ef0aec511610ec76c1",
+  "boundary": "Original host behavior under synthetic inputs, not physical receiver replies or timing. Normal game runtime unchanged."
+}
