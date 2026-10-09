@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "reference_repository": "fayaw/spearlegacyLLRF",
+  "reference_commit": "6a0d68153d731518f07e98762f82d25e042838a8",
+  "source_blobs": {
+    "ttf": {
+      "path": "spear-rf-code-legacy/rfApp/ksc_v152/PLDs/bid/testmux.ttf,v",
+      "git_blob_sha1": "b497a84a8288d94771b3439c36e667cd93cd5b51",
+      "sha256": "75309c9320a3b82a68b93e579f8d7ed1afc005ab7f468e858afce3030430a262"
+    },
+    "fit": {
+      "path": "spear-rf-code-legacy/rfApp/ksc_v152/PLDs/bid/testmux.fit,v",
+      "git_blob_sha1": "12bd9dc6ce31fb3c70bbedb1a6ce9322a40cb10e",
+      "sha256": "bb9c0e400b251a9372150caa78c34b5ab2b4778f04e971772e2f57e8cdd15cfc"
+    }
+  },
+  "pinned_blobs_verified": true,
+  "reference_device_from_fit": "EPF8282ALC84-2",
+  "ttf_head_revision": "1.1",
+  "fit_head_revision": "1.1",
+  "reference_profile": {
+    "payload_bytes": 5120,
+    "payload_sha256": "2e76b3b19d861c6197e81aa619f4600595392586bcca7050b4d9c6b9392423c9",
+    "prefix_bytes": 31,
+    "prefix_sha256": "92cf7e86a6e03d51b66ca34fcfae71617c105aa699e12bc4dcfb20ff1b078b2d",
+    "record_bytes": 24,
+    "record_count": 212,
+    "distinct_records": 48,
+    "suffix_bytes": 1,
+    "suffix_sha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+    "lsb_fixed_bits": 1,
+    "lsb_value": 0,
+    "msb_fixed_bits": 6,
+    "msb_value": 63,
+    "middle_bits": 185,
+    "empirical_polynomial": "0x111",
+    "empirical_residue": "0xff",
+    "fixed_bit_failure_indices": [],
+    "relation_failure_indices": [],
+    "matches_preexisting_model": true
+  },
+  "evidence_boundary": "Independent compiler-output format evidence, not FPGA logic recovery or physical wiring proof.",
+  "hotdo_image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "hotdo_profile": {
+    "payload_bytes": 5120,
+    "payload_sha256": "de6e298436c243dd11bc725592b99cf9e87bde6d305583ef0aec511610ec76c1",
+    "prefix_bytes": 31,
+    "prefix_sha256": "92cf7e86a6e03d51b66ca34fcfae71617c105aa699e12bc4dcfb20ff1b078b2d",
+    "record_bytes": 24,
+    "record_count": 212,
+    "distinct_records": 203,
+    "suffix_bytes": 1,
+    "suffix_sha256": "a8100ae6aa1940d0b663bb31cd466142ebbdbd5187131b92d93818987832eb89",
+    "lsb_fixed_bits": 1,
+    "lsb_value": 0,
+    "msb_fixed_bits": 6,
+    "msb_value": 63,
+    "middle_bits": 185,
+    "empirical_polynomial": "0x111",
+    "empirical_residue": "0xff",
+    "fixed_bit_failure_indices": [],
+    "relation_failure_indices": [],
+    "matches_preexisting_model": true
+  },
+  "comparison": {
+    "both_pass_locked_record_model": true,
+    "payloads_identical": false,
+    "prefixes_identical": true,
+    "suffixes_identical": true
+  },
+  "physical_recipient_proven": false,
+  "fpga_logic_recovered": false,
+  "runtime_changed": false,
+  "model2c_complete": false,
+  "reference_audit_workflow_run": 37986507994,
+  "reference_metadata_artifact_sha256": "cb851b112fc801d7c74b7b1fa3b31b2e6819166d3b849c2572590886664cdbe3",
+  "code_revision": "766bdfb081afd9a7c40a978c43863e5c408e379d",
+  "unit_test_run": 37986507945,
+  "unit_tests_passed": 157,
+  "new_tests_in_this_pass": 11
+}
