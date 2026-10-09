@@ -15,7 +15,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def instruction(opcode, register, base=16, disp=0):
-    return (opcode << 24) | (register << 19) | (base << 14) | (4 << 10) | disp
+    # MEMA base+12bit-offset for nonzero displacement; MEMB mode 4 for (base).
+    addressing = ((1 << 13) | disp) if disp else (4 << 10)
+    return (opcode << 24) | (register << 19) | (base << 14) | addressing
 
 
 class WidthTransferTests(unittest.TestCase):
