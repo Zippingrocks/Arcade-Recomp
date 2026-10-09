@@ -40,6 +40,17 @@ INT0=12, INT1=13, INT2=14, INT3=15. **These CPU semantics have synthetic
 native tests, not original-cabinet interrupt/timing verification.**
 [Research and test scope](docs/I960_SYNLD_PIN_ROUTING.md).
 
+### Partial Sega Model 2C IRQ registers
+
+The [new IRQ device](runtime/model2c_irq_registers.hpp) and
+[board-bus integration](runtime/model2c_bus.hpp) are **opt-in**: the
+documented request/acknowledge registers at `0x00E80000`, enable mask at
+`0x00E80004`, and public implementation's two-cycle enable delay are
+testable without making up an interrupt source. All events in CI are
+explicitly injected **synthetic inputs**, not original-cabinet events.
+Unknown writes, byte-lane accesses and devices still halt strictly.
+[Full evidence and limitations](docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md).
+
 ### Non-negotiable goals
 
 - Preserve original arcade timing, gameplay, branching, enemy AI, gun input, video, music, sound, and presentation.
