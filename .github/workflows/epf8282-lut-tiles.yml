@@ -1,0 +1,37 @@
+name: EPF8282 candidate LUT tiles
+on:
+  push:
+    branches: [main, research/epf8282-lut-tiles]
+    paths:
+      - .github/workflows/epf8282-lut-tiles.yml
+      - arcaderecomp/flex8000_lut_tiles.py
+      - arcaderecomp/flex8000_lut_probe.py
+      - arcaderecomp/flex8000_sram.py
+      - tests/test_flex8000_lut_tiles.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate-reference-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test geometry and guards on artificial data
+        run: python -m unittest discover -s tests -p test_flex8000_lut_tiles.py -v
+      - name: Audit candidate against pinned reference and reject mismatched pair
+        run: python -m arcaderecomp.flex8000_lut_tiles --fetch-reference --output build/reference/tile-audit.json
+      - name: Record exact code revision
+        run: git rev-parse HEAD > build/reference/source-commit.txt
+      - name: Publish metadata only, not source designs or configuration data
+        uses: actions/upload-artifact@v4
+        with:
+          name: epf8282-candidate-tile-metadata
+          path: |
+            build/reference/tile-audit.json
+            build/reference/source-commit.txt
+          retention-days: 7
+          if-no-files-found: error
