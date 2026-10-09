@@ -233,7 +233,8 @@ def read_boot_record(image: bytes) -> dict[str, int]:
     return {"sat": sat, "prcb": prcb, "initial_ip": ip}
 
 
-def discover(image: bytes, entry: int, limit: int = 4096) -> dict:
+def discover(image: bytes, entry: int, limit: int = 4096,
+             additional_entries: tuple[int, ...] = ()) -> dict:
     """Conservative graph walk, not proof that every reachable byte is code.
 
     Direct conditional/jump/call edges are explored. Register-indirect
@@ -241,7 +242,10 @@ def discover(image: bytes, entry: int, limit: int = 4096) -> dict:
     """
     if limit < 1 or limit > 1_000_000:
         raise ValueError("Invalid instruction discovery limit")
-    pending = deque([entry])
+    # Processor IAC reinitialization can jump to a new startup IP without
+    # a normal CALL/branch edge. Explicit extra roots are research hints,
+    # never inferred instruction boundaries or fabricated control flow.
+    pending = deque(dict.fromkeys((entry, *additional_entries)))
     instructions: dict[int, Instruction] = {}
     rejected: dict[int, str] = {}
     occupied: dict[int, int] = {}
