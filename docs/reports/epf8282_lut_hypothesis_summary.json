@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "tested_code_commit": "48914b9992e9ba00c0d54ca5e74075f3468ae2cc",
+  "source_commit": "6a0d68153d731518f07e98762f82d25e042838a8",
+  "source_blobs": {
+    "testmux.sof,v": "4bd945df501d848d9fc4fd512945336ec7c24fca",
+    "testmux.rpt,v": "88deb079d565b038b1bc4a71e015fd324dddd3ab"
+  },
+  "device": "EPF8282ALC84-2",
+  "vector_bits": 37524,
+  "lut_bit_spacings": [1,2,4,8,16,26,104,106,177,208,212],
+  "signed_cell_stride_range": [-512,512],
+  "zero_cell_stride_excluded": true,
+  "npn_class_sizes": [192,32,48,8,2],
+  "four_cell_matches_at_every_tested_bit_spacing": 0,
+  "eight_cell_matches_at_every_tested_bit_spacing": 0,
+  "archived_report_association_is_not_controlled_recompilation": true,
+  "all_possible_lut_encodings_tested": false,
+  "physical_bit_meaning_recovered": false,
+  "differential_mapper_tested_with_synthetic_controls": true,
+  "controlled_real_compiler_corpus_used": false,
+  "original_uncompiled_ahdl_probe_count": 23,
+  "baseline_local_test_count": 170,
+  "new_tests": 15,
+  "updated_local_test_count": 185,
+  "strict_original_rom_steps": 1904,
+  "documented_tx_original_rom_steps": 1910,
+  "runtime_hardware_changed": false,
+  "model2c_complete": false
+}

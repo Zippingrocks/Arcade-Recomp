@@ -1,0 +1,36 @@
+name: EPF8282 LUT layout hypothesis audit
+on:
+  push:
+    branches: [main, research/epf8282-lut-hypotheses]
+    paths:
+      - .github/workflows/epf8282-lut-discovery.yml
+      - arcaderecomp/flex8000_lut_probe.py
+      - arcaderecomp/flex8000_sram.py
+      - tests/test_flex8000_lut_probe.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test inference and rejection controls without game data
+        run: python -m unittest discover -s tests -p test_flex8000_lut_probe.py -v
+      - name: Test bounded layout hypotheses on pinned non-Sega inputs
+        run: python -m arcaderecomp.flex8000_lut_probe --fetch-reference --output build/research/lut-hypotheses.json
+      - name: Record exact source revision
+        run: git rev-parse HEAD > build/research/source-commit.txt
+      - name: Keep only counts, hypotheses and source identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: epf8282-lut-hypothesis-metadata
+          path: |
+            build/research/lut-hypotheses.json
+            build/research/source-commit.txt
+          retention-days: 7
+          if-no-files-found: error
