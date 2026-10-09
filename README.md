@@ -21,7 +21,7 @@ Revision A uses `epr-19696a.15` and `epr-19697a.16` instead. **Archive names alo
 
 ### Current stage
 
-**M0 verified; M1 started.** A user-supplied original `hotdo` arcade archive passed all 29 chip hash checks. Our independent Intel i960 decoder now discovers control flow and can emit native C++ for a limited instruction subset. Generated code runs against a deliberately simplified diagnostic memory bus. **This is not a playable game or working Model 2C runtime.** i960 procedure calls, register frames, interrupts, accurate bus devices, MB86235/TGPx4, sound and graphics remain unimplemented or incomplete.
+**M0 verified; M1 in progress.** A user-supplied original `hotdo` arcade archive passed all 29 chip hash checks. Our independent Intel i960 decoder discovers control flow, emits native C++ for a limited instruction subset, and now has synthetic-tested normal CALL/CALLX/RET register-frame handling, including four-frame spills/reloads. Generated code still runs against a deliberately simplified diagnostic bus. **This is not a playable game or completed Model 2C runtime.** Fault/interrupt frames, complete instruction coverage, real hardware devices, MB86235/TGPx4, sound and graphics remain unimplemented or incomplete.
 
 ### Non-negotiable goals
 
@@ -41,7 +41,7 @@ python -m arcaderecomp audit --layout targets/hotd1/original.json --rom /path/to
 python -m arcaderecomp build --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --region maincpu --output build/hotd1
 python -m arcaderecomp inspect --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --count 40
 python -m arcaderecomp translate --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --output build/hotd1/hotd1_i960.cpp --limit 512
-c++ -std=c++17 -O2 -Ibuild/hotd1 tools/hotd1_boot_probe.cpp -o build/hotd1/boot_probe
+c++ -std=c++17 -O2 -Ibuild/hotd1 -Iruntime tools/hotd1_boot_probe.cpp -o build/hotd1/boot_probe
 build/hotd1/boot_probe build/hotd1/maincpu.bin 500
 ```
 
@@ -53,4 +53,6 @@ The parent archive is optional when the supplied archive contains all 29 origina
 - [Arcade Museum original set inventory](https://www.arcade-museum.com/tech-center/machine/hotdo) documents chip IDs and checksums.
 - [Sega arcade history](https://www.sega.jp/history/arcade/) dates the original arcade game's launch to March 1997.
 
-See [original ROM audit](docs/HOTD1_ORIGINAL_AUDIT.md), [first native bootstrap experiment](docs/HOTD1_NATIVE_BOOT.md), [hardware research](docs/MODEL2C_HARDWARE.md), [provenance](docs/PROVENANCE.md) and [roadmap](docs/ROADMAP.md).
+**Completion is not subjective:** see [binding Model 2C definition of done](docs/MODEL2C_DEFINITION_OF_DONE.md). We will explicitly announce verified Gate A (CPU), Gate B (integrated platform), and Gate C (faithful original full-game completion), with the exact “SEGA MODEL 2C RECOMPILATION SUCCESSFULLY COMPLETED!” announcement reserved for Gate C.
+
+Further: [original ROM audit](docs/HOTD1_ORIGINAL_AUDIT.md), [first native bootstrap experiment](docs/HOTD1_NATIVE_BOOT.md), [i960 KB procedure-frame research](docs/I960_FRAMES.md), [hardware research](docs/MODEL2C_HARDWARE.md), [provenance](docs/PROVENANCE.md) and [roadmap](docs/ROADMAP.md).
