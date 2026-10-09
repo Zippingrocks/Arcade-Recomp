@@ -92,25 +92,35 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             symbol = "<<" if op == "shlo" else ">>"
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} ({a} & 31u));"
         if op in ("cmpo", "cmpi"):
-            # Toggling bit 31 provides portable two's-complement signed order.
-            left = f"({b} ^ 0x80000000u)" if op == "cmpi" else b
-            right = f"({a} ^ 0x80000000u)" if op == "cmpi" else a
-            return f"cpu.cc = ({left} < {right}) ? -1 : ({left} > {right}) ? 1 : 0;"
+            # Intel i960 AC.cc[2:0]: L=0b100, E=0b010, G=0b001,
+            # measured as src1 compared with src2, NOT src2 vs src1.
+            # Signed ordering via XOR 0x80000000 works without relying on
+            # implementation-defined uint32-to-int32 conversions.
+            left = f"({a} ^ 0x80000000u)" if op == "cmpi" else a
+            right = f"({b} ^ 0x80000000u)" if op == "cmpi" else b
+            return f"cpu.cc = ({left} < {right}) ? 4 : ({left} > {right}) ? 1 : 2;"
         return None
 
-    if ins.form == "COBR" and op in ("cmpibne", "cmpibe", "cmpobne", "cmpobe"):
-        # The compare-branch's first source is either immediate 0..31 or reg.
-        # This tranche rejects its special-function-register variant.
+    if ins.form == "COBR" and (op.startswith("cmpib") or op.startswith("cmpob")):
+        # For Intel KB compare-and-branch: src1 compared with src2.
+        # A single operand literal is allowed; special-function src2 isn't
+        # currently implemented and must fail closed.
         if word & 1:
             return None
         a = _operand((word >> 19) & 31, bool(word & 0x2000))
         b = f"cpu.r[{(word >> 14) & 31}]"
-        predicate = "!=" if op.endswith("ne") else "=="
-        # i960 compare-and-branch also updates the arithmetic condition code.
-        left = f"({b} ^ 0x80000000u)" if op.startswith("cmpib") else b
-        right = f"({a} ^ 0x80000000u)" if op.startswith("cmpib") else a
-        return (f"cpu.cc = ({left} < {right}) ? -1 : ({left} > {right}) ? 1 : 0; "
-                f"if ({b} {predicate} {a}) {{ cpu.ip = {target}; return true; }}")
+        is_signed = op.startswith("cmpib")
+        left = f"({a} ^ 0x80000000u)" if is_signed else a
+        right = f"({b} ^ 0x80000000u)" if is_signed else b
+        test = op[5:]  # cmpibge -> ge; cmpobne -> ne
+        masks = {"g": 1, "e": 2, "ge": 3, "l": 4,
+                 "ne": 5, "le": 6, "o": 7, "no": 0}
+        if test not in masks:
+            return None
+        mask = masks[test]
+        taken = f"cpu.cc == 0" if mask == 0 else f"(cpu.cc & {mask}) != 0"
+        return (f"cpu.cc = ({left} < {right}) ? 4 : ({left} > {right}) ? 1 : 2; "
+                f"if ({taken}) {{ cpu.ip = {target}; return true; }}")
 
     if ins.form == "CTRL":
         if op == "call":
@@ -119,12 +129,11 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return "return frame_return(cpu, bus);"
         if op == "b":
             return f"cpu.ip = {target}; return true;"
-        condition = {
-            "bl": "cpu.cc < 0", "ble": "cpu.cc <= 0",
-            "bg": "cpu.cc > 0", "bge": "cpu.cc >= 0",
-            "be": "cpu.cc == 0", "bne": "cpu.cc != 0",
-        }.get(op)
-        if condition is not None:
+        masks = {"bg": 1, "be": 2, "bge": 3, "bl": 4,
+                 "bne": 5, "ble": 6, "bo": 7, "bno": 0}
+        if op in masks:
+            mask = masks[op]
+            condition = "cpu.cc == 0" if mask == 0 else f"(cpu.cc & {mask}) != 0"
             return f"if ({condition}) {{ cpu.ip = {target}; return true; }}"
         return None
 
