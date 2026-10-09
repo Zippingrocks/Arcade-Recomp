@@ -81,6 +81,10 @@ struct Bus {
     void (*write8)(void*, std::uint32_t, std::uint8_t) = nullptr;
     std::uint16_t (*read16)(void*, std::uint32_t) = nullptr;
     void (*write16)(void*, std::uint32_t, std::uint16_t) = nullptr;
+    // Explicitly completed 32-bit synchronous read. False denotes hardware
+    // Bad Access without raising an i960 CPU exception or mutating dst.
+    // Async read32 MUST NOT silently stand in for a peripheral transaction.
+    bool (*read32_sync)(void*, std::uint32_t, std::uint32_t*) = nullptr;
 };
 
 static inline bool stop(CPU& cpu, StopCode code = StopCode::untranslated) {

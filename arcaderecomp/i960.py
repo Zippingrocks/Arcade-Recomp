@@ -70,6 +70,7 @@ REGISTER = {
     0x5d8: ("eshro", "sss"), 0x5dc: ("movl", "sd"),
     0x5ec: ("movt", "sd"), 0x5fc: ("movq", "sd"),
     0x600: ("synmov", "ss"), 0x601: ("synmovl", "ss"),
+    0x615: ("synld", "sd"),
     0x602: ("synmovq", "ss"), 0x603: ("cmpstr", "sss"),
     0x604: ("movqstr", "sss"), 0x605: ("movstr", "sss"),
 }

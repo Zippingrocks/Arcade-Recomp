@@ -114,7 +114,8 @@ public:
     arcaderecomp_generated::Bus callbacks() {
         return arcaderecomp_generated::Bus{
             this, &bridge_read32, &bridge_write32, &bridge_read8,
-            &bridge_write8, &bridge_read16, &bridge_write16
+            &bridge_write8, &bridge_read16, &bridge_write16,
+            &bridge_read32_sync
         };
     }
 
@@ -255,6 +256,24 @@ private:
         return result;
     }
 
+    // Explicitly completed plain ROM/RAM reads only. No wait-state register,
+    // serial I/O or unknown device is treated as synchronous ordinary memory.
+    // This is a functional memory model, NOT exact bus-cycle timing.
+    static bool bridge_read32_sync(void* context, std::uint32_t address,
+                                   std::uint32_t* destination) {
+        if (!destination) return false;
+        auto* board = static_cast<StrictBus*>(context);
+        const Region reg = board->classify(address);
+        if (reg != Region::program_rom && reg != Region::work_ram &&
+            reg != Region::game_data_rom) return false;
+        try {
+            const std::uint32_t value = board->read_value(address, 4u);
+            *destination = value;
+            return true;
+        } catch (const DeviceAccessFault&) {
+            return false;
+        }
+    }
     static std::uint32_t bridge_read32(void* p, std::uint32_t a) {
         return static_cast<StrictBus*>(p)->read_value(a, 4);
     }

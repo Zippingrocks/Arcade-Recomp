@@ -103,6 +103,16 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     f"bus.write{suffix}(bus.ctx, {address}, "
                     f"static_cast<std::uint{suffix}_t>(cpu.r[{dest}]));")
 
+    if ins.form == "REG" and op == "synld":
+        # Intel KB: synchronous load from [src1 register] into dst register.
+        # Do not accept literal or special register encodings for this form.
+        if word & (0x20 | 0x40 | 0x800 | 0x1000 | 0x2000):
+            return None
+        src = word & 31
+        dst = (word >> 19) & 31
+        return (f"if (!sync_load_word(cpu, bus, cpu.r[{src}], "
+                f"{dst}u)) return false;")
+
     if ins.form == "REG" and op == "synmov":
         # Intel KB: src1 register contains destination byte address;
         # src2 register contains source byte address. The sync helper

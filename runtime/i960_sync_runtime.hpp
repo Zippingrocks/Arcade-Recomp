@@ -44,6 +44,32 @@ static inline bool sync_move_word(CPU& cpu, const Bus& bus,
 }
 
 
+// Intel 80960KB manual, p. 11-124: SYNLD src,dst reads one word from
+// [src-register] into dst-register. Internal ICR is always readable.
+// For other addresses, a separate completion callback is mandatory.
+// A Bad Access sets AC.cc=000 without a CPU fault; dst stays unchanged.
+static inline bool sync_load_word(CPU& cpu, const Bus& bus,
+                                  std::uint32_t src_address,
+                                  unsigned dst_register) {
+    if (dst_register >= 32u)
+        return stop(cpu, StopCode::untranslated);
+    const std::uint32_t address = src_address & ~3u;
+    if (address == I960_LOCAL_ICR) {
+        cpu.r[dst_register] = cpu.interrupt_control_register;
+        cpu.cc = 2;
+        cpu.cc_defined = true;
+        return true;
+    }
+    if (!bus.read32_sync)
+        return stop(cpu, StopCode::synchronous_device_unimplemented);
+    std::uint32_t result = 0;
+    const bool success = bus.read32_sync(bus.ctx, address, &result);
+    if (success) cpu.r[dst_register] = result;
+    cpu.cc = success ? 2 : 0;
+    cpu.cc_defined = true;
+    return true;
+}
+
 static inline bool sync_move_quad(CPU& cpu, const Bus& bus,
                                   std::uint32_t destination,
                                   std::uint32_t source) {
