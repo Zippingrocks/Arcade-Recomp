@@ -30,7 +30,7 @@ class NativeSerialReadyPollTests(unittest.TestCase):
         #  0x18: be +8   (exit at 0x20)
         #  0x1c: b -16  (poll 0x0c)
         #  0x20: ret (not executed in this test)
-        mov = (0x5c << 24) | (17 << 19) | (1 << 11) | 12
+        mov = (0x5c << 24) | (17 << 19) | (0xc << 7) | (1 << 11) | 12
         ldob = (0x80 << 24) | (18 << 19) | (16 << 14) | (1 << 13) | 0x1a
         and_op = (0x58 << 24) | (18 << 19) | (18 << 14) | (1 << 7) | 17
         cmpi = (0x5a << 24) | (18 << 14) | (1 << 7) | 17
