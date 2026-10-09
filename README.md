@@ -37,11 +37,11 @@ Requirements: Python 3.10+ (standard library only). User supplies their own arca
 
 ```bash
 python -m unittest discover -s tests -v
-python -m arcaderecomp audit --layout targets/hotd1/original.json --rom /path/to/hotdo.zip --parent /path/to/hotd.zip
-python -m arcaderecomp build --layout targets/hotd1/original.json --rom /path/to/hotdo.zip --parent /path/to/hotd.zip --output build/original
+python -m arcaderecomp audit --layout targets/hotd1/original.json --rom /path/to/hotdo.7z
+python -m arcaderecomp build --layout targets/hotd1/original.json --rom /path/to/hotdo.7z --output build/original
 ```
 
-The parent archive is optional when all required original ROM files are present in one non-merged archive. The initial tool supports standard ZIP files, including ZIPs containing MAME set subfolders. A `.7z` archive can be extracted locally into the documented ZIP/chip layout before auditing; native 7z support is a later task. Audit is an identification tool, not proof of circuit-level emulation.
+The parent archive is optional when the supplied archive contains all 29 original ROM chips. ZIP files are supported through the Python standard library. Direct 7z support uses the **system libarchive shared library** (available in many Linux distributions; other systems may require a separate install). If libarchive is unavailable, extract the 7z locally and repack as ZIP for auditing. Audit is an identity check, not an arcade emulator.
 
 ### Evidence
 
@@ -49,4 +49,4 @@ The parent archive is optional when all required original ROM files are present 
 - [Arcade Museum original set inventory](https://www.arcade-museum.com/tech-center/machine/hotdo) documents chip IDs and checksums.
 - [Sega arcade history](https://www.sega.jp/history/arcade/) dates the original arcade game's launch to March 1997.
 
-See `docs/PROVENANCE.md` and `docs/ROADMAP.md`.
+See `docs/PROVENANCE.md`, `docs/HOTD1_ORIGINAL_AUDIT.md`, and `docs/ROADMAP.md`.
