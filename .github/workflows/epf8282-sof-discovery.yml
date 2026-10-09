@@ -1,0 +1,37 @@
+name: EPF8282 SOF data mapping audit
+on:
+  push:
+    branches: [main, research/epf8282-sof-mapping]
+    paths:
+      - .github/workflows/epf8282-sof-discovery.yml
+      - arcaderecomp/flex8000_sram.py
+      - arcaderecomp/flex8000_compare.py
+      - arcaderecomp/upload_framing.py
+      - tests/test_flex8000_sram.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference-mapping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test bit mapping and parsers on synthetic data
+        run: python -m unittest discover -s tests -p test_flex8000_sram.py -v
+      - name: Verify four hash-pinned non-Sega compiler artifacts
+        run: python -m arcaderecomp.flex8000_sram --fetch-pinned --output build/reference/sof-data-mapping.json
+      - name: Record exact source revision
+        run: git rev-parse HEAD > build/reference/source-commit.txt
+      - name: Publish only hashes and mapping metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: epf8282-sof-data-metadata
+          path: |
+            build/reference/sof-data-mapping.json
+            build/reference/source-commit.txt
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "evidence_level": "empirical_SOF_serial_data_mapping",
+  "physical_receiver_verified": false,
+  "logic_netlist_recovered": false,
+  "runtime_changed": false,
+  "model2c_complete": false,
+  "reference_pairs": [
+    {
+      "name": "testmux",
+      "source_commit": "6a0d68153d731518f07e98762f82d25e042838a8",
+      "source_blobs": {
+        "sof": {
+          "path": "spear-rf-code-legacy/rfApp/ksc_v152/PLDs/bid/testmux.sof,v",
+          "sha1": "4bd945df501d848d9fc4fd512945336ec7c24fca"
+        },
+        "ttf": {
+          "path": "spear-rf-code-legacy/rfApp/ksc_v152/PLDs/bid/testmux.ttf,v",
+          "sha1": "b497a84a8288d94771b3439c36e667cd93cd5b51"
+        }
+      },
+      "sof_revision": "1.1",
+      "ttf_revision": "1.1",
+      "sof_sha256": "1eac586ff4ce17a1ee602441ea5fe9d443583d7c83bb31df60b89b21caf416dd",
+      "sof_bytes": 4820,
+      "device_from_sof": "EPF8282ALC84-2",
+      "packet_sizes": {
+        "1": 41,
+        "2": 15,
+        "3": 1,
+        "5": 2,
+        "18": 2,
+        "17": 4703,
+        "8": 2
+      },
+      "container_checksum_verified": false,
+      "exact_sof_ttf_data_match": true,
+      "serial_bytes": 5120,
+      "records": 212,
+      "data_bits_per_record": 177,
+      "check_bits_per_record": 8,
+      "fixed_bits_per_record": 7,
+      "total_data_bits": 37524,
+      "packed_data_bytes": 4691,
+      "packed_data_sha256": "a795d14efc43ac3f6a2f42a24b8c2e357f513d0f3ac74fbc79145f1ce0e40226",
+      "serial_sha256": "2e76b3b19d861c6197e81aa619f4600595392586bcca7050b4d9c6b9392423c9",
+      "exact_roundtrip": true,
+      "envelope_interpreted": false,
+      "logic_netlist_recovered": false
+    },
+    {
+      "name": "buff_with_clk",
+      "source_commit": "6a0d68153d731518f07e98762f82d25e042838a8",
+      "source_blobs": {
+        "sof": {
+          "path": "spear-rf-code-legacy/rfApp/ksc_v152/PLDs/bid/buff_with_clk.sof,v",
+          "sha1": "224eeb4b8023f9fc0a16166f9e72d224ba32b57b"
+        },
+        "ttf": {
+          "path": "spear-rf-code-legacy/rfApp/ksc_v152/PLDs/bid/buff_with_clk.ttf,v",
+          "sha1": "8230b4adf18606b955862280a4d6d50b4ef7a06e"
+        }
+      },
+      "sof_revision": "1.1",
+      "ttf_revision": "1.1",
+      "sof_sha256": "6a237e23ad95096705761f913eec8f465537953b8f4648f0545ecbb60b80973f",
+      "sof_bytes": 4820,
+      "device_from_sof": "EPF8282ALC84-2",
+      "packet_sizes": {
+        "1": 41,
+        "2": 15,
+        "3": 1,
+        "5": 2,
+        "18": 2,
+        "17": 4703,
+        "8": 2
+      },
+      "container_checksum_verified": false,
+      "exact_sof_ttf_data_match": true,
+      "serial_bytes": 5120,
+      "records": 212,
+      "data_bits_per_record": 177,
+      "check_bits_per_record": 8,
+      "fixed_bits_per_record": 7,
+      "total_data_bits": 37524,
+      "packed_data_bytes": 4691,
+      "packed_data_sha256": "49bf883eb8da0ebc30670b0ef548289e17502221486c59ca326d59b378f0265f",
+      "serial_sha256": "28048e93139b439dc1f9e954a9f92529632bd1b9a88ed864ec0327a95692e0b9",
+      "exact_roundtrip": true,
+      "envelope_interpreted": false,
+      "logic_netlist_recovered": false
+    }
+  ],
+  "hotdo": {
+    "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+    "serial_bytes": 5120,
+    "records": 212,
+    "data_bits_per_record": 177,
+    "check_bits_per_record": 8,
+    "fixed_bits_per_record": 7,
+    "total_data_bits": 37524,
+    "packed_data_bytes": 4691,
+    "packed_data_sha256": "5144cf9b156a27a41e53e17a31aa6efb098fcce448fbf9eed1de9a1bc6733f09",
+    "serial_sha256": "de6e298436c243dd11bc725592b99cf9e87bde6d305583ef0aec511610ec76c1",
+    "exact_roundtrip": true,
+    "envelope_interpreted": false,
+    "logic_netlist_recovered": false,
+    "scope": "Same measured codec applied to authenticated upload; no original Sega SOF exists in this input."
+  },
+  "validation": {
+    "code_commit": "dbe5fbccf4b5f22ca4c7922c534658a27effb278",
+    "reference_ci_run": 37988888063,
+    "reference_artifact_sha256": "7dce1d1e05d15032a6c875b5295043b651bcf56cf68a2d1737cb86cc63762470",
+    "local_tests": 170,
+    "local_test_exit": 0,
+    "original_chip_audit": {
+      "matched": 29,
+      "total": 29
+    },
+    "strict_default_steps": 1904,
+    "strict_tx_steps": 1910,
+    "strict_default_exit": 3,
+    "strict_tx_exit": 3,
+    "full_suite_ci_run": 37988888019,
+    "full_suite_ci_tests": 170,
+    "full_suite_ci_seconds": 51.718,
+    "local_test_seconds": 42.231
+  }
+}
