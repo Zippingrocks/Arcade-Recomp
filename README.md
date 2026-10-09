@@ -21,7 +21,7 @@ Revision A uses `epr-19696a.15` and `epr-19697a.16` instead. **Archive names alo
 
 ### Current stage
 
-**M0 authenticated; M1 underway; Model 2C NOT COMPLETE.** The user-supplied original `hotdo` ROM set passed all 29 chip fingerprints. The independent Intel i960 decoder and C++ emitter now translate **129 of 130 reachable unique instruction addresses in the verified original game's early startup control-flow graph** (not 129 of the game's entire codebase). The **actual original ROM** executed **1,910 native translated instructions**, including correct channel-2 `0xff` and channel-1 `0x01` serial transmissions, then our strict bus intentionally stopped on the unknown 315-5649 serial status at `0x01c0001a`. The remaining uncovered early instruction is `synmovq`. CALL/CALLX/RET register frames, four-frame spill/reload, width-specific I/O and conditional branches have synthetic compiled tests. **No authentic gameplay boot has occurred.** Timers, real I/O responses, accurate CPU-control timing, fault/interrupt frames, MB86235/TGPx4, sound and graphics remain incomplete. See the [measured original-ROM native trace](docs/HOTD1_ORIGINAL_NATIVE_TRACE.md).
+**M0 authenticated; M1 underway; Model 2C NOT COMPLETE.** The user-supplied original `hotdo` ROM set passed all 29 chip fingerprints. The independent Intel i960 decoder and C++ emitter now produce native code at **130 of 130 reachable unique instruction addresses in the verified original game's early startup control-flow graph** (**not** a full-game coverage figure). The previously unsupported `SYNMOVQ` now safely reads and captures Intel's four-word internal-IAC message, but deliberately **halts before performing the still-unimplemented processor reinitialization**. The **actual original ROM** executed **1,910 native translated instructions**, including correct channel-2 `0xff` and channel-1 `0x01` serial transmissions, then our strict bus intentionally stopped on the unknown 315-5649 serial status at `0x01c0001a`. The remaining processor-IAC transition is reinitialization message `0x93`, which specifies new PRCB `0x00510E00` and next IP `0x000006B0`. It has been verified in an isolated original-ROM native instruction test, **not** through authentic serial hardware. CALL/CALLX/RET register frames, four-frame spill/reload, width-specific I/O and conditional branches have synthetic compiled tests. **No authentic gameplay boot has occurred.** Timers, real I/O responses, accurate CPU-control timing, fault/interrupt frames, MB86235/TGPx4, sound and graphics remain incomplete. See the [measured original-ROM native trace](docs/HOTD1_ORIGINAL_NATIVE_TRACE.md).
 
 ### Non-negotiable goals
 
@@ -50,6 +50,11 @@ c++ -std=c++17 -O2 -Iruntime -Ibuild/hotd1 \
 build/hotd1/strict_probe build/hotd1/maincpu.bin 10000
 # Allow only independently documented Sega serial TRANSMITS; status stays strict.
 build/hotd1/strict_probe build/hotd1/maincpu.bin 10000 --serial-tx
+
+# Separately test ONE original IAC instruction with known register inputs.
+# This is NOT an actual full serial handshake or processor reboot.
+c++ -std=c++17 -O2 -Iruntime -Ibuild/hotd1 tools/hotd1_iac_probe.cpp -o build/hotd1/iac_probe
+build/hotd1/iac_probe build/hotd1/maincpu.bin
 ```
 
 The parent archive is optional when the supplied archive contains all 29 original ROM chips. ZIP files are supported through the Python standard library. Direct 7z support uses the **system libarchive shared library** (available in many Linux distributions; other systems may require a separate install). If libarchive is unavailable, extract the 7z locally and repack as ZIP for auditing. Audit is an identity check, not an arcade emulator. **The strict native probe deliberately exits with code 3 when it reaches unimplemented hardware.** Code 4 denotes an unsupported translated CPU operation. Neither is evidence of arcade boot.
@@ -62,4 +67,4 @@ The parent archive is optional when the supplied archive contains all 29 origina
 
 **Completion is not subjective:** see [binding Model 2C definition of done](docs/MODEL2C_DEFINITION_OF_DONE.md). We will explicitly announce verified Gate A (CPU), Gate B (integrated platform), and Gate C (faithful original full-game completion), with the exact “SEGA MODEL 2C RECOMPILATION SUCCESSFULLY COMPLETED!” announcement reserved for Gate C.
 
-Further: [verified original-ROM 1,910-step native execution](docs/HOTD1_ORIGINAL_NATIVE_TRACE.md), [Sega serial I/O](docs/SEGA_IO3155649.md), [original ROM audit](docs/HOTD1_ORIGINAL_AUDIT.md), [first native bootstrap experiment](docs/HOTD1_NATIVE_BOOT.md), [i960 KB procedure-frame research](docs/I960_FRAMES.md), [hardware research](docs/MODEL2C_HARDWARE.md), [strict Model 2C bus](runtime/model2c_bus.hpp), [provenance](docs/PROVENANCE.md) and [roadmap](docs/ROADMAP.md).
+Further: [Intel 80960KB SYNMOVQ / original reinit IAC](docs/HOTD1_SYN_MOV_IAC.md), [verified original-ROM 1,910-step native execution](docs/HOTD1_ORIGINAL_NATIVE_TRACE.md), [Sega serial I/O](docs/SEGA_IO3155649.md), [original ROM audit](docs/HOTD1_ORIGINAL_AUDIT.md), [first native bootstrap experiment](docs/HOTD1_NATIVE_BOOT.md), [i960 KB procedure-frame research](docs/I960_FRAMES.md), [hardware research](docs/MODEL2C_HARDWARE.md), [strict Model 2C bus](runtime/model2c_bus.hpp), [provenance](docs/PROVENANCE.md) and [roadmap](docs/ROADMAP.md).
