@@ -27,6 +27,19 @@ Revision A uses `epr-19696a.15` and `epr-19697a.16` instead. **Archive names alo
 
 The original program's `SYNMOV` at `0x000006D4` now executes as compiled native code in a **separate original-ROM instruction test**, updating the Intel 80960KB interrupt-control register from its documented reset value `0xFF000000` to HOTD1's original `0x0F0E0D0C`, and advancing to `0x000006D8`. The test is reproducible through `tools/hotd1_icr_probe.cpp`. The preceding board-level write at `0x00F80000` remains unknown and **is not bypassed in the faithful runtime**. This original-ROM result is intentionally isolated, not proof of seamless arcade startup. See [the independent ICR research and tests](docs/HOTD1_INTEL_ICR_STAGE2.md).
 
+### Latest Intel KB instruction research
+
+Ahead-of-time `SYNLD` now reads the internal Intel 80960KB ICR at
+`0xFF000004` or uses an **explicit synchronous-read** completion callback
+for ordinary memory. An unimplemented/bad device access sets the documented
+`AC.cc=000` rather than inventing a value. Without a synchronous-capable
+bus, the CPU stops rather than silently using asynchronous I/O. The
+new [ICR pin decoder](runtime/i960_interrupt_pins.hpp) documents and
+tests the real original HOTD1 vector value `0x0F0E0D0C` as
+INT0=12, INT1=13, INT2=14, INT3=15. **These CPU semantics have synthetic
+native tests, not original-cabinet interrupt/timing verification.**
+[Research and test scope](docs/I960_SYNLD_PIN_ROUTING.md).
+
 ### Non-negotiable goals
 
 - Preserve original arcade timing, gameplay, branching, enemy AI, gun input, video, music, sound, and presentation.
