@@ -41,8 +41,19 @@ def verify(archive_paths, regions):
     candidates = {name: [] for name in expected}
     for path in archive_paths:
         path = Path(path)
+        if path.suffix.lower() == ".7z":
+            from .archive7z import read_7z_members
+            for name, (member, content) in read_7z_members(path, set(expected)).items():
+                item = expected[name]
+                if (len(content) == number(item["size"])
+                        and f"{zlib.crc32(content) & 0xffffffff:08x}" == item["crc32"].lower()
+                        and hashlib.sha1(content).hexdigest() == item["sha1"].lower()):
+                    matches[name] = content
+                else:
+                    candidates[name].append(f"{path.name}:{member}")
+            continue
         if path.suffix.lower() != ".zip":
-            raise RomError("Only ZIP archives are supported; unpack 7z locally")
+            raise RomError("Unsupported archive extension (expected .zip or .7z)")
         with zipfile.ZipFile(path) as archive:
             for entry in archive.infolist():
                 if entry.is_dir():
