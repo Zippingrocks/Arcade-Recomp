@@ -103,6 +103,9 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         a = _operand(word & 31, bool(word & 0x800))
         b = _operand((word >> 14) & 31, bool(word & 0x1000))
         dst = (word >> 19) & 31
+        if op in ("and", "or", "xor"):
+            symbol = {"and": "&", "or": "|", "xor": "^"}[op]
+            return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} {a});"
         if op in ("addo", "subo"):
             symbol = "+" if op == "addo" else "-"
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} {a});"
