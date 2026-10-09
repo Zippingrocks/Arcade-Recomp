@@ -85,11 +85,10 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             symbol = "<<" if op == "shlo" else ">>"
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} ({a} & 31u));"
         if op in ("cmpo", "cmpi"):
-            typ = "std::int32_t" if op == "cmpi" else "std::uint32_t"
-            return (
-                f"cpu.cc = ((static_cast<{typ}>({b}) < static_cast<{typ}>({a})) "
-                f"? -1 : (static_cast<{typ}>({b}) > static_cast<{typ}>({a})) ? 1 : 0);"
-            )
+            # Toggling bit 31 provides portable two's-complement signed order.
+            left = f"({b} ^ 0x80000000u)" if op == "cmpi" else b
+            right = f"({a} ^ 0x80000000u)" if op == "cmpi" else a
+            return f"cpu.cc = ({left} < {right}) ? -1 : ({left} > {right}) ? 1 : 0;"
         return None
 
     if ins.form == "COBR" and op in ("cmpibne", "cmpibe", "cmpobne", "cmpobe"):
@@ -100,7 +99,11 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         a = _operand((word >> 19) & 31, bool(word & 0x2000))
         b = f"cpu.r[{(word >> 14) & 31}]"
         predicate = "!=" if op.endswith("ne") else "=="
-        return f"if ({b} {predicate} {a}) {{ cpu.ip = {target}; return true; }}"
+        # i960 compare-and-branch also updates the arithmetic condition code.
+        left = f"({b} ^ 0x80000000u)" if op.startswith("cmpib") else b
+        right = f"({a} ^ 0x80000000u)" if op.startswith("cmpib") else a
+        return (f"cpu.cc = ({left} < {right}) ? -1 : ({left} > {right}) ? 1 : 0; "
+                f"if ({b} {predicate} {a}) {{ cpu.ip = {target}; return true; }}")
 
     if ins.form == "CTRL":
         if op == "b":
