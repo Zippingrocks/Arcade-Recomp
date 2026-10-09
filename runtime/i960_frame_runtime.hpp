@@ -28,7 +28,10 @@ enum class StopCode : std::uint32_t {
     stack_address_wrap = 10,
     iac_reinitialize_pending = 11,
     unsupported_iac_message = 12,
-    synchronous_device_unimplemented = 13
+    synchronous_device_unimplemented = 13,
+    iac_bad_message = 14,
+    iac_invalid_prcb = 15,
+    undefined_condition_code = 16
 };
 
 struct CPU {
@@ -49,6 +52,19 @@ struct CPU {
     std::uint32_t frame_reloads = 0;
     std::uint32_t pending_iac[4]{};
     bool pending_iac_valid = false;
+    // Reinitialize is explicitly opt-in until complete CPU/I/O hardware
+    // validation. Strict original-ROM runs retain their existing stop.
+    bool allow_iac_93_reinitialize = false;
+    std::uint32_t sat_address = 0;
+    std::uint32_t prcb_address = 0;
+    std::uint32_t interrupt_table_address = 0;
+    std::uint32_t interrupt_stack_address = 0;
+    std::uint32_t fault_table_address = 0;
+    std::uint32_t process_controls = 0;
+    std::uint32_t trace_controls = 0;
+    bool cc_defined = true;  // Set false by i960KB reinitialization.
+    bool prcb_loaded = false;
+    std::uint32_t reinitialize_count = 0;
 };
 
 struct Bus {
