@@ -38,3 +38,51 @@ The native probe supplies stand-in bus callbacks. A short original boot experime
 4. Introduce a trace comparator so native output can be evaluated against verified cabinet/emulator reference observations without publishing commercial bytes.
 
 The mission remains **a standalone, faithful, ahead-of-time recompiled arcade game**, not an emulator shell.
+
+
+## Current follow-up: native calls and strict bus
+
+Since the historical 107-step experiment above:
+
+- Our independently authored Intel 80960KB frame helper now compiles and
+  exercises nested local `CALL`, `CALLX` and `RET`, including four-frame
+  spill/reload behavior, against **synthetic** instruction streams.
+- i960 arithmetic comparisons were corrected to use the documented
+  three-bit `AC.cc` masks and proper `src1` versus `src2` order. Synthetic
+  compiled tests cover every CTRL branch-mask outcome.
+- Native `ldob`, `ldib`, `ldos`, `ldis`, `stob`, and `stos` now
+  use width-specific memory-bus callbacks. Signed loads are sign extended.
+- A new strict Model 2C host bus maps documented CPU ROM, working RAM,
+  CPU control and optional game data, while rejecting unimplemented I/O,
+  geometry, interrupt and timer hardware. No unknown peripheral reads return
+  fabricated zeroes.
+- A new **strict native diagnostic harness** replaces the fake shadow
+  memory with that strict bus when requested, so unimplemented hardware is
+  detected instead of silently bypassed.
+
+The original ROM's `CALL` at `0x0000068C` targets `0x000A3750`.
+Independent static analysis of the verified chip bytes confirms that early
+in this callee, a `STOB` addresses `0x01C00014` — inside the Sega
+315-5649 I/O controller window. Synthetic tests show our strict bus rejects
+that address with a typed device fault.
+
+**Crucial distinction:** the corrected and extended native recompiler
+has NOT yet been conclusively retested end-to-end against the original
+game archive. Thus we do NOT claim it has executed that specific original
+IO write, nor that we have reached authentic arcade boot.
+
+To run the updated strict experiment locally, after generating the
+private ROM and translated C++ files using the commands below:
+
+```bash
+c++ -std=c++17 -O2 -Iruntime -Ibuild/hotd1 \
+  tools/hotd1_strict_boot_probe.cpp -o build/hotd1/strict_probe
+build/hotd1/strict_probe build/hotd1/maincpu.bin 10000
+```
+
+The strict probe intentionally returns exit code **3** on an
+unimplemented device and **4** on a missing i960 translation or unsupported
+frame state. These are **expected, informative halts**, not passed boot tests.
+
+Evidence and next steps: `docs/MODEL2C_HARDWARE.md`,
+`docs/I960_FRAMES.md`, and `docs/MODEL2C_DEFINITION_OF_DONE.md`.
