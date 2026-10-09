@@ -1,12 +1,18 @@
-name: EPF8282 SOF mapping discovery
+name: EPF8282 SOF data mapping audit
 on:
   push:
-    branches: [research/epf8282-sof-mapping]
-    paths: [.github/workflows/epf8282-sof-discovery.yml]
+    branches: [main, research/epf8282-sof-mapping]
+    paths:
+      - .github/workflows/epf8282-sof-discovery.yml
+      - arcaderecomp/flex8000_sram.py
+      - arcaderecomp/flex8000_compare.py
+      - arcaderecomp/upload_framing.py
+      - tests/test_flex8000_sram.py
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  inspect:
+  reference-mapping:
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
@@ -14,61 +20,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Inspect only pinned non-Sega compiler artifacts
-        run: |
-          python - <<'PY'
-          import json,re,struct,hashlib,urllib.request
-          from pathlib import Path
-          from arcaderecomp.flex8000_compare import fetch_reference,rcs_head_text,parse_ttf,git_blob_sha1,COMMIT,REPOSITORY,DIRECTORY
-          ttf,fit=fetch_reference()
-          stream=parse_ttf(rcs_head_text(ttf)[1])
-          url=f'https://raw.githubusercontent.com/{REPOSITORY}/{COMMIT}/{DIRECTORY}testmux.sof,v'
-          with urllib.request.urlopen(url,timeout=20) as f: archive=f.read(2000001)
-          assert git_blob_sha1(archive)=='4bd945df501d848d9fc4fd512945336ec7c24fca'
-          text=archive.decode('latin1')
-          head=re.match(r'head\s+(\S+);',text)[1]
-          m=re.search(r'(?m)^'+re.escape(head)+r'\nlog\n',text)
-          def quoted(p):
-              while text[p].isspace(): p+=1
-              assert text[p]=='@';p+=1;out=[]
-              while p<len(text):
-                  if text[p]!='@':out.append(text[p]);p+=1
-                  elif text[p:p+2]=='@@':out.append('@');p+=2
-                  else:return ''.join(out),p+1
-              raise ValueError('unterminated')
-          _,p=quoted(m.end());k=re.match(r'\s*text\s*',text[p:]);sof,_=quoted(p+k.end());sof=sof.encode('latin1')
-          assert sof[:4]==b'SOF\0'
-          version,count=struct.unpack_from('<II',sof,4);p=12;packets={};meta=[]
-          for _ in range(count):
-              tag,size=struct.unpack_from('<HI',sof,p);p+=6
-              assert p+size<=len(sof) and tag not in packets
-              value=sof[p:p+size];packets[tag]=value
-              item={'tag':tag,'size':size,'offset':p,'sha256':hashlib.sha256(value).hexdigest()}
-              if tag in (1,2):item['text']=value.rstrip(b'\0').decode('ascii')
-              if tag==17:item['first_16_byte_values']=list(value[:16])
-              meta.append(item);p+=size
-          assert p==len(sof)
-          bits=lambda b: ''.join(f'{v:08b}'[::-1] for v in b)
-          records=[bits(stream[31+24*i:55+24*i]) for i in range(212)]
-          raw=bits(packets[17]); matches=[];best=[]
-          for lo in range(1,10):
-              chunks=[r[lo:lo+177] for r in records]
-              for order in ('forward','reverse'):
-                  c=chunks if order=='forward' else chunks[::-1]
-                  for rev in (False,True):
-                      candidate=''.join(x[::-1] if rev else x for x in c)
-                      pos=raw.find(candidate)
-                      if pos>=0:matches.append({'low':lo,'order':order,'reverse_bits_in_record':rev,'packet_bit_offset':pos})
-                      # Record-by-record exact full 177-bit matches, not partial overlaps.
-                      positions=[raw.find(x[::-1] if rev else x) for x in c]
-                      best.append({'low':lo,'order':order,'reverse_bits_in_record':rev,'records_found':sum(x>=0 for x in positions)})
-          result={'reference_commit':COMMIT,'sof_blob_sha1':git_blob_sha1(archive),'sof_size':len(sof),'version':version,'packets':meta,'matches':matches,'best':sorted(best,key=lambda r:r['records_found'],reverse=True)[:12], 'device_model_implemented':False}
-          Path('build/reference').mkdir(parents=True,exist_ok=True)
-          Path('build/reference/sof-discovery.json').write_text(json.dumps(result,indent=2)+'\n')
-          print(json.dumps(result,indent=2))
-          PY
-      - uses: actions/upload-artifact@v4
+      - name: Test bit mapping and parsers on synthetic data
+        run: python -m unittest discover -s tests -p test_flex8000_sram.py -v
+      - name: Verify four hash-pinned non-Sega compiler artifacts
+        run: python -m arcaderecomp.flex8000_sram --fetch-pinned --output build/reference/sof-data-mapping.json
+      - name: Record exact source revision
+        run: git rev-parse HEAD > build/reference/source-commit.txt
+      - name: Publish only hashes and mapping metadata
+        uses: actions/upload-artifact@v4
         with:
-          name: epf8282-sof-discovery-metadata
-          path: build/reference/sof-discovery.json
-          retention-days: 3
+          name: epf8282-sof-data-metadata
+          path: |
+            build/reference/sof-data-mapping.json
+            build/reference/source-commit.txt
+          if-no-files-found: error
+          retention-days: 7
