@@ -74,6 +74,16 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                 f"cpu.r[{dst}] = 0x{ins.next_pc:08x}u; "
                 "cpu.ip = branch_target & ~3u; return true;")
 
+    if ins.form in ("MEMA", "MEMB") and op in ("ldl", "ldt", "ldq", "stl", "stt", "stq"):
+        count = {"l": 2, "t": 3, "q": 4}[op[-1]]
+        first = (word >> 19) & 31
+        # Undefined register group encodings remain explicit unsupported sites.
+        if first % (2 if count == 2 else 4) or (first % 16) + count > 16:
+            return None
+        helper = "load_group" if op.startswith("ld") else "store_group"
+        return (f"if (!{helper}<{count}>(cpu, bus, {_addr(ins, word, image)}, "
+                f"{first}u)) return false;")
+
     if ins.form in ("MEMA", "MEMB") and op in (
         "lda", "ld", "st", "ldob", "ldib", "ldos", "ldis", "stob", "stos"
     ):
@@ -171,11 +181,23 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         if op in ("addo", "subo"):
             symbol = "+" if op == "addo" else "-"
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} {a});"
+        if op in ("movl", "movt", "movq"):
+            count = {"movl": 2, "movt": 3, "movq": 4}[op]
+            first = word & 31
+            alignment = 2 if count == 2 else 4
+            # Literal expansion is not inferred from the ambiguous KB summary.
+            # Register forms are implemented; literal forms remain unsupported.
+            if word & 0x800 or first % alignment or dst % alignment:
+                return None
+            if first < dst + count and dst < first + count:
+                return None  # Intel documents overlap as unpredictable.
+            return f"if (!move_group<{count}>(cpu, {first}u, {dst}u)) return false;"
         if op == "mov":
             return f"cpu.r[{dst}] = {a};"
-        if op in ("shlo", "shro"):
-            symbol = "<<" if op == "shlo" else ">>"
-            return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} ({a} & 31u));"
+        if op in ("shlo", "shro", "shri", "shrdi"):
+            helper = {"shlo": "shift_left_ordinal", "shro": "shift_right_ordinal",
+                      "shri": "shift_right_integer", "shrdi": "shift_right_dividing"}[op]
+            return f"cpu.r[{dst}] = {helper}({b}, {a});"
         if op in ("cmpo", "cmpi"):
             # Intel i960 AC.cc[2:0]: L=0b100, E=0b010, G=0b001,
             # measured as src1 compared with src2, NOT src2 vs src1.
@@ -265,6 +287,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include <cstdint>
 #include "i960_frame_runtime.hpp"
 #include "i960_sync_runtime.hpp"
+#include "i960_data_runtime.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {
@@ -278,3 +301,4 @@ static inline bool step(CPU& cpu, const Bus& bus) {
     report = TranslationReport(entry, len(graph["instructions"]), translated,
                                tuple(unsupported), graph["limit_reached"])
     return result, report
+

@@ -31,7 +31,9 @@ enum class StopCode : std::uint32_t {
     synchronous_device_unimplemented = 13,
     iac_bad_message = 14,
     iac_invalid_prcb = 15,
-    undefined_condition_code = 16
+    undefined_condition_code = 16,
+    undefined_register_group = 17,
+    unsupported_block_transfer = 18
 };
 
 struct CPU {
@@ -85,6 +87,10 @@ struct Bus {
     // Bad Access without raising an i960 CPU exception or mutating dst.
     // Async read32 MUST NOT silently stand in for a peripheral transaction.
     bool (*read32_sync)(void*, std::uint32_t, std::uint32_t*) = nullptr;
+    // Full-span preflight and completion for ordinary multiword memory.
+    // False is a research stop, NOT a fabricated architectural bus fault.
+    bool (*read_words)(void*, std::uint32_t, std::uint32_t*, unsigned) = nullptr;
+    bool (*write_words)(void*, std::uint32_t, const std::uint32_t*, unsigned) = nullptr;
 };
 
 static inline bool stop(CPU& cpu, StopCode code = StopCode::untranslated) {

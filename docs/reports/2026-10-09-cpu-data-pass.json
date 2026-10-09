@@ -1,0 +1,20 @@
+{
+  "input_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "base_commit": "6dea173158ff20983a4a518cce277a8ef3b68466",
+  "roots": ["0x5f0", "0x6b0"],
+  "candidates": 3051,
+  "before_emitted": 2950,
+  "after_emitted": 3025,
+  "before_unsupported": 101,
+  "after_unsupported": 26,
+  "remaining_forms": {"unknown": 6, "subi": 1, "addi": 2, "testne": 1, "chkbit": 2, "bbc": 5, "not": 3, "andnot": 2, "cmpinco": 3, "bbs": 1},
+  "shift_test_vectors_per_compiler": 24360,
+  "new_tests": 10,
+  "full_tests": 88,
+  "local_compilers": ["GCC", "Clang"],
+  "ubsan_new_tests": true,
+  "dynamic_strict_steps": 1904,
+  "dynamic_serial_tx_steps": 1910,
+  "serial_rx_ready_completed": false,
+  "board_00f80000_identified": false
+}

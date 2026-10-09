@@ -124,7 +124,7 @@ public:
         return arcaderecomp_generated::Bus{
             this, &bridge_read32, &bridge_write32, &bridge_read8,
             &bridge_write8, &bridge_read16, &bridge_write16,
-            &bridge_read32_sync
+            &bridge_read32_sync, &bridge_read_words, &bridge_write_words
         };
     }
 
@@ -314,6 +314,35 @@ private:
         } catch (const DeviceAccessFault&) {
             return false;
         }
+    }
+    // Complete-span validation keeps multiword operations away from MMIO.
+    // Refusal is a diagnostic stop, NOT evidence of hardware Bad Access.
+    bool block_span(std::uint32_t address, unsigned count, bool writing) const {
+        if (count < 2u || count > 4u) return false;
+        const Region reg = classify(address);
+        if (writing ? reg != Region::work_ram :
+            (reg != Region::work_ram && reg != Region::program_rom &&
+             reg != Region::game_data_rom)) return false;
+        if (reg == Region::game_data_rom && game_data_.empty()) return false;
+        // Keep unaligned CPU-fault policy unimplemented; do not guess at it.
+        if (address & 3u) return false;
+        return region_remaining(address, reg) >= count * 4u;
+    }
+    static bool bridge_read_words(void* p, std::uint32_t address,
+                                  std::uint32_t* out, unsigned count) {
+        const auto* board = static_cast<StrictBus*>(p);
+        if (!out || !board->block_span(address, count, false)) return false;
+        for (unsigned i = 0; i < count; ++i) out[i] = board->read_value(address + 4u*i, 4u);
+        return true;
+    }
+    static bool bridge_write_words(void* p, std::uint32_t address,
+                                   const std::uint32_t* values, unsigned count) {
+        auto* board = static_cast<StrictBus*>(p);
+        if (!values || !board->block_span(address, count, true)) return false;
+        // Allocate trace capacity before the first data write, too.
+        board->writes_.reserve(board->writes_.size() + count);
+        for (unsigned i = 0; i < count; ++i) board->write(address + 4u*i, 4u, values[i]);
+        return true;
     }
     static std::uint32_t bridge_read32(void* p, std::uint32_t a) {
         return static_cast<StrictBus*>(p)->read_value(a, 4);
