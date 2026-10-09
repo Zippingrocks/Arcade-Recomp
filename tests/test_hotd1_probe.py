@@ -23,6 +23,10 @@ class BootProbeTests(unittest.TestCase):
                              0x8c803000, 0x00200000,  # lda 0x200000,g0
                              0x8c883000, 0x42,        # lda 0x42,g1
                              store) + struct.pack("<I", 0xffffffff)
+        # Synthetic PRCB lives at 0xb0 with initial FP stored at PRCB+24.
+        memory = bytearray(memory.ljust(0xd0, b"\x00"))
+        struct.pack_into("<I", memory, 0xb0 + 24, 0x00510400)
+        memory = bytes(memory)
         source, report = emit_cpp(memory, 0x10)
         self.assertEqual(report.translated, 3)
         with tempfile.TemporaryDirectory() as folder:
@@ -32,7 +36,7 @@ class BootProbeTests(unittest.TestCase):
             binary = directory / "probe"
             compiling = subprocess.run([
                 compiler, "-std=c++17", "-O2", "-Wall",
-                "-I", str(directory),
+                "-I", str(directory), "-I", str(ROOT / "runtime"),
                 str(ROOT / "tools/hotd1_boot_probe.cpp"), "-o", str(binary)],
                 capture_output=True, text=True, timeout=30)
             self.assertEqual(compiling.returncode, 0, compiling.stderr)
