@@ -1,6 +1,6 @@
 # Sega Model 2C — Definition of Done
 
-**Status (2026-10-08): IN DEVELOPMENT. NOT COMPLETE.**
+**Status (2026-10-09): IN DEVELOPMENT. NOT COMPLETE.**
 
 This is the project's binding rule for when we may announce:
 > **SEGA MODEL 2C RECOMPILATION SUCCESSFULLY COMPLETED!**
@@ -50,15 +50,18 @@ We will **not** make that announcement because a ROM is identified, native instr
 
 We will report clearly when Gates A, B, or C are achieved. **The exact success declaration is reserved for Gate C**, with links to actual test logs and a full-game validation report.
 
-Current state: authenticated original `hotdo` ROM; **78 automated tests passing**; first 1,910 strict original-ROM native instruction steps measured to the serial-status device boundary. An **opt-in, explicitly simulated serial-input** experiment executes 91,118 translated original-program steps and enters stage two at `0x000006B0`, where the strict bus stops on unknown board write `0x00F80000`. Separately, a **real original-ROM `SYNMOV` at `0x000006D4` executes natively in isolation**, setting Intel KB internal ICR from `0xFF000000` to `0x0F0E0D0C` and advancing IP to `0x000006D8`. This isolated test does **not** bypass the unknown board write in the faithful runtime. The new BAL/BALX/BX instructions also pass separate synthetic native tests, without original-ROM coverage for those instructions. These are authentic early CPU-code results, **not** original-cabinet verification, finished i960 support, a playable game, or Model 2C completion. Intel 80960KB `SYNLD` native instruction and the INT0/IAC /
-INT2/INTR / INT3/INTA pin-role decoder now pass synthetic tests. This only
-decodes CPU-side register roles and synchronous memory completion; it does
-**not** generate real interrupts, CPU exception frames, or arcade timing.
-The new, **opt-in** Sega Model 2C interrupt request/enable registers
-at `0x00E80000` and `0x00E80004` additionally pass synthetic tests
-for bitwise acknowledgement, delayed mask updates and line-bit grouping.
-No original timer interrupts, CPU IRQ exception frames or original-board
-signals are reproduced by these tests. Real serial status, interrupt
-delivery, accurate device timing, geometry, sound and gameplay remain unresolved.
+## Current evidence, not a completion percentage
+
+**94 automated tests pass** at source commit `e8b90f09554a78c13f4c25f9bf9b3d8ebc2553af` ([CI evidence](https://github.com/Zippingrocks/Arcade-Recomp/actions/runs/37918124810)). The original `hotdo` ROM is authenticated. The named multi-register transfer and shift implementation is complete within its documented functional scope (Issue #9); precise CPU fault/timing behavior and unrelated instructions are not complete.
+
+The same two-root original static graph contains 3,051 candidates: 3,025 now generate native operations and 26 still stop. The 75 newly supported original instruction sites passed 450 isolated native checks with synthetic CPU/memory state. These counts do not measure completed gameplay or cabinet verification.
+
+Continuous original-ROM strict execution remains at 1,904 steps before the disabled first serial TX, or 1,910 with documented TX enabled before the missing serial-status read. No new fabricated serial response is used in these regressions. The earlier 91,118-step second-stage experiment used explicitly fictional serial input and stopped at unknown board write `0x00F80000`; it is separate from authentic-input evidence. The isolated original Intel IAC/ICR tests likewise do not prove continuous startup.
+
+The optional serial event model now derives ready bits from explicit observed buffer events and consumes received bytes. It does not establish actual Sega initial state, timing, gun inputs or endpoint replies. **Issue #4 remains open.** The address audit adds two diagnostic-context store candidates beyond startup at `0x00F80000`, but does not establish the physical circuit or its effects. **Issue #6 remains open**, and no no-op handler was added.
+
+The Intel SYNLD/pin-role tests and opt-in board IRQ registers do not implement actual original-cabinet interrupt delivery. Real serial status, CPU fault/interrupt behavior, accurate device timing, geometry, rendering, sound and gameplay remain unresolved.
+
+See [the three-target evidence report](THREE_TARGETS_VALIDATION.md) for test scope, limitations and reproduction commands. **None of Gates A, B or C is being declared complete.**
 
 This is independent from the later original-versus-Revision-A and prototype milestones. Prototypes expand the preservation roadmap but are not prerequisites for authentic retail HOTD1 completion.
