@@ -147,10 +147,21 @@ int main() {
         data = struct.pack("<6I", word, 0x10, 0x0a000000,
                            0xffffffff, 0x0a000000, 0xffffffff)
         source, report = emit_cpp(data, 0, 32)
-        self.assertIn(0, report.unsupported if not report.translated else ())
-        # CALLX destinations are dynamic; graph cannot discover 0x10 from
-        # MEMB addressing yet. Isolated emitted entry must nevertheless compile.
+        self.assertGreaterEqual(report.translated, 1)
+        # CALLX destinations are not yet resolved by the graph builder. The
+        # emitted native opcode must still perform the correct call transition.
         self.assertIn("frame_call(", source)
+        compile_and_run(source, """
+int main() {
+    using namespace arcaderecomp_generated;
+    CPU cpu{}; Bus bus{};
+    if (!frame_init(cpu, 0x00510400u, 0u)) return 1;
+    if (!step(cpu, bus)) return 2;
+    if (cpu.ip != 16u || cpu.frame_depth != 1u) return 3;
+    if (cpu.r[31] != 0x00510440u) return 4;
+    return 0;
+}
+""")
 
 
 if __name__ == "__main__":
