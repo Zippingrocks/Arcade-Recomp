@@ -194,14 +194,16 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
     return None
 
 
-def emit_cpp(image: bytes, entry: int, max_instructions: int = 256) -> tuple[str, TranslationReport]:
+def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
+             additional_entries: tuple[int, ...] = ()) -> tuple[str, TranslationReport]:
     """Translate reachable, ROM-resident instructions into a native C++ stepper.
 
     Memory is supplied through explicit device/bus callbacks. Local CALL,
     CALLX and RET are modeled with four cached register frames. Supervisor/fault
     returns, interrupt frames, exact cycles and unimplemented opcodes stop safely. The generated source is game-derived; keep it out of Git.
     """
-    graph = discover(image, entry, limit=max_instructions)
+    graph = discover(image, entry, limit=max_instructions,
+                     additional_entries=additional_entries)
     translated = 0
     unsupported = []
     bodies = []
