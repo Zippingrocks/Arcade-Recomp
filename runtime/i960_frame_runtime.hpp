@@ -50,6 +50,13 @@ struct Bus {
     void* ctx = nullptr;
     std::uint32_t (*read32)(void*, std::uint32_t) = nullptr;
     void (*write32)(void*, std::uint32_t, std::uint32_t) = nullptr;
+    // Independent width-specific callbacks preserve byte-lane I/O semantics.
+    // Device backends must refuse unmapped or unsupported accesses rather
+    // than silently treating control registers like ordinary RAM.
+    std::uint8_t (*read8)(void*, std::uint32_t) = nullptr;
+    void (*write8)(void*, std::uint32_t, std::uint8_t) = nullptr;
+    std::uint16_t (*read16)(void*, std::uint32_t) = nullptr;
+    void (*write16)(void*, std::uint32_t, std::uint16_t) = nullptr;
 };
 
 static inline bool stop(CPU& cpu, StopCode code = StopCode::untranslated) {
