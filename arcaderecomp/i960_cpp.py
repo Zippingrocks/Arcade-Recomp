@@ -71,7 +71,11 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
     if ins.form == "REG":
         # Special function registers and the full i960 local-register frame
         # model have not been implemented in this tranche.
-        if word & (0x20 | 0x40 | 0x2000):
+        if word & (0x20 | 0x40):
+            return None
+        # The destination-mode field is irrelevant for compare-only REG
+        # instructions. Some legitimate ROM instructions set it.
+        if word & 0x2000 and op not in ("cmpo", "cmpi"):
             return None
         a = _operand(word & 31, bool(word & 0x800))
         b = _operand((word >> 14) & 31, bool(word & 0x1000))
