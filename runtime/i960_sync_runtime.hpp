@@ -9,6 +9,7 @@
 // not yet independently implemented. No guessed 0x93 side effects.
 #pragma once
 #include "i960_frame_runtime.hpp"
+#include "i960_reinitialize.hpp"
 
 #include <array>
 #include <cstdint>
@@ -43,6 +44,8 @@ static inline bool sync_move_quad(CPU& cpu, const Bus& bus,
             // Verify alignment before advertising a decoded reinit request.
             if ((words[1] & 3u) || (words[2] & 3u) || (words[3] & 3u))
                 return stop(cpu, StopCode::bad_instruction_pointer);
+            if (cpu.allow_iac_93_reinitialize)
+                return perform_iac_93_reinitialize(cpu, bus);
             return stop(cpu, StopCode::iac_reinitialize_pending);
         }
         return stop(cpu, StopCode::unsupported_iac_message);
