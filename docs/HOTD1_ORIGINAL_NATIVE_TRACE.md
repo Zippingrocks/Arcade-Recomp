@@ -33,11 +33,11 @@ The result is **not a playable title screen**, **not a complete boot**, **not co
 
 ## Discoverable original i960 instruction scope
 
-Independent static graph discovery from original IP found **130 unique instruction addresses**. The original milestone translated **125** of them (5 unsupported). Subsequently, Intel-manual-backed native bit instructions and comparison/decrement lowered the count to **129 translated**, **1 unsupported**, the remaining original address:
+Independent static graph discovery from original IP found **130 unique instruction addresses**. The original milestone translated **125** of them (5 unsupported). Subsequently, Intel-manual-backed native bit instructions and comparison/decrement lowered the count to **129 translated**, **1 unsupported** at the time of this initial measurement, the remaining original address:
 
-- `0x000006a0` — `synmovq` (synchronous memory operation requiring documented i960 and bus semantics; **deliberately unresolved**).
+- `0x000006a0` — `synmovq`: subsequently **decoded and given a native, fail-closed IAC capture**; Intel's KB manual proves it submits a `0x93` reinitialize message. **Full CPU reinitialization remains unresolved.** See [the newer IAC milestone](HOTD1_SYN_MOV_IAC.md).
 
-A local rerun with that newly committed instruction code verified the same 1,910 original-ROM steps and the same precise serial-status fault. Later static code and peripheral boot paths still need wider discovery as new correct hardware behavior becomes available. **129/130 is the reachable early bootstrap graph, not 99% of the entire game or CPU instruction set.**
+A local rerun with that newly committed instruction code verified the same 1,910 original-ROM steps and the same precise serial-status fault. Later static code and peripheral boot paths still need wider discovery as new correct hardware behavior becomes available. **Current code generation reaches 130/130 addresses in this early bootstrap graph only; the SYNMOVQ site deliberately stops on pending IAC — it does not complete the CPU reinit. None of these figures represents full game or hardware completion.**
 
 ## Reproduce with a legitimately held original arcade set
 
