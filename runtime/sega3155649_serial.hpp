@@ -35,6 +35,7 @@ public:
     static constexpr unsigned SERIAL_TX2 = 0x0a;
     static constexpr unsigned SERIAL_RX1 = 0x0b;
     static constexpr unsigned SERIAL_RX2 = 0x0c;
+    static constexpr unsigned SERIAL_STATUS = 0x0d;
 
     struct TXEvent {
         unsigned channel;
@@ -53,11 +54,19 @@ public:
 
     using SerialRead = std::function<std::uint8_t(std::uint8_t last_mux, unsigned channel)>;
     using SerialWrite = std::function<void(std::uint8_t value, unsigned channel)>;
+    using StatusRead = std::function<std::uint8_t()>;
 
     // RX needs a real hardware trace, explicit user/controller input, or a
     // trusted deterministic test fixture. By default it refuses to respond.
     void set_serial_rx(SerialRead callback) { serial_rx_ = std::move(callback); }
     void set_serial_tx_observer(SerialWrite callback) { serial_tx_ = std::move(callback); }
+
+    // Status is externally supplied by a hardware link or an explicitly
+    // labeled test fixture. Never fabricate the historically common 0x0c
+    // "always receive-ready" value.
+    void set_serial_status_source(StatusRead callback) {
+        status_source_ = std::move(callback);
+    }
 
     void write_bus_byte(std::uint32_t absolute_address, std::uint8_t value) {
         unsigned reg = resolve_register(absolute_address, true);
@@ -73,6 +82,11 @@ public:
 
     std::uint8_t read_bus_byte(std::uint32_t absolute_address) const {
         unsigned reg = resolve_register(absolute_address, false);
+        if (reg == SERIAL_STATUS) {
+            if (!status_source_)
+                throw Unsupported(absolute_address, false, "serial status source not configured");
+            return status_source_();
+        }
         if (reg != SERIAL_RX1 && reg != SERIAL_RX2)
             throw Unsupported(absolute_address, false, "device status/port read not implemented");
         if (!serial_rx_)
@@ -97,6 +111,7 @@ private:
     std::vector<TXEvent> events_;
     SerialRead serial_rx_{};
     SerialWrite serial_tx_{};
+    StatusRead status_source_{};
 
     static unsigned resolve_register(std::uint32_t absolute_address, bool write) {
         if (absolute_address < BASE || absolute_address >= BASE + 0x20u)
