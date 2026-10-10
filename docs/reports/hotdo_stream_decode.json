@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "upload_sha256": "de6e298436c243dd11bc725592b99cf9e87bde6d305583ef0aec511610ec76c1",
+  "data_sha256": "5144cf9b156a27a41e53e17a31aa6efb098fcce448fbf9eed1de9a1bc6733f09",
+  "data_bits": 37524,
+  "compilers": [
+    "g++",
+    "clang++"
+  ],
+  "compiler_reports_identical": true,
+  "evidence_level": "original_upload_with_synthetic_pin_stimulus_and_empirical_record_profile",
+  "decode": {
+    "schema_version": 1,
+    "synthetic_pin_stimulus": true,
+    "opaque_envelope_supplied_from_input": true,
+    "silicon_configuration_accepted": false,
+    "startup_armed": false,
+    "sega_serial_connected": false,
+    "data_bits": 37524,
+    "modes": [
+      {
+        "mode": "PS",
+        "input_bits": 40960,
+        "records_validated": 212,
+        "matches_python_data": true
+      },
+      {
+        "mode": "PPS",
+        "input_bits": 40960,
+        "records_validated": 212,
+        "matches_python_data": true
+      },
+      {
+        "mode": "PPA",
+        "input_bits": 40960,
+        "records_validated": 212,
+        "matches_python_data": true
+      }
+    ]
+  },
+  "model2c_complete": false
+}
