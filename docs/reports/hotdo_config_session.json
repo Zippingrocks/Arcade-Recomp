@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "upload_sha256": "de6e298436c243dd11bc725592b99cf9e87bde6d305583ef0aec511610ec76c1",
+  "data_sha256": "5144cf9b156a27a41e53e17a31aa6efb098fcce448fbf9eed1de9a1bc6733f09",
+  "compilers": [
+    "g++",
+    "clang++"
+  ],
+  "reports_identical": true,
+  "evidence": "original_data_with_synthetic_pin_error_and_completion_events",
+  "result": {
+    "schema_version": 1,
+    "synthetic_pin_and_completion_events": true,
+    "mode_count": 3,
+    "cutoffs_per_mode": 221,
+    "reset_trials": 663,
+    "device_error_trials": 663,
+    "reloads_match_expected": 1326,
+    "stale_handles_rejected": 1326,
+    "startup_timeouts_invalidate": 3,
+    "explicit_startup_intervals": 3,
+    "profile_completion_signals_acceptance": false,
+    "silicon_acceptance_claimed": false,
+    "configured_circuit_executed": false,
+    "sega_connected": false
+  },
+  "model2c_complete": false
+}
