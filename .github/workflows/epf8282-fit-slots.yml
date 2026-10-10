@@ -1,0 +1,37 @@
+name: EPF8282 ordered fitter-input audit
+on:
+  push:
+    branches: [main, research/epf8282-ordered-fit-slots]
+    paths:
+      - .github/workflows/epf8282-fit-slots.yml
+      - arcaderecomp/flex8000_fit_slots.py
+      - arcaderecomp/flex8000_fit_constraints.py
+      - arcaderecomp/flex8000_lut_tiles.py
+      - tests/test_flex8000_fit_slots.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ordered-fit-reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Exercise parser and common-slot constraints on artificial data
+        run: python -m unittest discover -s tests -p test_flex8000_fit_slots.py -v
+      - name: Check three pinned NON-SEGA reference files with fixed geometry and polarity
+        run: python -m arcaderecomp.flex8000_fit_slots --fetch-reference --output build/research/fit-slots.json
+      - name: Record actual source revision
+        run: git rev-parse HEAD > build/research/source-commit.txt
+      - name: Retain metadata only, never equations or configuration bytes
+        uses: actions/upload-artifact@v4
+        with:
+          name: epf8282-ordered-fit-metadata
+          path: |
+            build/research/fit-slots.json
+            build/research/source-commit.txt
+          retention-days: 7
+          if-no-files-found: error
