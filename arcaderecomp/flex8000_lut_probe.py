@@ -178,7 +178,8 @@ def correlate(training: list[bytes], repeat: bytes,
             'warning': 'Even unique correlations require controlled fitted-resource evidence; not a hardware implementation.'}
 
 
-def load_corpus(manifest_path: Path) -> dict:
+def read_corpus(manifest_path: Path) -> dict:
+    """Read private identity-checked samples, shared by correlation analyzers."""
     if manifest_path.stat().st_size > 65536:
         raise ValueError('Manifest too large')
     def no_duplicates(pairs):
@@ -219,9 +220,17 @@ def load_corpus(manifest_path: Path) -> dict:
     if set(t for r,t in samples if r=='train') != {1<<i for i in range(16)} \
             or [t for r,t in samples if r=='repeat'] != [1]:
         raise ValueError('Missing minterms or wrong repeated baseline')
-    result = correlate([samples['train',1<<i] for i in range(16)],samples['repeat',1],
-                       [(t,v) for (r,t),v in samples.items() if r=='holdout'])
-    result.update(device=target, source_hashes=identities, compiler_executed_by_this_tool=False)
+    return {'training': [samples['train',1<<i] for i in range(16)],
+            'repeat': samples['repeat',1],
+            'heldouts': [(t,v) for (r,t),v in samples.items() if r=='holdout'],
+            'device': target, 'identities': identities}
+
+
+def load_corpus(manifest_path: Path) -> dict:
+    corpus = read_corpus(manifest_path)
+    result = correlate(corpus['training'], corpus['repeat'], corpus['heldouts'])
+    result.update(device=corpus['device'], source_hashes=corpus['identities'],
+                  compiler_executed_by_this_tool=False)
     return result
 
 

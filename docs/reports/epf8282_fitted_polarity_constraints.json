@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "reference_commit": "6a0d68153d731518f07e98762f82d25e042838a8",
+  "source_blobs": {
+    "testmux.sof,v": "4bd945df501d848d9fc4fd512945336ec7c24fca",
+    "testmux.rpt,v": "88deb079d565b038b1bc4a71e015fd324dddd3ab"
+  },
+  "configuration_sha256": "a795d14efc43ac3f6a2f42a24b8c2e357f513d0f3ac74fbc79145f1ce0e40226",
+  "candidate": {
+    "first_bit": 22138,
+    "cell_stride": 1416,
+    "rows": 8,
+    "row_pitch": 177,
+    "column_step": 1
+  },
+  "cell_count": 8,
+  "registered_data_cells": 1,
+  "inverted_output_aliases": 4,
+  "models": {
+    "logical_report_signals": {
+      "common_convention_count": 0,
+      "conventions": [],
+      "tested_common_conventions": 32,
+      "input_permutations_per_cell": 24,
+      "physical_input_assignment_verified": false
+    },
+    "normalized_fitted_output_aliases": {
+      "common_convention_count": 1,
+      "conventions": [
+        {
+          "address_xor": 15,
+          "output_xor": 0,
+          "per_cell_permutation_counts": [2, 4, 4, 6, 6, 24, 4, 6]
+        }
+      ],
+      "tested_common_conventions": 32,
+      "input_permutations_per_cell": 24,
+      "physical_input_assignment_verified": false
+    }
+  },
+  "netlist_recovered": false,
+  "runtime_changed": false,
+  "scope": "Fixed candidate and one archival SOF/report pair; no new independent circuit or controlled rebuild."
+}

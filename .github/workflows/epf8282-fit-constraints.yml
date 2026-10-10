@@ -20,8 +20,22 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+      - name: Test parser and encoding guards without reference data
+        run: python -m unittest discover -s tests -p test_flex8000_fit_constraints.py -v
       - name: Audit exact pinned non-Sega fitted equations and candidate bits
         run: python -m arcaderecomp.flex8000_fit_constraints --fetch-reference --output build/research/fit-constraints.json
+      - name: Verify measured result without refitting the hypothesis
+        run: |
+          python - <<'PY'
+          import json
+          r=json.load(open('build/research/fit-constraints.json'))
+          assert r['models']['logical_report_signals']['common_convention_count']==0
+          assert r['models']['normalized_fitted_output_aliases']['conventions']==[{
+              'address_xor':15, 'output_xor':0,
+              'per_cell_permutation_counts':[2,4,4,6,6,24,4,6]}]
+          assert r['inverted_output_aliases']==4
+          assert r['netlist_recovered'] is False and r['runtime_changed'] is False
+          PY
       - name: Record code identity
         run: git rev-parse HEAD > build/research/source-commit.txt
       - name: Retain counts and encoding hypotheses only
