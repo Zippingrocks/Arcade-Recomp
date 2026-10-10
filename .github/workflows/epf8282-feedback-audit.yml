@@ -1,0 +1,43 @@
+name: EPF8282 register-cut feedback audit
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'arcaderecomp/flex8000_feedback_audit.py'
+      - 'tests/test_flex8000_feedback_audit.py'
+      - '.github/workflows/epf8282-feedback-audit.yml'
+permissions:
+  contents: read
+jobs:
+  pinned-feedback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Test artificial feedback and register boundaries
+        run: python -m unittest discover -s tests -p test_flex8000_feedback_audit.py -v
+      - name: Analyze three pinned non-Sega compiler files
+        run: python -m arcaderecomp.flex8000_feedback_audit --fetch-reference --output build/research/feedback.json
+      - name: Check exact tables and complete fixed-point agreement
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('build/research/feedback.json').read_text())
+          assert not r['new_independent_design'] and not r['runtime_changed']
+          assert r['result']['all_cell_bits_match']
+          assert r['result']['all_fixed_points_match']
+          assert not r['result']['sequential_semantics_verified']
+          PY
+      - name: Record source identity
+        run: git rev-parse HEAD > build/research/source-commit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: epf8282-feedback-metadata
+          path: |
+            build/research/feedback.json
+            build/research/source-commit.txt
+          retention-days: 7
