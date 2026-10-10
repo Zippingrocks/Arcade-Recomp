@@ -1,0 +1,35 @@
+name: EPF8282 fitted-polarity constraint audit
+on:
+  push:
+    branches: [main, research/epf8282-fit-constraints]
+    paths:
+      - .github/workflows/epf8282-fit-constraints.yml
+      - arcaderecomp/flex8000_fit_constraints.py
+      - arcaderecomp/flex8000_lut_tiles.py
+      - arcaderecomp/flex8000_sram.py
+      - tests/test_flex8000_fit_constraints.py
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pinned-fit-constraints:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Audit exact pinned non-Sega fitted equations and candidate bits
+        run: python -m arcaderecomp.flex8000_fit_constraints --fetch-reference --output build/research/fit-constraints.json
+      - name: Record code identity
+        run: git rev-parse HEAD > build/research/source-commit.txt
+      - name: Retain counts and encoding hypotheses only
+        uses: actions/upload-artifact@v4
+        with:
+          name: epf8282-fit-constraints-metadata
+          path: |
+            build/research/fit-constraints.json
+            build/research/source-commit.txt
+          if-no-files-found: error
+          retention-days: 7
