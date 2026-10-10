@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "upload_sha256": "de6e298436c243dd11bc725592b99cf9e87bde6d305583ef0aec511610ec76c1",
+  "data_sha256": "5144cf9b156a27a41e53e17a31aa6efb098fcce448fbf9eed1de9a1bc6733f09",
+  "compilers": ["g++", "clang++"],
+  "reports_identical": true,
+  "evidence": "original_data_with_synthetic_pin_and_error_events",
+  "result": {
+    "schema_version": 1,
+    "synthetic_pin_and_error_events": true,
+    "mode_count": 3,
+    "cutoffs_per_mode": 220,
+    "trial_count": 660,
+    "old_attempts_invalidated": 660,
+    "reloads_match_expected": 660,
+    "startup_armed": false,
+    "silicon_acceptance_claimed": false,
+    "sega_connected": false
+  },
+  "model2c_complete": false,
+  "base_commit": "37bff28efbf6ee48931a16a095dbe3bdf7cefa03",
+  "new_test_methods": 15,
+  "recovery_oracle_traces_per_compiler": 1242,
+  "mode_strap_patterns": 8,
+  "source_artifact_sha256": "1a91765fbd1b20a85365f732b986b1385f3e42bb4ad7bd27a3a054ed138899df",
+  "unchanged_strict_steps": [1904,1910],
+  "game_runtime_connected": false,
+  "hardware_error_detection_implemented": false,
+  "baseline_local_tests": 296,
+  "full_local_tests": 311
+}
