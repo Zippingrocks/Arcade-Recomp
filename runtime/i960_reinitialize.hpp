@@ -84,6 +84,9 @@ static inline bool perform_iac_93_reinitialize(CPU& cpu, const Bus& bus) {
     // allow a stale pre-reinitialization CC to determine a later branch.
     cpu.cc = 0;
     cpu.cc_defined = false;
+    cpu.integer_overflow_mask_defined = false;
+    cpu.integer_overflow_flag_defined = false;
+    cpu.pending_integer_overflow = {};
     cpu.pending_iac_valid = false;
     ++cpu.reinitialize_count;
     cpu.stop_ip = 0;

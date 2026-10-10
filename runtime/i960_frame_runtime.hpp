@@ -31,7 +31,16 @@ enum class StopCode : std::uint32_t {
     synchronous_device_unimplemented = 13,
     iac_bad_message = 14,
     iac_invalid_prcb = 15,
-    undefined_condition_code = 16
+    undefined_condition_code = 16,
+    undefined_integer_controls = 17,
+    integer_overflow_pending = 18
+};
+
+// A diagnostic handoff, not an architected in-memory fault record.
+struct PendingIntegerOverflow {
+    bool pending = false;
+    std::uint32_t instruction_ip = 0;
+    std::uint32_t resume_ip = 0;
 };
 
 struct CPU {
@@ -66,6 +75,13 @@ struct CPU {
     // at 0xFF000004). Initialized to FF000000h by processor reset.
     std::uint32_t interrupt_control_register = 0xff000000u;
     bool cc_defined = true;  // Set false by i960KB reinitialization.
+    // AC[12] mask and sticky AC[8] flag. Intel reset/reinitialize leave AC
+    // undefined: do not silently choose masked or trapping overflow behavior.
+    bool integer_overflow_mask = false;
+    bool integer_overflow_mask_defined = false;
+    bool integer_overflow_flag = false;
+    bool integer_overflow_flag_defined = false;
+    PendingIntegerOverflow pending_integer_overflow{};
     bool prcb_loaded = false;
     std::uint32_t reinitialize_count = 0;
 };
@@ -112,6 +128,9 @@ static inline bool frame_init(CPU& cpu, std::uint32_t initial_fp,
     cpu.frame_depth = 0;
     cpu.stop_code = StopCode::none;
     cpu.interrupt_control_register = 0xff000000u;
+    cpu.integer_overflow_mask_defined = false;
+    cpu.integer_overflow_flag_defined = false;
+    cpu.pending_integer_overflow = {};
     for (unsigned slot = 0; slot < 4; ++slot)
         cpu.saved_valid[slot] = false;
     return true;

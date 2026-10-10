@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "evidence": "isolated_original_opcodes_with_synthetic_cpu_state",
+  "sites": [
+    {
+      "pc": "0x1034",
+      "mnemonic": "subi"
+    },
+    {
+      "pc": "0x103c",
+      "mnemonic": "addi"
+    },
+    {
+      "pc": "0x1060",
+      "mnemonic": "addi"
+    }
+  ],
+  "input_vectors": 1672,
+  "comparisons_per_compiler": 53504,
+  "compilers": [
+    "g++",
+    "clang++"
+  ],
+  "reports_identical": true,
+  "sanitizer": "undefined",
+  "native_result": {
+    "checks": 53504,
+    "synthetic_cpu_state": true,
+    "hardware_verified": false
+  },
+  "static_candidates": 3051,
+  "native_emitting_sites": 3045,
+  "unsupported_sites": [
+    "0x5c0",
+    "0xbfc",
+    "0x11cc",
+    "0x1384",
+    "0x13d80",
+    "0x334d8"
+  ],
+  "fault_handler_executed": false,
+  "arcade_hardware_verified": false,
+  "model2c_complete": false
+}

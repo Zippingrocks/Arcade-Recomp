@@ -205,6 +205,12 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         if op in ("and", "or", "xor"):
             symbol = {"and": "&", "or": "|", "xor": "^"}[op]
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} {a});"
+        if op in ("addi", "subi"):
+            # Operands are captured before dst writes; unmasked overflow is
+            # a post-result pending fault, not wrapping ordinal arithmetic.
+            return (f"if (!integer_add_sub(cpu, {a}, {b}, {dst}u, "
+                    f"0x{ins.next_pc:08x}u, {'true' if op == 'subi' else 'false'})) "
+                    "return false;")
         if op in ("addo", "subo"):
             symbol = "+" if op == "addo" else "-"
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} {a});"
@@ -328,10 +334,13 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_frame_runtime.hpp"
 #include "i960_sync_runtime.hpp"
 #include "i960_transfer_shift.hpp"
+#include "i960_integer_arithmetic.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {
     (void)bus; // A pure-register translation need not access the bus.
+    if (cpu.pending_integer_overflow.pending)
+        return stop_pending_integer_overflow(cpu);
     switch (cpu.ip) {
 """ + "\n".join(bodies) + """
       default: return stop(cpu);
