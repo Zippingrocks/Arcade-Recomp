@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'arcaderecomp/flex8000_feedback_audit.py'
-      - 'tests/test_flex8000_feedback_audit.py'
+      - 'tests/test_flex8000_feedback*.py'
       - '.github/workflows/epf8282-feedback-audit.yml'
 permissions:
   contents: read
@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Test artificial feedback and register boundaries
-        run: python -m unittest discover -s tests -p test_flex8000_feedback_audit.py -v
+        run: python -m unittest discover -s tests -p 'test_flex8000_feedback*.py' -v
       - name: Analyze three pinned non-Sega compiler files
         run: python -m arcaderecomp.flex8000_feedback_audit --fetch-reference --output build/research/feedback.json
       - name: Check exact tables and complete fixed-point agreement
@@ -31,6 +31,12 @@ jobs:
           assert r['result']['all_cell_bits_match']
           assert r['result']['all_fixed_points_match']
           assert not r['result']['sequential_semantics_verified']
+          x=r['result']
+          assert x['assignments_exhaustively_tested']==2048
+          assert x['combinational_feedback_component_sizes']==[4]
+          assert x['reference_fixed_point_count_histogram']=={'1':13,'2':2,'3':1}
+          assert x['single_bit_mutations']['detected_by_register_cut_relation']==46
+          assert x['single_bit_mutations']['invisible_to_register_cut_relation']==82
           PY
       - name: Record source identity
         run: git rev-parse HEAD > build/research/source-commit.txt

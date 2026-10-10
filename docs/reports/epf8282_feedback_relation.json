@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "reference_commit": "6a0d68153d731518f07e98762f82d25e042838a8",
+  "source_blobs": {
+    "testmux.sof,v": "4bd945df501d848d9fc4fd512945336ec7c24fca",
+    "testmux.rpt,v": "88deb079d565b038b1bc4a71e015fd324dddd3ab",
+    "testmux.fit,v": "12bd9dc6ce31fb3c70bbedb1a6ce9322a40cb10e"
+  },
+  "candidate": {
+    "first_bit": 22138,
+    "cell_stride": 1416,
+    "rows": 8,
+    "row_pitch": 177,
+    "column_step": 1
+  },
+  "address_xor": 15,
+  "output_xor": 0,
+  "slot_order": [0, 1, 2, 3],
+  "result": {
+    "cell_count": 8,
+    "combinational_cells": 7,
+    "register_outputs_held_as_boundary_variables": 1,
+    "external_inputs": 3,
+    "boundary_cases": 16,
+    "assignments_exhaustively_tested": 2048,
+    "combinational_feedback_component_sizes": [4],
+    "reference_fixed_point_count_histogram": {"1": 13, "2": 2, "3": 1},
+    "candidate_fixed_point_count_histogram": {"1": 13, "2": 2, "3": 1},
+    "boundary_cases_with_different_solution_sets": 0,
+    "total_reference_fixed_points": 20,
+    "ambiguous_reference_boundaries": 3,
+    "empty_reference_boundaries": 0,
+    "exact_cell_bit_matches": 128,
+    "cell_bit_comparisons": 128,
+    "all_fixed_points_match": true,
+    "all_cell_bits_match": true,
+    "sequential_semantics_verified": false,
+    "scope": "Boolean relation with DFF outputs held; no clock/reset/delay/initial-state or physical routing inference.",
+    "single_bit_mutations": {
+      "tested": 128,
+      "detected_by_exact_cell_comparison": 128,
+      "detected_by_register_cut_relation": 46,
+      "invisible_to_register_cut_relation": 82,
+      "not_a_replacement_for_cell_or_sequential_validation": true
+    }
+  },
+  "new_independent_design": false,
+  "connections_from_compiler_metadata": true,
+  "configuration_routing_bits_decoded": false,
+  "runtime_changed": false,
+  "model2c_complete": false
+}

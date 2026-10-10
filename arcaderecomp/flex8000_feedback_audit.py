@@ -83,7 +83,15 @@ def feedback_sizes(network: Network) -> list[int]:
     """Exact SCCs of combinational data dependence; cut registered outputs."""
     validate(network)
     combinational = {c.name for c in network.cells if not c.registered}
-    edges = {c.name: names(c.expression) & combinational for c in network.cells if not c.registered}
+    def support(expression):
+        variables = sorted(names(expression))
+        # Syntactic feedback can cancel, e.g. a OR NOT a. Only a variable
+        # that changes the function under some assignment is a data edge.
+        outputs = [evaluate(expression, {v: (n >> j) & 1 for j, v in enumerate(variables)},
+                            network.inverted) for n in range(1 << len(variables))]
+        return {v for j, v in enumerate(variables)
+                if any(outputs[n] != outputs[n ^ (1 << j)] for n in range(len(outputs)))}
+    edges = {c.name: support(c.expression) & combinational for c in network.cells if not c.registered}
     # Eight vertices maximum: reachability gives a small independent SCC method.
     reach = {}
     for node in edges:
