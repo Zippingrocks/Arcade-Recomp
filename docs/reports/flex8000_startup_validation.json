@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-10",
+  "base_commit": "032086445c093bef022999de0e8ad14e54c703c9",
+  "evidence_level": "manufacturer_documented_post_configuration_window_with_synthetic_events",
+  "baseline_source_sha256": "0d36ca266662a2d083fd2c4382c6ab16cb32f937c57f63e84ca7b7968d99cc7e",
+  "baseline_tests": 267,
+  "new_tests": 14,
+  "full_local_tests": 281,
+  "new_native_compilers": [
+    "GCC",
+    "Clang"
+  ],
+  "undefined_behavior_sanitizer": true,
+  "warnings_are_errors": true,
+  "open_drain_cases_per_compiler": 27,
+  "startup_matrix_cases_per_compiler": 2808,
+  "timeout_window_cycles": 10,
+  "initialization_window_cycles": 10,
+  "clock_phase_and_nanosecond_timing_modeled": false,
+  "entry_requires_external_conf_done_release_event": true,
+  "configuration_acceptance_implemented": false,
+  "sega_clock_and_timeout_options_identified": false,
+  "sega_serial_backend_changed": false,
+  "i960_emitter_changed": false,
+  "existing_hardware_bus_changed": false,
+  "actual_original_rom": {
+    "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+    "matched_chips": 29,
+    "strict_steps": 1904,
+    "transmit_only_steps": 1910,
+    "diagnostic_exit_code": 3,
+    "synthetic_rx_status_enabled": false,
+    "startup_component_armed": false,
+    "static_candidates": 3051,
+    "emitting_sites": 3042,
+    "unsupported_sites": 9
+  },
+  "model2c_complete": false
+}
