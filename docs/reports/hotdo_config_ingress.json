@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "image_sha256": "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75",
+  "upload_sha256": "de6e298436c243dd11bc725592b99cf9e87bde6d305583ef0aec511610ec76c1",
+  "compilers": [
+    "g++",
+    "clang++"
+  ],
+  "compiler_reports_identical": true,
+  "evidence_level": "original_upload_with_synthetic_pin_and_clock_stimulus",
+  "input_stage": {
+    "schema_version": 1,
+    "synthetic_pin_stimulus": true,
+    "board_mode_identified": false,
+    "configuration_completed": false,
+    "stream_bytes": 5120,
+    "modes": [
+      {
+        "mode": "PS",
+        "accepted_bits": 40960,
+        "matches_input_lsb_first": true
+      },
+      {
+        "mode": "PPS",
+        "accepted_bits": 40960,
+        "matches_input_lsb_first": true
+      },
+      {
+        "mode": "PPA",
+        "accepted_bits": 40960,
+        "matches_input_lsb_first": true
+      }
+    ],
+    "ppa_busy_observations": 40960,
+    "ppa_masked_status_reads": 122880
+  },
+  "sega_serial_backend_connected": false,
+  "model2c_complete": false
+}
