@@ -7,7 +7,7 @@ on:
       - arcaderecomp/flex8000_fit_slots.py
       - arcaderecomp/flex8000_fit_constraints.py
       - arcaderecomp/flex8000_lut_tiles.py
-      - tests/test_flex8000_fit_slots.py
+      - tests/test_flex8000_fit_slot*.py
   workflow_dispatch:
 permissions:
   contents: read
@@ -21,9 +21,24 @@ jobs:
         with:
           python-version: '3.13'
       - name: Exercise parser and common-slot constraints on artificial data
-        run: python -m unittest discover -s tests -p test_flex8000_fit_slots.py -v
-      - name: Check three pinned NON-SEGA reference files with fixed geometry and polarity
+        run: python -m unittest discover -s tests -p 'test_flex8000_fit_slot*.py' -v
+      - name: Check three pinned NON-SEGA files with fixed geometry and polarity
         run: python -m arcaderecomp.flex8000_fit_slots --fetch-reference --output build/research/fit-slots.json
+      - name: Preserve the measured shared-slot result without refitting
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path('build/research/fit-slots.json').read_text())
+          slots = result['ordered_fit_result']
+          assert slots['shared_slot_orders'] == [[0,1,2,3]]
+          assert slots['shared_slot_order_count'] == 1
+          assert (slots['address_xor'], slots['output_xor']) == (15,0)
+          assert result['fit_metadata']['build_stamp_matches'] is True
+          assert sum(c['explicit_slot_row'] for c in result['fit_metadata']['cells']) == 7
+          assert result['netlist_recovered'] is False
+          assert result['runtime_changed'] is False
+          PY
       - name: Record actual source revision
         run: git rev-parse HEAD > build/research/source-commit.txt
       - name: Retain metadata only, never equations or configuration bytes
