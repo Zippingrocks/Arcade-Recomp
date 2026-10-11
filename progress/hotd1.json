@@ -184,7 +184,7 @@
         {
           "id": "model2c.rx_framework",
           "title": "Serial RX/status software framework",
-          "percent": 45
+          "percent": 50
         },
         {
           "id": "model2c.authentic_rx",
@@ -713,6 +713,32 @@
         "tests/test_model2c_geometry_trace_native.py"
       ],
       "note": "CI caught and corrected two syntax-only comprehension typos in the new ROM-free geometry native test module; retained all fail-closed runtime behavior and original evidence limitations. Target metrics unchanged pending successful GCC/Clang regression results: TGPx4 research 15%, Model2C 20%, HOTD1 10%."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "estimate",
+      "scope": "model2c.rx_framework",
+      "percent_before": 45,
+      "percent_after": 50,
+      "evidence": [
+        "runtime/sega3155649_cpu_replay.hpp",
+        "tools/hotd1_strict_boot_probe.cpp",
+        "tests/test_sega_serial_cpu_replay.py",
+        "docs/SEGA_IO3155649.md"
+      ],
+      "note": "Added bounded fail-closed exact CPU-side serial transaction replay to the opt-in private native strict-boot probe, with explicit per-read source bytes, original-byte transmit matching, missing/mismatched data refusal, terminal capture completeness checks and GCC/Clang ROM-free probe coverage. Synthetic fixture inputs can advance native CPU research but are NEVER authentic RX/status hardware proof; strict default unchanged. Software framework estimate 45->50%, authentic_rx 5%, Model2C 20%, HOTD1 overall 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "model2c.rx_framework",
+      "percent_before": 50,
+      "percent_after": 50,
+      "evidence": [
+        "tests/test_progress_tracker.py",
+        "tests/test_sega_serial_cpu_replay.py"
+      ],
+      "note": "CI on initial strict CPU-side serial replay branch passed the new GCC/Clang synthetic replay tests but exposed the pre-existing progress CLI regression using a hardcoded 45->50 increase. Updated the fixture test to derive an actual +5 percentage from current baseline rather than wrongly requesting a no-op update. Serial replay remains optional and unverified, authentic Model 2C RX/status behavior remains 5%, motherboard 20%, HOTD1 overall 10%."
     }
   ]
 }

@@ -136,6 +136,16 @@ class ProgressTrackerTests(unittest.TestCase):
             validate(doc)
 
     def test_save_and_cli_roundtrip_without_touching_source(self):
+        # Derive the test update from the current tracker baseline rather
+        # than assuming a software-framework estimate never changes.
+        starting_percent = next(
+            t["percent"]
+            for area in self.baseline["areas"]
+            for t in area["tasks"]
+            if t["id"] == "model2c.rx_framework"
+        )
+        target_percent = starting_percent + 5
+        self.assertLessEqual(target_percent, 100)
         with tempfile.TemporaryDirectory(prefix="hotdo-progress-") as d:
             target = Path(d) / "progress.json"
             save(target, self.baseline)
@@ -146,7 +156,7 @@ class ProgressTrackerTests(unittest.TestCase):
             self.assertEqual(main(["--file", str(target), "status",
                                    "--json"]), 0)
             self.assertEqual(main(["--file", str(target), "update",
-                                   "--id", "model2c.rx_framework", "--percent", "50",
+                                   "--id", "model2c.rx_framework", "--percent", str(target_percent),
                                    "--note", "Validated new externally supplied serial RX framing against the synthetic regression.",
                                    "--evidence", "tests/test_sega_serial_events.py",
                                    "--dry-run"]), 0)
@@ -160,13 +170,13 @@ class ProgressTrackerTests(unittest.TestCase):
             self.assertEqual(revised["areas"][2]["percent"], 20)
             self.assertEqual(main(["--file", str(target), "update",
                                    "--id", "model2c.rx_framework",
-                                   "--percent", "50",
+                                   "--percent", str(target_percent),
                                    "--note", "The explicit synthetic model was expanded but no cabinet proof was obtained.",
                                    "--evidence", "tests/test_sega_serial_events.py"]), 0)
             final = load(target)
-            self.assertEqual(validate(final)["model2c.rx_framework"]["percent"], 50)
-            self.assertEqual(final["history"][-1]["percent_before"], 45)
-            self.assertEqual(final["history"][-1]["percent_after"], 50)
+            self.assertEqual(validate(final)["model2c.rx_framework"]["percent"], target_percent)
+            self.assertEqual(final["history"][-1]["percent_before"], starting_percent)
+            self.assertEqual(final["history"][-1]["percent_after"], target_percent)
             self.assertEqual(json.loads(target.read_text()), final)
             self.assertEqual([p.name for p in Path(d).iterdir()], ["progress.json"])
 

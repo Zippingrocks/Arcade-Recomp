@@ -8,11 +8,13 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 #include "model2c_bus.hpp"
+#include "sega3155649_cpu_replay.hpp"
 #include "hotd1_i960.cpp"
 
 namespace {
@@ -36,7 +38,8 @@ std::uint32_t little32(const std::vector<std::uint8_t>& data,
 
 void report(const arcaderecomp_generated::CPU& cpu,
             const arcaderecomp_model2c::StrictBus& board,
-            std::size_t executed, bool geometry_trace_enabled) {
+            std::size_t executed, bool geometry_trace_enabled,
+            const arcaderecomp_model2c::SerialCPUReplay* replay) {
     std::cout << "Original HOTD1 Model 2C STRICT diagnostic — NOT A GAME BOOT\n"
               << "executed=" << std::dec << executed
               << " ip=0x" << std::hex << cpu.ip << std::dec
@@ -69,6 +72,10 @@ void report(const arcaderecomp_generated::CPU& cpu,
               << " dropped=" << board.serial_access_trace_dropped()
               << " truncated=" << (board.serial_access_trace_truncated() ? "yes" : "no")
               << " limit=" << board.serial_access_trace_limit() << "\n";
+    if (replay)
+        std::cout << "serial_replay_UNVERIFIED consumed=" << replay->consumed()
+                  << " total=" << replay->total()
+                  << " remaining=" << replay->remaining() << "\n";
     if (geometry_trace_enabled) {
         for (const auto& access : board.geometry_access_trace()) {
             std::cout << "geometry_access ordinal=" << access.ordinal
@@ -96,18 +103,22 @@ void report(const arcaderecomp_generated::CPU& cpu,
 } // namespace
 
 int main(int argc, char** argv) {
-    if (argc < 2 || argc > 6) {
+    if (argc < 2 || argc > 7) {
         std::cerr << "Usage: strict_boot_probe <PRIVATE maincpu.bin> "
                   << "[steps=10000] [optional PRIVATE main_data.bin] "
-                  << "[--serial-tx] [--geometry-trace]\n"
+                  << "[--serial-tx] [--geometry-trace] "
+                  << "[--serial-replay-unverified <PRIVATE cpu-side capture>]\n"
                   << "   --serial-tx: documented TX only, never fake RX\n"
-                  << "   --geometry-trace: refused access attempts ONLY\n";
+                  << "   --geometry-trace: refused access attempts ONLY\n"
+                  << "   --serial-replay-unverified: require exact external CPU-side "
+                  << "TX/status/RX rows; NOT hardware proof\n";
         return 2;
     }
     try {
         std::size_t limit = 10000u;
         bool partial_serial = false;
         bool geometry_trace = false;
+        std::string replay_path;
         std::vector<std::string> positional;
         for (int i = 2; i < argc; ++i) {
             const std::string arg(argv[i]);
@@ -119,6 +130,12 @@ int main(int argc, char** argv) {
                 if (geometry_trace)
                     throw std::runtime_error("duplicate --geometry-trace");
                 geometry_trace = true;
+            } else if (arg == "--serial-replay-unverified") {
+                if (!replay_path.empty() || i + 1 >= argc)
+                    throw std::runtime_error("missing/duplicate replay path");
+                replay_path = argv[++i];
+                if (replay_path.empty() || replay_path.rfind("--", 0) == 0)
+                    throw std::runtime_error("invalid replay path");
             } else if (arg.rfind("--", 0) == 0) {
                 throw std::runtime_error("unknown probe option");
             } else {
@@ -127,6 +144,8 @@ int main(int argc, char** argv) {
         }
         if (positional.size() > 2u)
             throw std::runtime_error("too many positional arguments");
+        if (partial_serial && !replay_path.empty())
+            throw std::runtime_error("serial TX-only and replay modes are exclusive");
         if (!positional.empty()) {
             std::size_t consumed = 0;
             const auto parsed = std::stoull(positional[0], &consumed, 10);
@@ -145,13 +164,24 @@ int main(int argc, char** argv) {
         if (positional.size() == 2u)
             data = read_binary(positional[1].c_str());
         arcaderecomp_model2c::StrictBus board(std::move(program), std::move(data));
-        board.enable_partial_serial_io(partial_serial);
-        board.enable_serial_access_trace(partial_serial);
+        std::unique_ptr<arcaderecomp_model2c::SerialCPUReplay> replay;
+        if (!replay_path.empty()) {
+            std::ifstream input(replay_path);
+            if (!input) throw std::runtime_error("cannot open private replay");
+            auto parsed = arcaderecomp_model2c::SerialCPUReplay::parse(input);
+            replay = std::make_unique<arcaderecomp_model2c::SerialCPUReplay>(
+                std::move(parsed));
+            replay->bind(board.serial_device());
+            std::cerr << "UNVERIFIED SERIAL REPLAY: supplied CPU-side observations; "
+                      << "NOT original hardware proof\n";
+        }
+        board.enable_partial_serial_io(partial_serial || replay != nullptr);
+        board.enable_serial_access_trace(partial_serial || replay != nullptr);
         board.enable_geometry_access_trace(geometry_trace);
         auto bus = board.callbacks();
         arcaderecomp_generated::CPU cpu{};
         if (!arcaderecomp_generated::frame_init(cpu, initial_fp, initial_ip)) {
-            report(cpu, board, 0, geometry_trace);
+            report(cpu, board, 0, geometry_trace, replay.get());
             std::cerr << "CPU initial frame invalid\n";
             return 2;
         }
@@ -159,18 +189,18 @@ int main(int argc, char** argv) {
         try {
             while (executed < limit) {
                 if (!arcaderecomp_generated::step(cpu, bus)) {
-                    report(cpu, board, executed, geometry_trace);
+                    report(cpu, board, executed, geometry_trace, replay.get());
                     std::cerr << "STOP: unsupported i960 instruction / frame state, code="
                               << static_cast<unsigned>(cpu.stop_code) << "\n";
                     return 4;
                 }
                 ++executed;
             }
-            report(cpu, board, executed, geometry_trace);
+            report(cpu, board, executed, geometry_trace, replay.get());
             std::cerr << "STOP: diagnostic instruction limit reached\n";
             return 5;
         } catch (const arcaderecomp_model2c::DeviceAccessFault& fault) {
-            report(cpu, board, executed, geometry_trace);
+            report(cpu, board, executed, geometry_trace, replay.get());
             std::cerr << "STOP: required hardware not implemented: "
                       << fault.what() << "\n";
             return 3;
