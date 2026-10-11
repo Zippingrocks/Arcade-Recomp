@@ -78,6 +78,18 @@ struct BusWrite {
     Region region;
 };
 
+// CPU-side transaction observations. Refused reads must not be confused
+// with an observed status value of zero. Ordinals are not device cycles.
+struct SerialBusAccess {
+    std::uint64_t ordinal;
+    std::uint32_t address;
+    unsigned width;
+    bool write;
+    bool completed;
+    bool value_known;
+    std::uint32_t value;
+};
+
 class StrictBus final {
 public:
     static constexpr std::uint32_t kProgramSize = 0x00200000u;
@@ -120,6 +132,16 @@ public:
     IO3155649& serial_device() { return io_; }
     const IO3155649& serial_device() const { return io_; }
 
+    // Research-only observational trace, never a serial reply provider.
+    // Captures accepted and refused CPU bus accesses without advancing time.
+    void enable_serial_access_trace(bool enabled = true) {
+        serial_trace_enabled_ = enabled;
+    }
+    void clear_serial_access_trace() { serial_trace_.clear(); }
+    const std::vector<SerialBusAccess>& serial_access_trace() const {
+        return serial_trace_;
+    }
+
     arcaderecomp_generated::Bus callbacks() {
         return arcaderecomp_generated::Bus{
             this, &bridge_read32, &bridge_write32, &bridge_read8,
@@ -146,6 +168,21 @@ public:
 
     void write(std::uint32_t address, unsigned width, std::uint32_t value) {
         const auto reg = classify(address);
+        if (reg == Region::serial_io) {
+            try {
+                validate_access(address, width, true, reg);
+                io_.write_bus_byte(address, static_cast<std::uint8_t>(value));
+            } catch (const IO3155649::Unsupported& error) {
+                record_serial_access(address, width, true, false, true, value);
+                throw DeviceAccessFault(address, width, true, reg, error.what());
+            } catch (const DeviceAccessFault&) {
+                record_serial_access(address, width, true, false, true, value);
+                throw;
+            }
+            record_serial_access(address, width, true, true, true, value);
+            writes_.push_back({address, value, width, reg});
+            return;
+        }
         validate_access(address, width, true, reg);
         if (reg == Region::irq_registers) {
             if (address == PartialIRQRegisters::REQUEST)
@@ -155,15 +192,6 @@ public:
             else
                 throw DeviceAccessFault(address, width, true, reg,
                                         "unsupported IRQ register address");
-            writes_.push_back({address, value, width, reg});
-            return;
-        }
-        if (reg == Region::serial_io) {
-            try {
-                io_.write_bus_byte(address, static_cast<std::uint8_t>(value));
-            } catch (const IO3155649::Unsupported& error) {
-                throw DeviceAccessFault(address, width, true, reg, error.what());
-            }
             writes_.push_back({address, value, width, reg});
             return;
         }
@@ -191,6 +219,18 @@ private:
     std::size_t pending_timing_writes_ = 0;
     bool serial_io_enabled_ = false;
     IO3155649 io_{};
+    bool serial_trace_enabled_ = false;
+    mutable std::vector<SerialBusAccess> serial_trace_{};
+
+    void record_serial_access(std::uint32_t address, unsigned width,
+                              bool write, bool completed, bool value_known,
+                              std::uint32_t value) const {
+        if (!serial_trace_enabled_) return;
+        serial_trace_.push_back({
+            static_cast<std::uint64_t>(serial_trace_.size()) + 1u,
+            address, width, write, completed, value_known, value
+        });
+    }
     bool irq_enabled_ = false;
     PartialIRQRegisters irq_{};
 
@@ -273,6 +313,20 @@ private:
 
     std::uint32_t read_value(std::uint32_t address, unsigned width) const {
         const auto reg = classify(address);
+        if (reg == Region::serial_io) {
+            try {
+                validate_access(address, width, false, reg);
+                const auto value = io_.read_bus_byte(address);
+                record_serial_access(address, width, false, true, true, value);
+                return value;
+            } catch (const IO3155649::Unsupported& error) {
+                record_serial_access(address, width, false, false, false, 0u);
+                throw DeviceAccessFault(address, width, false, reg, error.what());
+            } catch (const DeviceAccessFault&) {
+                record_serial_access(address, width, false, false, false, 0u);
+                throw;
+            }
+        }
         validate_access(address, width, false, reg);
         if (reg == Region::irq_registers) {
             if (address == PartialIRQRegisters::REQUEST)
@@ -281,13 +335,6 @@ private:
                 return irq_.enable();
             throw DeviceAccessFault(address, width, false, reg,
                                     "unsupported IRQ register address");
-        }
-        if (reg == Region::serial_io) {
-            try {
-                return io_.read_bus_byte(address);
-            } catch (const IO3155649::Unsupported& error) {
-                throw DeviceAccessFault(address, width, false, reg, error.what());
-            }
         }
         const auto* array = readable_bytes(address, reg);
         const auto base = region_offset(address, reg);

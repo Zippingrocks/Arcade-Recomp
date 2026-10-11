@@ -52,6 +52,18 @@ void report(const arcaderecomp_generated::CPU& cpu,
                   << " byte=0x" << std::hex << static_cast<unsigned>(tx.byte)
                   << " address=0x" << tx.address << std::dec << "\n";
     }
+    for (const auto& access : board.serial_access_trace()) {
+        std::cout << "serial_access ordinal=" << access.ordinal
+                  << " direction=" << (access.write ? "write" : "read")
+                  << " address=0x" << std::hex << access.address << std::dec
+                  << " width=" << access.width
+                  << " completed=" << (access.completed ? "yes" : "no");
+        if (access.value_known)
+            std::cout << " value=0x" << std::hex << access.value << std::dec;
+        else
+            std::cout << " value=UNOBSERVED";
+        std::cout << "\n";
+    }
 }
 
 } // namespace
@@ -90,6 +102,7 @@ int main(int argc, char** argv) {
         }
         arcaderecomp_model2c::StrictBus board(std::move(program), std::move(data));
         board.enable_partial_serial_io(partial_serial);
+        board.enable_serial_access_trace(partial_serial);
         auto bus = board.callbacks();
         arcaderecomp_generated::CPU cpu{};
         if (!arcaderecomp_generated::frame_init(cpu, initial_fp, initial_ip)) {
