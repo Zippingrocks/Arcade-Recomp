@@ -8,6 +8,7 @@
 #pragma once
 
 #include "i960_interrupt_pins.hpp"
+#include "i960_interrupt_priority.hpp"
 #include "model2c_irq_registers.hpp"
 
 #include <array>
@@ -71,4 +72,58 @@ inline Model2CIRQObservation observe_model2c_irq(
     }
     return snapshot;
 }
+// Optional *second* observation pass. The Intel current program priority is
+// not presently independently decoded from this project's CPU process
+// controls, so it must be supplied explicitly by the research caller.
+// Do NOT use this information to accept, arbitrate, or deliver interrupts.
+struct Model2CPinPriorityReview {
+    bool evaluated = false; // false for unasserted pins or IAC/INTR/INTA
+    arcaderecomp_generated::KBVectorPriorityReview vector{};
+};
+struct Model2CIRQPriorityReview {
+    unsigned externally_supplied_current_priority = 0u;
+    std::array<Model2CPinPriorityReview, 4> pins{};
+    unsigned higher_priority_candidates = 0u;
+    unsigned would_post_pending = 0u;
+    unsigned invalid_or_reserved_vectors = 0u;
+    unsigned non_direct_asserted_pins = 0u;
+};
+
+// Read-only interpretation of a frozen board/ICR snapshot. This neither
+// selects a highest priority pin nor models the required pending table,
+// priority mutation, edge semantics, interrupt frame or board ACK.
+inline Model2CIRQPriorityReview review_model2c_irq_priorities(
+    const Model2CIRQObservation& snapshot, unsigned current_priority) {
+    if (current_priority > 31u)
+        throw std::out_of_range("Intel program priority outside 0..31");
+    Model2CIRQPriorityReview review{};
+    review.externally_supplied_current_priority = current_priority;
+    for (unsigned pin = 0; pin < review.pins.size(); ++pin) {
+        const auto& observed = snapshot.pins[pin];
+        if (!observed.asserted) continue;
+        if (!observed.direct_vector_candidate) {
+            ++review.non_direct_asserted_pins;
+            continue;
+        }
+        auto& result = review.pins[pin];
+        result.evaluated = true;
+        result.vector = arcaderecomp_generated::review_kb_vector_priority(
+            observed.configured_vector, current_priority);
+        using arcaderecomp_generated::KBVectorDisposition;
+        switch (result.vector.disposition) {
+        case KBVectorDisposition::higher_priority_candidate:
+            ++review.higher_priority_candidates;
+            break;
+        case KBVectorDisposition::would_post_pending:
+            ++review.would_post_pending;
+            break;
+        case KBVectorDisposition::invalid_vector:
+        case KBVectorDisposition::reserved_vector:
+            ++review.invalid_or_reserved_vectors;
+            break;
+        }
+    }
+    return review;
+}
+
 } // namespace arcaderecomp_model2c

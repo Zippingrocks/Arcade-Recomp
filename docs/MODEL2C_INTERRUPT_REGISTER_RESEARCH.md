@@ -112,3 +112,37 @@ ACK source grouping, 4096 possible synthetic 12-bit request combinations,
 and state immutability. All tests use invented request injections with no
 actual arcade trace. Original board IRQ timing, priority, line-level and
 entry/return proof remains missing; Issue #7 stays open.
+
+
+## Intel KB vector priority classification (2026-10-11)
+
+`runtime/i960_interrupt_priority.hpp` now implements an independently
+written, **pure priority review**, grounded in the [Intel 80960KB Programmer's
+Reference Manual, Chapter 8 pp. 8-2, 8-3 and
+8-9](https://www.arithmazium.org/classroom/lib/Intel_80960KB_Programmers_Reference_Manual_Mar88.pdf).
+For a valid 8-bit interrupt vector, Intel defines a priority level equal to
+integer `vector / 8`. Vectors 0–7 are unavailable and vectors 244–251
+are reserved. A priority-31 vector is always eligible for immediate
+service; other vectors with a priority **equal to or below** the
+processor's current priority would be posted pending instead of serviced
+immediately. The pure helper also provides the documented *byte offsets
+and bit positions* in Intel's pending-interrupt table and the offset of
+the handler entry, **without touching any CPU memory**.
+
+The existing `model2c_irq_observation.hpp` adds an *optional read-only
+second pass*, `review_model2c_irq_priorities(snapshot, current_priority)`.
+**The caller MUST supply a known or hypothetical current priority (0–31).**
+The project does not silently interpret an unverified `process_controls`
+field, because actual Intel control-state tracking and interrupt-frame
+entry/return are incomplete. Non-vector IAC/INTR/INTA pins and unsupported
+vectors remain explicitly unclassified or invalid. Multiple candidates
+are never arbitrated by this helper, and no pending interrupts are
+posted, acknowledged, serviced or delivered.
+
+Synthetic GCC/Clang UBSan tests cover all **8,192 combinations** of
+256 vectors and 32 program priorities, Intel table offsets, the
+priority-31 special case, the original `hotdo` ICR `0x0F0E0D0C`
+(vectors 12–15, all priority 1), reset multiplexing and reserved-vector
+rejection. This advances documented CPU *priority research* and tests,
+but **does not establish actual Model 2C interrupt acceptance, timing,
+priority-state accuracy, supervisor frames or original-cabinet behavior**.
