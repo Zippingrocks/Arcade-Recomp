@@ -154,6 +154,34 @@ python -m unittest discover -s tests -p test_tgpx4_host_trace.py -v
 ```
 
 
+
+### Native attempted-access trace — not an accepted upload
+
+The strict `StrictBus` now provides an **opt-in**, bounded
+`geometry_access_trace` recording attempted CPU reads/writes to the known
+geometry and TGPx4 apertures, with ordinal and dropped-record accounting.
+The private original-HOTD1 native boot probe accepts `--geometry-trace`
+and emits `geometry_access` records followed by an explicit
+`geometry_trace_summary` footer. This does not enable geometry hardware:
+each strict geometry access still raises `DeviceAccessFault`. Attempted
+write values are known but `completed=no`; denied read values remain
+`UNOBSERVED`. Rejected synchronous non-RAM loads return Bad Access and do
+not emit fabricated completed reads.
+
+```sh
+strict_boot_probe /private/maincpu.bin 10000 --serial-tx --geometry-trace
+```
+
+The separate accepted-upload auditor `tgpx4_host_trace` **must reject**
+these attempted writes as incomplete. The strict original native boot still
+stops at the unknown Sega 315-5649 status read, with no fake RX/status or
+TGPx4 result. A diagnostic trace is not an arcade capture, not a decoded
+MB86235 program, and not evidence of completed physical FIFO transactions.
+ROM-free GCC/Clang tests cover the observer and a synthetic compiled boot
+probe. No proprietary image, private generated code or DSP opcodes are
+committed.
+
+
 ## Next requirements for native geometry recompiler
 
 1. Capture or derive the original *host program upload* independently from
