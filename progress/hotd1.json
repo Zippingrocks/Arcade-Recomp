@@ -908,6 +908,19 @@
         "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
       ],
       "note": "Added a fail-closed optional native CPU bus contract for provider-asserted coherent/locked 36-byte KB pending-table capture; StrictBus does not implement it and ordinary read32 cannot substitute. Validates known priority, aligned bounded table address, provider success and snapshot consistency before exposing metadata; refuses poisoned/partial data. Synthetic GCC/Clang native tests only. No actual Intel lock/atomic read-modify-write, pending memory updates, interrupt delivery, MODPC lowering or cabinet proof; cpu.interrupts remains 15%, CPU 55%, Model2C 20%, overall HOTD1 10%."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.interrupts",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "runtime/i960_pending_interrupt_record_edit.hpp",
+        "tests/test_i960_pending_interrupt_record_edit_native.py",
+        "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
+      ],
+      "note": "Implemented pure, uncommitted 36-byte Intel KB pending-vector post/take record drafts. Validated full original record before any output; support duplicate idempotency, priority/vector bit integrity, highest-vector tie order and final-vector priority clear. GCC/Clang UBSan synthetic exhaustive vector/current-priority and same-priority pair tests. No actual locked bus transaction, RAM commit, MODPC priority lowering, CPU interrupt frame or cabinet proof. cpu.interrupts 15%, CPU 55%, Model2C 20%, original HOTD1 10% unchanged."
     }
   ]
 }
