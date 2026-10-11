@@ -310,3 +310,30 @@ Project hardware-fidelity estimates remain unchanged.
 
 Primary Intel manual (Mar 1988), Chapter 8:
 https://www.arithmazium.org/classroom/lib/Intel_80960KB_Programmers_Reference_Manual_Mar88.pdf
+
+
+## Synthetic synchronized pending-table transactions (2026-10-11)
+
+The deliberately named `runtime/i960_pending_transaction_synthetic.hpp`
+is a host-only, **ROM-free test model**, not a Sega Model 2C bus backend.
+Its `SyntheticKBPendingTable` owns one 36-byte pending record behind a
+C++ mutex and holds that mutex across reading, validating, drafting
+and committing each synthetic posting/removal. An explicit test-only
+commit-denial toggle simulates failure before any mutation. It records
+a monotonic commit revision and returns vector metadata **only after**
+a successful commit; no-op and failed operations do not report a
+delivered vector or alter the revision.
+
+GCC/Clang UBSan regression tests stress twelve simultaneous writers
+posting 192 distinct vectors, duplicate/idempotent writes, twelve
+concurrent consumers, failure injection, corrupt original bitmaps and
+the unchanged `MODPC` priority-lowering stop. A host mutex is **not**
+the architected i960KB atomic read-modify-write bus-lock signal or an
+original Model 2C device. This test model is deliberately not installed
+as `StrictBus::read_pending_record_locked`; actual RAM side effects,
+priority arbitration, supervisor frames, IRQ return and original
+HOTD1 315-5649 serial RX/status remain unimplemented.
+
+The scoped CPU interrupt estimate stays at 15% and original HOTD1
+overall stays at 10%. The synthetic transaction tests do not prove
+any additional arcade-cabinet execution.

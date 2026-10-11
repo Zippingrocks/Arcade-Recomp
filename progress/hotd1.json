@@ -921,6 +921,19 @@
         "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
       ],
       "note": "Implemented pure, uncommitted 36-byte Intel KB pending-vector post/take record drafts. Validated full original record before any output; support duplicate idempotency, priority/vector bit integrity, highest-vector tie order and final-vector priority clear. GCC/Clang UBSan synthetic exhaustive vector/current-priority and same-priority pair tests. No actual locked bus transaction, RAM commit, MODPC priority lowering, CPU interrupt frame or cabinet proof. cpu.interrupts 15%, CPU 55%, Model2C 20%, original HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.interrupts",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "runtime/i960_pending_transaction_synthetic.hpp",
+        "tests/test_i960_pending_transaction_synthetic_native.py",
+        "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
+      ],
+      "note": "Added a deliberately separate synthetic lock-protected pending-table transaction model to validate all-or-nothing post/take drafts, idempotency, revision tracking and fail-closed commit denial under GCC/Clang UBSan concurrent tests (192 distinct vectors and 12 writers/consumers). Not connected to native StrictBus or original CPU; C++ mutex is not Intel LOCK bus timing, no hardware atomic RMW, actual IRQ entry, MODPC priority-lowering or HOTD1 board evidence. cpu.interrupts 15%, native CPU 55%, Model2C 20%, original HOTD1 10% unchanged."
     }
   ]
 }
