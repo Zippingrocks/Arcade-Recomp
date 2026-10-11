@@ -132,6 +132,19 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!convert_integer_to_real_exact(cpu, {value}, "
                 f"{dst}u, {'true' if dest_fp else 'false'})) return false;")
 
+    if ins.form == "REG" and op == "addr":
+        # Intel KB ADDR 78F, original arcade candidate 0xC00:
+        # real32 + real32 -> real32. No host arithmetic, and never
+        # simulate inexact exception or rounding flags.
+        # Only GPR real32 operands and destination are supported here.
+        if word & (0x20 | 0x40 | 0x800 | 0x1000 | 0x2000):
+            return None
+        first = word & 31
+        second = (word >> 14) & 31
+        dst = (word >> 19) & 31
+        return (f"if (!add_real32_exact(cpu, cpu.r[{first}], "
+                f"cpu.r[{second}], {dst}u)) return false;")
+
     if ins.form == "REG" and op == "cvtzri":
         # Intel KB CVTZRI 6C2: round toward zero, independent of AC
         # rounding mode. Do not manufacture precision/invalid fault flags.
@@ -532,6 +545,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_long_real.hpp"
 #include "i960_fp_logb.hpp"
 #include "i960_fp_to_integer.hpp"
+#include "i960_fp_add_exact.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {
