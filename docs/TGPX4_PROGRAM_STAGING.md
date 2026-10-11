@@ -125,6 +125,25 @@ native bus (which still faults on these accesses), original startup, physical
 control prior state, timing, the MB86235 opcode semantics, nor ROM correctness
 are established by this tool.
 
+### Evidence checklist for future original HOTD1 captures
+
+Before interpreting any reported `candidate_sha256` as a meaningful game
+program fingerprint, preserve three **private** independent checks:
+
+1. The raw capture includes an observed start and end control write, with
+   recording bounds and a known acquisition method, not a guessed reset.
+2. The CPU-write capture mechanism reports its total/loss counters. A
+   filtered stream must retain the original write order without silently
+   removing mid-upload FIFO transactions.
+3. Reproduce the digest from a second independent collection or from
+   an appropriately authenticated original-code-derived upload trace.
+   Agreement would corroborate *bytes and ordering* only, not MB86235
+   instruction meaning or original-cabinet execution.
+
+The current tools cannot perform those independent observations themselves.
+Any missing check stays explicitly unresolved; never upgrade the
+`external_capture_unverified` provenance label to hardware proof.
+
 This input is an **externally obtained filtered CPU-write transcript**, not
 an automatic native `StrictBus` trace. A complete authentic HOTD1 input
 cannot yet be collected from uninterrupted native boot because the authentic
