@@ -10,6 +10,7 @@
 // back. New local-register contents are *architecturally unspecified*: the
 // deterministic zeros here are a research convenience, not arcade fidelity.
 #pragma once
+#include <cstddef>
 #include <cstdint>
 
 namespace arcaderecomp_generated {
@@ -127,6 +128,12 @@ struct Bus {
     // Bad Access without raising an i960 CPU exception or mutating dst.
     // Async read32 MUST NOT silently stand in for a peripheral transaction.
     bool (*read32_sync)(void*, std::uint32_t, std::uint32_t*) = nullptr;
+    // Optional EXPLICIT exclusive 36-byte Intel pending-record snapshot.
+    // The provider must hold an appropriate lock across all 36 bytes and
+    // return true only for a complete read. Caller cannot verify LOCK-pin
+    // behavior; StrictBus has no such provider. Never fall back to read32.
+    bool (*read_pending_record_locked)(void*, std::uint32_t,
+                                       std::uint8_t*, std::size_t) = nullptr;
 };
 
 static inline bool stop(CPU& cpu, StopCode code = StopCode::untranslated) {
