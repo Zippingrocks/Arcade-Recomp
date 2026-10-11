@@ -179,3 +179,45 @@ review. Future `MODPC` and fault-return implementations must explicitly
 update or invalidate the knowledge marker. A direct external rewrite
 that restores the exact same process-controls bits is not independently
 observable by this helper, so it must not serve as a security boundary.
+
+
+## Native MODPC (655h) — strictly bounded, fail-closed (2026-10-11)
+
+The original **Intel 80960KB Programmer's Reference Manual** (March 1988),
+Chapter 11 pp. 11-82–11-83, specifies MODPC operands as dummy
+source / mask / source-and-destination. With mask zero, MODPC copies
+process controls to the destination even in user mode. With a nonzero mask,
+the processor must be in supervisor mode, changes only masked bits and
+returns the **previous** process controls through the destination.
+**Reducing** program priority also requires an interrupt-table pending
+check before execution can safely resume.
+
+The independent i960 REG decoder and C++ AOT translator now recognize
+**opcode 655h**. The native `kb_modpc_checked` handler requires already
+established PC provenance from the opt-in IAC `0x93` path. It implements
+the **mask-zero read** and **supervisor-mode, priority-field-only
+nondecreasing update** (including idempotent writes), preserving the prior
+PC value as the destination. The mask and proposed replacement are
+captured before the destination is overwritten, so register aliases are
+safe.
+
+Cases requiring absent hardware/CPU behavior deliberately stop with
+specific diagnostic codes and **no PC/register mutation**: unknown
+process-controls origin, user-mode nonzero mask (architected TYPE.MISMATCH
+fault not yet implemented), masks touching non-priority fields such as
+trace/state/resume/mode/reserved bits, and any priority *lowering*
+(which requires pending-interrupt table examination). The translator also
+rejects undocumented special-register encoding modes. The source1
+operand is Intel's unused dummy; actual mask comes from source2.
+
+GCC and Clang UBSan ROM-free tests cover decoding/AOT, 32 synthetic
+priority levels and nondecreasing transitions, aliasing, mask-zero reads,
+stale state, user privilege, unsupported fields, and rejection of a
+priority-lowering MODPC after a successfully modeled IAC `0x93`.
+This does **not** implement Intel fault entry, pending-table scanning,
+priority arbitration, MODPC trace delay, interrupt delivery or
+original Model 2C board behavior. Strict original HOTD1 boot remains
+blocked by real Sega 315-5649 RX/status evidence.
+
+Primary reference:
+https://www.arithmazium.org/classroom/lib/Intel_80960KB_Programmers_Reference_Manual_Mar88.pdf

@@ -842,6 +842,22 @@
         "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
       ],
       "note": "Added explicitly tracked initial Intel KB program priority after successful opt-in IAC 0x93, invalidated for ordinary frame_init, failed PRCB validation or out-of-band process-control modifications. Read-only IRQ observer now has a guarded known-CPU-priority API, refusing unknown state rather than assuming zero. ROM-free GCC/Clang UBSan integration tests cover provenance and pending-priority review. No MODPC handler, actual pending writes/interrupt delivery/frames or physical Model2C evidence; cpu.interrupts 15%, CPU 55%, Model2C 20%, HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.interrupts",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "arcaderecomp/i960.py",
+        "arcaderecomp/i960_cpp.py",
+        "runtime/i960_process_controls.hpp",
+        "runtime/i960_frame_runtime.hpp",
+        "tests/test_i960_modpc_native.py",
+        "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
+      ],
+      "note": "Added native Intel KB MODPC 655h decode/AOT and conservative process-controls handling based on primary manual: mask-zero read and priority-only nondecreasing supervisor changes with old-PC destination, rejecting unknown process-control source, user privilege fault, unsupported fields and priority-lowering pending-check requirement. Synthetic GCC/Clang UBSan tests; no architected TYPE.MISMATCH fault, pending interrupt scan, actual IRQ delivery or cabinet proof. cpu.interrupts=15%, CPU 55%, HOTD1 overall 10% unchanged."
     }
   ]
 }

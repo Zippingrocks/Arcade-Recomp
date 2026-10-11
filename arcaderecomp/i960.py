@@ -75,6 +75,7 @@ REGISTER = {
     0x604: ("movqstr", "sss"), 0x605: ("movstr", "sss"),
     0x640: ("spanbit", "sd"), 0x641: ("scanbit", "sd"),
     0x650: ("modify", "sss"),
+    0x655: ("modpc", "sss"),
     0x66d: ("flushreg", ""),
     0x674: ("cvtir", "sd"),
     0x68a: ("logbnr", "sd"),
