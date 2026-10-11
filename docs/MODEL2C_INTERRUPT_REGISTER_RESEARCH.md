@@ -221,3 +221,37 @@ blocked by real Sega 315-5649 RX/status evidence.
 
 Primary reference:
 https://www.arithmazium.org/classroom/lib/Intel_80960KB_Programmers_Reference_Manual_Mar88.pdf
+
+
+## Static pending-interrupt record validation (2026-10-11)
+
+Intel's 80960KB March 1988 manual, Chapter 8 pp. 8-2–8-3 and 8-8–8-9,
+defines the interrupt table's first **36 bytes**: little-endian 32-bit
+pending-priority mask at offsets 0–3, followed by 32 vector bytes at
+offsets 4–35. Vectors 0–7 are unusable and 244–251 reserved. When more
+than one vector has the same priority, the KB chooses the **highest vector
+number** first. The CPU's actual posting/inspection of the table uses an
+**atomic, bus-locking read/write transaction**.
+
+The independent `runtime/i960_pending_interrupt_snapshot.hpp` now
+validates a **caller-supplied immutable snapshot**, checks that its
+priority bitmap equals the priorities represented in the pending-vector
+bits, rejects reserved vectors, and calculates only the *highest
+potentially serviceable vector* for an **explicit current priority**.
+Priority-31 pending vectors are treated as potentially serviceable even
+when the caller supplies program priority 31. There is no silent
+assumption that the table is empty.
+
+Crucially, this helper is **not integrated with CPU interrupt delivery
+or MODPC priority lowering**. It cannot validate atomic capture
+coherence, read the actual PRCB's interrupt table, lock a bus, mutate
+pending bits, ACK a board line, schedule an interrupt, or enter an Intel
+handler. A returned candidate is not a real hardware interrupt.
+`kb_modpc_checked` still halts on *all* priority reductions, even when
+an invented snapshot is empty. Synthetic GCC/Clang UBSan tests cover
+all 256 vectors against 32 priorities (8,192 cases), mixed priorities,
+same-priority ordering, inconsistent bitmap data, reserved vectors,
+read-only state preservation and the unchanged fail-closed MODPC guard.
+
+Reference: Intel 80960KB Programmer's Reference Manual (1988),
+https://www.arithmazium.org/classroom/lib/Intel_80960KB_Programmers_Reference_Manual_Mar88.pdf
