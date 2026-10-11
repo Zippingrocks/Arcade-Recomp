@@ -32,6 +32,10 @@ enum class Region {
     serial_io,
     irq_registers,
     timer_registers,
+    geometry_interface,
+    geometry_buffer,
+    geometry_fifo_status,
+    video_control,
     unmapped
 };
 
@@ -44,6 +48,10 @@ static inline const char* region_name(Region region) {
     case Region::serial_io: return "Sega 315-5649 I/O controller (serial partial)";
     case Region::irq_registers: return "Model 2C IRQ request/enable registers (partial)";
     case Region::timer_registers: return "Model 2C countdown timer registers (partial)";
+    case Region::geometry_interface: return "Model 2C geometry interface registers (unimplemented)";
+    case Region::geometry_buffer: return "Model 2C geometry buffer window (unimplemented)";
+    case Region::geometry_fifo_status: return "Model 2C geometry FIFO status (unimplemented)";
+    case Region::video_control: return "Model 2C video control registers (unimplemented)";
     case Region::unmapped: return "unmapped or unimplemented Model 2C device";
     }
     return "unknown";
@@ -107,6 +115,14 @@ public:
     static constexpr std::uint32_t kExtraSize = 0x01000000u;
     static constexpr std::uint32_t kIOStart = 0x01c00000u;
     static constexpr std::uint32_t kIOSize = 0x20u;
+    // Published i960-visible Model 2C geometry apertures. Knowing an
+    // address map is NOT permission to assume any FIFO/RAM side effects.
+    static constexpr std::uint32_t kGeometryInterface = 0x00800000u;
+    static constexpr std::uint32_t kGeometryInterfaceSize = 0x00004000u;
+    static constexpr std::uint32_t kGeometryBuffer = 0x00900000u;
+    static constexpr std::uint32_t kGeometryBufferSize = 0x00080000u;
+    static constexpr std::uint32_t kGeometryFifoStatus = 0x00980004u;
+    static constexpr std::uint32_t kVideoControl = 0x0098000cu;
 
     // Program ROM and optional 32-MiB mapped game-data ROM are user-supplied
     // and are never stored in this project's source tree.
@@ -185,6 +201,14 @@ public:
         if (inside(address, 0u, kProgramSize)) return Region::program_rom;
         if (inside(address, kWorkStart, kWorkSize)) return Region::work_ram;
         if (inside(address, kControlStart, kControlSize)) return Region::cpu_control;
+        if (inside(address, kGeometryInterface, kGeometryInterfaceSize))
+            return Region::geometry_interface;
+        if (inside(address, kGeometryBuffer, kGeometryBufferSize))
+            return Region::geometry_buffer;
+        if (inside(address, kGeometryFifoStatus, 4u))
+            return Region::geometry_fifo_status;
+        if (inside(address, kVideoControl, 4u))
+            return Region::video_control;
         if (inside(address, kIOStart, kIOSize)) return Region::serial_io;
         if (inside(address, PartialModel2CTimers::BASE, 16u)) return Region::timer_registers;
         if (inside(address, PartialIRQRegisters::REQUEST, 8u))
@@ -317,6 +341,14 @@ private:
             return 8u - (address - PartialIRQRegisters::REQUEST);
         case Region::timer_registers:
             return 16u - (address - PartialModel2CTimers::BASE);
+        case Region::geometry_interface:
+            return kGeometryInterfaceSize - (address - kGeometryInterface);
+        case Region::geometry_buffer:
+            return kGeometryBufferSize - (address - kGeometryBuffer);
+        case Region::geometry_fifo_status:
+            return 4u - (address - kGeometryFifoStatus);
+        case Region::video_control:
+            return 4u - (address - kVideoControl);
         case Region::game_data_rom:
             if (inside(address, kExtraStart, kExtraSize))
                 return kExtraSize - (address - kExtraStart);
@@ -359,6 +391,15 @@ private:
             throw DeviceAccessFault(address, width, write, reg, "data ROM not supplied");
         if (write && (reg == Region::program_rom || reg == Region::game_data_rom))
             throw DeviceAccessFault(address, width, true, reg, "ROM is read-only");
+        // This classification only improves fault provenance. In particular,
+        // the mirrored geometry window must NOT be treated as generic RAM;
+        // FIFO fullness, coprocessor uploads and video timing are unknown.
+        if (reg == Region::geometry_interface ||
+            reg == Region::geometry_buffer ||
+            reg == Region::geometry_fifo_status ||
+            reg == Region::video_control)
+            throw DeviceAccessFault(address, width, write, reg,
+                                    "geometry/video hardware behavior unimplemented");
     }
 
     const std::vector<std::uint8_t>* readable_bytes(std::uint32_t address,
