@@ -186,6 +186,63 @@ int main() {
 }
 """)
 
+    def test_iac_reinitialize_invalidates_every_floating_register(self):
+        # A native FP read after IAC 0x93 must not reuse pre-reset FP bits.
+        # This tests definedness, not a fabricated reset value for the 80-bit
+        # physical register contents. All opcodes and bus data are synthetic.
+        movre_fp0_to_g4 = (0x6e000080 | 0x1000 |
+                            (20 << 19) | 0x20)
+        run_cpp(stream(second_entry=movre_fp0_to_g4), r"""
+int main() {
+    TestMem memory = make_mem();
+    CPU cpu{}; Bus bus{}; bus.ctx=&memory; bus.read32=&read32;
+    if(!frame_init(cpu,0x00510200u,0u))return 1;
+    for(unsigned slot=0;slot<4u;++slot){
+        cpu.fp[slot].low=0xdead0000u+slot;
+        cpu.fp[slot].middle=0x80000000u;
+        cpu.fp[slot].high=16383u;
+        cpu.fp_defined[slot]=true;
+    }
+    cpu.r[16]=0xff000010u;cpu.r[17]=0x100u;
+    cpu.allow_iac_93_reinitialize=true;
+    if(!step(cpu,bus)||cpu.ip!=0x40u||
+       cpu.reinitialize_count!=1u)return 2;
+    for(unsigned slot=0;slot<4u;++slot)
+        if(cpu.fp_defined[slot])return 3;
+    cpu.r[20]=0x12345678u;cpu.r[21]=0xabcdef01u;
+    if(step(cpu,bus) ||
+       cpu.stop_code!=StopCode::undefined_floating_point_register||
+       cpu.ip!=0x40u || cpu.stop_ip!=0x40u ||
+       cpu.r[20]!=0x12345678u || cpu.r[21]!=0xabcdef01u)
+       return 4;
+    return 0;
+}
+""")
+
+    def test_failed_iac_prcb_validation_preserves_fp_registers(self):
+        # Invalid PRCB must fail before CPU frame_init; it must not
+        # partially reset an otherwise known FP value.
+        run_cpp(stream(), r"""
+int main() {
+    TestMem memory=make_mem();
+    memory.words[0x00510e18u]=0x00510401u;
+    CPU cpu{};Bus bus{};bus.ctx=&memory;bus.read32=&read32;
+    cpu.r[16]=0xff000010u;cpu.r[17]=0x100u;
+    cpu.allow_iac_93_reinitialize=true;
+    for(unsigned slot=0;slot<4u;++slot){
+        cpu.fp_defined[slot]=true;
+        cpu.fp[slot].low=0x10101010u+slot;
+    }
+    if(step(cpu,bus) ||
+       cpu.stop_code!=StopCode::iac_invalid_prcb ||
+       cpu.reinitialize_count!=0u || cpu.ip!=0u)return 1;
+    for(unsigned slot=0;slot<4u;++slot)
+        if(!cpu.fp_defined[slot] ||
+           cpu.fp[slot].low!=0x10101010u+slot)return 2;
+    return 0;
+}
+""")
+
     def test_extra_entry_produces_post_reinit_aot_code(self):
         report = run_cpp(stream(), r"""
 int main() { return 0; }
