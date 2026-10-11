@@ -18,6 +18,7 @@
 #include "sega3155649_events.hpp"
 
 #include <cstdint>
+#include <exception>
 #include <functional>
 #include <stdexcept>
 #include <string>
@@ -110,7 +111,16 @@ public:
             }
             if (!status_source_)
                 throw Unsupported(absolute_address, false, "serial status source not configured");
-            return status_source_();
+            // A disconnected real receiver (or a failing synthetic
+            // provider) is NOT an observed status byte. Preserve the
+            // bus fault contract, without exposing provider diagnostics
+            // or letting the CPU continue with a fabricated value.
+            try {
+                return status_source_();
+            } catch (const std::exception&) {
+                throw Unsupported(absolute_address, false,
+                                  "external serial status provider failed");
+            }
         }
         if (reg != SERIAL_RX1 && reg != SERIAL_RX2)
             throw Unsupported(absolute_address, false, "device status/port read not implemented");
@@ -123,7 +133,12 @@ public:
             throw Unsupported(absolute_address, false, "serial receive source not configured");
         // Channel 2 mux selection was provided by its own TX last byte.
         // Channel 1 likewise owns independent selection state.
-        return serial_rx_(last_tx_[channel - 1u], channel);
+        try {
+            return serial_rx_(last_tx_[channel - 1u], channel);
+        } catch (const std::exception&) {
+            throw Unsupported(absolute_address, false,
+                              "external serial receive provider failed");
+        }
     }
 
     const std::vector<TXEvent>& transmissions() const { return events_; }

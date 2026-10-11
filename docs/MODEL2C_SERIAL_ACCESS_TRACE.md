@@ -39,3 +39,16 @@ ROM-free native regression tests run with GCC and Clang under UBSan in
 tests/test_sega_serial_bus_trace.py and test_strict_boot_probe.py.
 The original ROM-derived generated source, binaries and original
 commercial ROM image remain private and are not checked into Git.
+
+
+### External serial provider failures
+
+A connected status or RX provider can legitimately fail (for example,
+disconnected hardware or a missing capture sample). Such exceptions now
+become a structured, address-specific `DeviceAccessFault` at the native
+CPU bus boundary. The diagnostic trace records a failed read with
+`value_known=false`, not a successful zero or a guessed readiness bit.
+Provider-specific exception messages are not copied into the game-side
+fault report. A later successful read becomes observed **only** if the
+provider explicitly returns a byte. This improves device-adapter
+resilience; it adds no actual 315-5649 receive/status implementation.

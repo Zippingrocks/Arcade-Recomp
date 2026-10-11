@@ -113,6 +113,107 @@ int main(){
 }
 """)
 
+    def test_failing_legacy_providers_are_unknown_and_recover_only_on_real_values(self):
+        # Synthetic callback failures simulate a detached input source.
+        # A throw must pass through the DeviceAccessFault boundary instead
+        # of being mistaken for a received 0x00 or an unhandled C++ error.
+        native(r"""
+#include <string>
+int main(){
+    StrictBus board(std::vector<std::uint8_t>(StrictBus::kProgramSize,0u));
+    board.enable_partial_serial_io();
+    board.enable_serial_access_trace();
+    board.write(0x01c00012u,1u,0x07u);
+    board.write(0x01c00014u,1u,0x42u);
+    unsigned status_calls=0,rx_calls=0;
+    board.serial_device().set_serial_status_source([&]() -> std::uint8_t {
+        ++status_calls;
+        if(status_calls==1u)
+            throw std::runtime_error("private capture transport went offline");
+        return std::uint8_t{0};
+    });
+    board.serial_device().set_serial_rx(
+        [&](std::uint8_t mux,unsigned channel)->std::uint8_t {
+            ++rx_calls;
+            if(channel!=2u||mux!=0x42u)return 0xfeu;
+            if(rx_calls==1u)throw std::runtime_error("external RX disconnected");
+            return std::uint8_t{0xa5u};
+        });
+    try{(void)board.read(0x01c0001au,1u);return 1;}
+    catch(const DeviceAccessFault& e){
+        const std::string message=e.what();
+        if(e.region!=Region::serial_io||e.write||
+           message.find("external serial status provider failed")==
+               std::string::npos||
+           message.find("private capture transport")!=std::string::npos)
+            return 2;
+    }
+    try{(void)board.read(0x01c00018u,1u);return 3;}
+    catch(const DeviceAccessFault& e){
+        const std::string message=e.what();
+        if(e.region!=Region::serial_io||e.write||
+           message.find("external serial receive provider failed")==
+               std::string::npos||
+           message.find("RX disconnected")!=std::string::npos)
+            return 4;
+    }
+    if(status_calls!=1u||rx_calls!=1u||board.serial_access_trace().size()!=4u)
+        return 5;
+    const auto& trace=board.serial_access_trace();
+    for(unsigned i=2u;i<4u;++i) {
+        if(trace[i].ordinal!=i+1u||trace[i].write||
+           trace[i].completed||trace[i].value_known)return 6;
+    }
+    // Only explicitly returned bytes now become observed known values.
+    if(board.read(0x01c0001au,1u)!=0u)return 7;
+    if(board.read(0x01c00018u,1u)!=0xa5u)return 8;
+    if(status_calls!=2u||rx_calls!=2u||trace.size()!=6u)return 9;
+    if(!trace[4].completed||!trace[4].value_known||
+       trace[4].value!=0u||!trace[5].completed||
+       trace[5].value!=0xa5u)return 10;
+    if(board.serial_device().transmissions().size()!=2u||
+       board.writes().size()!=2u)return 11;
+    return 0;
+}
+""")
+
+    def test_translated_i960_provider_failure_does_not_advance_ip(self):
+        # Invented i960 LOADBYTE from the real 315-5649 status register.
+        # This test must not need the original Sega ROM.
+        from arcaderecomp.i960_cpp import emit_cpp
+        import struct
+        word=(0x80<<24)|(18<<19)|(16<<14)|(4<<10)
+        generated,report=emit_cpp(struct.pack("<2I",word,0xffffffff),0,8)
+        self.assertEqual(report.translated,1)
+        native(generated + r"""
+using namespace arcaderecomp_generated;
+int main(){
+    StrictBus board(std::vector<std::uint8_t>(StrictBus::kProgramSize,0u));
+    board.enable_partial_serial_io();
+    board.enable_serial_access_trace();
+    board.serial_device().set_serial_status_source(
+        []()->std::uint8_t{throw std::runtime_error("unavailable");});
+    CPU cpu{};
+    cpu.r[16]=0x01c0001au;
+    cpu.r[18]=0xdeadbeefu;
+    Bus bus=board.callbacks();
+    try{(void)step(cpu,bus);return 1;}
+    catch(const DeviceAccessFault& e){
+        if(e.address!=0x01c0001au||e.write||e.width!=1u)return 2;
+    }
+    if(cpu.ip!=0u||cpu.r[18]!=0xdeadbeefu)return 3;
+    const auto& observations=board.serial_access_trace();
+    if(observations.size()!=1u||observations[0].completed||
+       observations[0].value_known)return 4;
+    board.serial_device().set_serial_status_source(
+        []()->std::uint8_t{return std::uint8_t{0x0cu};});
+    if(!step(cpu,bus)||cpu.ip!=4u||cpu.r[18]!=0x0cu)return 5;
+    if(observations.size()!=2u||!observations[1].completed||
+       !observations[1].value_known||observations[1].value!=0x0cu)return 6;
+    return 0;
+}
+""")
+
     def test_trace_not_enabled_by_default(self):
         native(r"""
 int main(){
