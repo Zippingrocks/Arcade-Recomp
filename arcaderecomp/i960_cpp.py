@@ -115,6 +115,23 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     f"bus.write{suffix}(bus.ctx, {address}, "
                     f"static_cast<std::uint{suffix}_t>(cpu.r[{dest}]));")
 
+    if ins.form == "REG" and op == "cvtir":
+        # CVTIR 674h: signed int32 -> binary32 or extended80.
+        # Every signed int32 fits extended80 exactly. Binary32 needs the
+        # processor's rounding controls for inexact results; those remain
+        # intentionally unsupported, not delegated to host IEEE rounding.
+        if not (word & 0x1000) or word & (0x20 | 0x40):
+            return None
+        if (word >> 14) & 31:
+            return None
+        dst = (word >> 19) & 31
+        dest_fp = bool(word & 0x2000)
+        if dest_fp and dst >= 4:
+            return None
+        value = _operand(word & 31, bool(word & 0x800))
+        return (f"if (!convert_integer_to_real_exact(cpu, {value}, "
+                f"{dst}u, {'true' if dest_fp else 'false'})) return false;")
+
     if ins.form == "REG" and op == "movre":
         # Intel 80960KB MOVRE 6E1: bit-exact 80-bit transfer with 16-bit
         # high-word padding when moving from fp0..fp3 to a GPR triple.
@@ -457,6 +474,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_transfer_shift.hpp"
 #include "i960_integer_arithmetic.hpp"
 #include "i960_fp_registers.hpp"
+#include "i960_fp_convert.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {
