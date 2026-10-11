@@ -76,6 +76,65 @@ Regression (synthetic, no Sega code or ROMs):
 python -m unittest discover -s tests -p test_tgpx4_program.py -v
 ```
 
+
+### CPU-side host-write capture audit (2026-10-10)
+
+A separate offline audit, `arcaderecomp.tgpx4_host_trace`, accepts a
+**filtered, order-preserving CPU-side write transcript** rather than assuming
+an arbitrary raw binary is the uploaded program. A candidate upload must
+contain exactly one *observed in the supplied transcript* control-on write
+to `0x00980000`, an even number of full 32-bit writes to the documented
+`0x00884000–0x00887FFF` TGPx4 FIFO aperture, and a final control-off write
+to `0x00980000`. Control writes may differ only in bit 31. The parser
+rejects anything else, including missing final control, gaps in ordinals,
+unobserved writes, reported dropped events, and partial word pairs.
+
+The following is an entirely **invented synthetic capture**. Hex words are
+not original HOTD1 data:
+
+```json
+{
+  "schema": "model2c-tgpx4-host-writes-v1",
+  "provenance": "synthetic",
+  "source_note": "Synthetic test only, no cabinet observation",
+  "capture_complete": true,
+  "total_events": 4,
+  "dropped_events": 0,
+  "events": [
+    {"ordinal": 1, "direction": "write", "address": "0x00980000", "width": 4, "completed": true, "value": "0x80000000"},
+    {"ordinal": 2, "direction": "write", "address": "0x00884000", "width": 4, "completed": true, "value": "0x11223344"},
+    {"ordinal": 3, "direction": "write", "address": "0x00884004", "width": 4, "completed": true, "value": "0x55667788"},
+    {"ordinal": 4, "direction": "write", "address": "0x00980000", "width": 4, "completed": true, "value": "0x00000000"}
+  ]
+}
+```
+
+```sh
+python -m arcaderecomp.tgpx4_host_trace \
+  --capture /private/cpu-writes.json \
+  --output /private/tgpx4-trace-metadata.json \
+  --pair-order low-first
+```
+
+The tool extracts 32-bit numeric writes in recorded order and fingerprints
+candidate 64-bit slots by using the existing staging module. No binary is
+exported. `capture_complete` and `provenance` are **source assertions**
+that cannot authenticate real hardware or detect omitted events before
+filtering; this requires independent capture evidence. Neither the strict
+native bus (which still faults on these accesses), original startup, physical
+control prior state, timing, the MB86235 opcode semantics, nor ROM correctness
+are established by this tool.
+
+This input is an **externally obtained filtered CPU-write transcript**, not
+an automatic native `StrictBus` trace. A complete authentic HOTD1 input
+cannot yet be collected from uninterrupted native boot because the authentic
+Sega 315-5649 RX/status boundary remains unresolved.
+
+```sh
+python -m unittest discover -s tests -p test_tgpx4_host_trace.py -v
+```
+
+
 ## Next requirements for native geometry recompiler
 
 1. Capture or derive the original *host program upload* independently from
