@@ -136,7 +136,7 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return None
         return (f"if (!move_extended_real(cpu, {src}u, "
                 f"{'true' if src_fp else 'false'}, {dst}u, "
-                f"{'true' if dst_fp else 'false'})) return false;"
+                f"{'true' if dst_fp else 'false'})) return false;")
 
     if ins.form == "REG" and op == "flushreg":
         # Intel KB FLUSHREG has no operands. Refuse reserved/noncanonical
