@@ -64,6 +64,11 @@ void report(const arcaderecomp_generated::CPU& cpu,
             std::cout << " value=UNOBSERVED";
         std::cout << "\n";
     }
+    std::cout << "serial_trace_summary total=" << board.serial_access_trace_total()
+              << " retained=" << board.serial_access_trace().size()
+              << " dropped=" << board.serial_access_trace_dropped()
+              << " truncated=" << (board.serial_access_trace_truncated() ? "yes" : "no")
+              << " limit=" << board.serial_access_trace_limit() << "\n";
 }
 
 } // namespace

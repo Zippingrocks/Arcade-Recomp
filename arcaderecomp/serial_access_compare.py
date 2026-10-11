@@ -20,6 +20,10 @@ import sys
 import tempfile
 
 SCHEMA = "model2c-cpu-serial-capture-v1"
+SUMMARY_RE = re.compile(
+    r"^serial_trace_summary total=([0-9]+) retained=([0-9]+)"
+    r" dropped=([0-9]+) truncated=(yes|no) limit=([0-9]+)$"
+)
 NATIVE_RE = re.compile(
     r"^serial_access ordinal=([0-9]+) direction=(read|write)"
     r" address=0x([0-9a-fA-F]+) width=([0-9]+)"
@@ -86,10 +90,20 @@ def _sequence(events: list[Access]) -> list[Access]:
 def parse_native(text: str) -> list[Access]:
     """Read strict_boot_probe diagnostic lines, retaining unknown reads."""
     found: list[Access] = []
+    summary: tuple[int, int, int, str, int] | None = None
     for line in text.splitlines():
         line = line.strip()
+        if line.startswith("serial_trace_summary"):
+            match = SUMMARY_RE.fullmatch(line)
+            if match is None or summary is not None:
+                raise TraceError("malformed or duplicated serial trace summary")
+            total, retained, dropped, truncated, limit = match.groups()
+            summary = (int(total), int(retained), int(dropped), truncated, int(limit))
+            continue
         if not line.startswith("serial_access"):
             continue
+        if summary is not None:
+            raise TraceError("serial access after final trace summary")
         match = NATIVE_RE.fullmatch(line)
         if not match:
             raise TraceError("malformed native serial_access diagnostic")
@@ -101,7 +115,16 @@ def parse_native(text: str) -> list[Access]:
         ))
         if len(found) > MAX_EVENTS:
             raise TraceError("too many native observations")
-    return _sequence(found)
+    entries = _sequence(found)
+    if summary is not None:
+        total, retained, dropped, truncated, limit = summary
+        if (retained != len(entries) or retained > limit or
+                total != retained + dropped or
+                (truncated == "yes") != (dropped > 0)):
+            raise TraceError("serial trace summary disagrees with captured events")
+        if dropped != 0:
+            raise TraceError("truncated native serial trace is not comparable")
+    return entries
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict:

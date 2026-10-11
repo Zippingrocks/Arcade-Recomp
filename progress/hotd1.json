@@ -579,6 +579,21 @@
         "docs/ROADMAP.md"
       ],
       "note": "Initial subjective estimates transcribed from the project-wide progress report; NOT derived mathematically, not independently validated against all original cabinet behavior."
+    },
+    {
+      "date": "2026-10-10",
+      "kind": "review",
+      "scope": "tools.serial_trace",
+      "percent_before": 90,
+      "percent_after": 90,
+      "evidence": [
+        "runtime/model2c_bus.hpp",
+        "tools/hotd1_strict_boot_probe.cpp",
+        "arcaderecomp/serial_access_compare.py",
+        "tests/test_sega_serial_bus_trace.py",
+        "tests/test_serial_access_compare.py"
+      ],
+      "note": "Added a bounded CPU-side serial-access trace with retained/dropped count metadata and strict rejection of incomplete captures. This hardens diagnostic integrity but does not supply any authentic Sega 315-5649 RX/status bytes or original cabinet timing; the 90% tooling estimate is unchanged."
     }
   ]
 }

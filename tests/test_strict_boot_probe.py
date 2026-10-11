@@ -86,6 +86,9 @@ class StrictBootProbeTests(unittest.TestCase):
             self.assertIn("serial_access ordinal=2 direction=read", run.stdout)
             self.assertIn("address=0x1c0001a width=1 completed=no value=UNOBSERVED",
                           run.stdout)
+            self.assertIn(
+                "serial_trace_summary total=2 retained=2 dropped=0 "
+                "truncated=no limit=4096", run.stdout)
             self.assertNotIn("completed=no value=0x0", run.stdout)
             self.assertIn("required hardware not implemented", run.stderr)
 

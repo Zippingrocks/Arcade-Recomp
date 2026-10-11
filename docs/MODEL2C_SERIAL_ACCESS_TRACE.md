@@ -66,3 +66,29 @@ succeed only if the observer explicitly accepts the byte. TX-full
 writes never invoke the observer. This is a local software transaction
 contract, not evidence that a real 315-5649 can retract bytes already
 sent to the gun board. Callback success is not physical TX completion.
+
+
+### Bounded capture and explicit evidence loss
+
+The optional CPU-side access trace now retains a **first-in-session prefix**
+of at most **4,096 observations** by default. Set the bound using
+`StrictBus::set_serial_access_trace_limit(limit)` before tracing; a limit
+of zero records only total and dropped counts. Capturing more transactions
+never silently evicts earlier observations or changes the return from a
+real serial provider. The diagnostic reports both retained and dropped
+counts. It also exports a machine-readable terminal line:
+
+    serial_trace_summary total=3 retained=3 dropped=0 truncated=no limit=4096
+
+If the session exceeds its cap the report explicitly marks
+`truncated=yes`. The Python serial-access comparator **rejects** such
+records instead of guessing the missing traffic or treating it as a match.
+Increasing the cap after truncation may retain later events with real
+ordinals, never fabricated missing entries. Clearing the trace explicitly
+resets ordinals and loss counters but does **not** reset serial device
+state, completed transmissions or MMIO write logs. Disabling tracing
+stops counting until recording is re-enabled.
+
+This bounds the **CPU diagnostic trace only**. Long-running hardware
+transmission and general bus write history use their own separate storage
+and require independent limits for fully bounded runtime memory.

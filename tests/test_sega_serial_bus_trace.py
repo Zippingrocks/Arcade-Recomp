@@ -306,6 +306,87 @@ int main(){
 }
 """)
 
+    def test_bounded_capture_counts_drops_and_explicit_session_reset(self):
+        # 20,000 accesses: memory retention stays fixed, but evidence loss
+        # is counted and never mistaken for a complete 20,000-row trace.
+        native(r"""
+int main(){
+    StrictBus board(std::vector<std::uint8_t>(StrictBus::kProgramSize,0u));
+    board.enable_partial_serial_io();
+    if(board.serial_access_trace_limit()!=4096u)return 1;
+    board.enable_serial_access_trace();
+    board.set_serial_access_trace_limit(3u);
+    board.serial_device().set_serial_status_source(
+        []()->std::uint8_t{return 0u;}); // explicit SYNTHETIC source
+    board.write(0x01c00014u,1u,0xffu);
+    for(unsigned i=0;i<20000u;++i)
+        if(board.read(0x01c0001au,1u)!=0u)return 2;
+    const auto& history=board.serial_access_trace();
+    if(history.size()!=3u || board.serial_access_trace_total()!=20001u ||
+       board.serial_access_trace_dropped()!=19998u ||
+       !board.serial_access_trace_truncated())return 3;
+    if(history[0].ordinal!=1u||history[0].value!=0xffu||
+       history[1].ordinal!=2u||history[1].address!=0x01c0001au||
+       history[2].ordinal!=3u)return 4;
+    try{board.set_serial_access_trace_limit(2u);return 5;}
+    catch(const std::invalid_argument&){}
+    if(board.serial_access_trace_limit()!=3u)return 6;
+    board.enable_serial_access_trace(false);
+    for(unsigned i=0;i<10u;++i)(void)board.read(0x01c0001au,1u);
+    if(board.serial_access_trace_total()!=20001u)return 7;
+    board.clear_serial_access_trace();
+    if(!history.empty()||board.serial_access_trace_total()!=0u||
+       board.serial_access_trace_dropped()!=0u||
+       board.serial_access_trace_truncated())return 8;
+    // Reset only diagnostic history, never synthetic device data.
+    if(board.serial_device().last_tx(2u)!=0xffu||
+       board.serial_device().transmissions().size()!=1u||
+       board.writes().size()!=1u)return 9;
+    board.set_serial_access_trace_limit(0u);
+    board.enable_serial_access_trace();
+    for(unsigned i=0;i<7u;++i)(void)board.read(0x01c0001au,1u);
+    if(!history.empty()||board.serial_access_trace_total()!=7u||
+       board.serial_access_trace_dropped()!=7u||
+       !board.serial_access_trace_truncated())return 10;
+    board.set_serial_access_trace_limit(2u);
+    (void)board.read(0x01c0001au,1u);
+    if(history.size()!=1u||history[0].ordinal!=8u||
+       board.serial_access_trace_total()!=8u||
+       board.serial_access_trace_dropped()!=7u)return 11;
+    board.clear_serial_access_trace();
+    (void)board.read(0x01c0001au,1u);
+    if(history.size()!=1u||history[0].ordinal!=1u||
+       board.serial_access_trace_dropped()!=0u)return 12;
+    return 0;
+}
+""")
+
+    def test_bounded_capture_never_changes_strict_serial_fault(self):
+        native(r"""
+int main(){
+    StrictBus board(std::vector<std::uint8_t>(StrictBus::kProgramSize,0u));
+    board.enable_partial_serial_io();
+    board.enable_serial_access_trace();
+    board.set_serial_access_trace_limit(1u);
+    board.write(0x01c00012u,1u,0x31u);
+    for(unsigned i=0;i<37u;++i) {
+        try{(void)board.read(0x01c0001au,1u);return 1;}
+        catch(const DeviceAccessFault& e) {
+            if(e.region!=Region::serial_io||e.write||
+               e.address!=0x01c0001au||e.width!=1u)return 2;
+        }
+    }
+    if(board.serial_access_trace().size()!=1u||
+       board.serial_access_trace_total()!=38u||
+       board.serial_access_trace_dropped()!=37u||
+       !board.serial_access_trace_truncated()||
+       board.serial_access_trace()[0].value!=0x31u)return 3;
+    if(board.serial_device().last_tx(1u)!=0x31u||
+       board.serial_device().transmissions().size()!=1u)return 4;
+    return 0;
+}
+""")
+
     def test_trace_not_enabled_by_default(self):
         native(r"""
 int main(){

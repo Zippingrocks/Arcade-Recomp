@@ -12,6 +12,7 @@
 #include "sega3155649_serial.hpp"
 #include "model2c_irq_registers.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <iomanip>
 #include <sstream>
@@ -137,10 +138,29 @@ public:
     void enable_serial_access_trace(bool enabled = true) {
         serial_trace_enabled_ = enabled;
     }
-    void clear_serial_access_trace() { serial_trace_.clear(); }
+    static constexpr std::size_t kDefaultSerialTraceLimit = 4096u;
+
+    // A bounded, prefix-only diagnostic. Increasing the limit may resume
+    // capture, but missing ordinal ranges are never silently filled in.
+    // To start a fresh contiguous recording, explicitly clear the trace.
+    void set_serial_access_trace_limit(std::size_t limit) {
+        if (limit < serial_trace_.size())
+            throw std::invalid_argument(
+                "cannot shrink serial trace below already retained observations");
+        serial_trace_limit_ = limit;
+    }
+    std::size_t serial_access_trace_limit() const { return serial_trace_limit_; }
+    void clear_serial_access_trace() {
+        serial_trace_.clear();
+        serial_trace_total_ = 0u;
+        serial_trace_dropped_ = 0u;
+    }
     const std::vector<SerialBusAccess>& serial_access_trace() const {
         return serial_trace_;
     }
+    std::uint64_t serial_access_trace_total() const { return serial_trace_total_; }
+    std::uint64_t serial_access_trace_dropped() const { return serial_trace_dropped_; }
+    bool serial_access_trace_truncated() const { return serial_trace_dropped_ != 0u; }
 
     arcaderecomp_generated::Bus callbacks() {
         return arcaderecomp_generated::Bus{
@@ -220,15 +240,27 @@ private:
     bool serial_io_enabled_ = false;
     IO3155649 io_{};
     bool serial_trace_enabled_ = false;
+    std::size_t serial_trace_limit_ = kDefaultSerialTraceLimit;
     mutable std::vector<SerialBusAccess> serial_trace_{};
+    mutable std::uint64_t serial_trace_total_ = 0u;
+    mutable std::uint64_t serial_trace_dropped_ = 0u;
 
     void record_serial_access(std::uint32_t address, unsigned width,
                               bool write, bool completed, bool value_known,
                               std::uint32_t value) const {
         if (!serial_trace_enabled_) return;
+        // The trace is diagnostic, never a provider of device responses.
+        // Stop retaining new entries at the cap, but preserve the
+        // total transaction count and an explicit evidence-loss flag.
+        if (serial_trace_total_ == UINT64_MAX)
+            throw std::overflow_error("serial trace ordinal exhausted");
+        const auto ordinal = ++serial_trace_total_;
+        if (serial_trace_.size() >= serial_trace_limit_) {
+            ++serial_trace_dropped_;
+            return;
+        }
         serial_trace_.push_back({
-            static_cast<std::uint64_t>(serial_trace_.size()) + 1u,
-            address, width, write, completed, value_known, value
+            ordinal, address, width, write, completed, value_known, value
         });
     }
     bool irq_enabled_ = false;
