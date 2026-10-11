@@ -101,7 +101,7 @@ int main() {
             cpu=initialized(priority);
             cpu.ip=4u;
             cpu.r[17]=0x001f0000u; // allowed priority mask
-            cpu.r[18]=(later<<16u) | 0xa5a50000u;
+            cpu.r[18]=(later<<16u) | 0xa5000000u;
             const auto original=cpu.process_controls;
             if(!step(cpu,bus)||cpu.ip!=8u ||
                cpu.process_controls!=((later<<16u)|0x2002u) ||
@@ -193,7 +193,7 @@ int main() {
        cpu.stop_code!=StopCode::undefined_process_controls)return 2;
     Mem m{};
     constexpr auto P=0x00510e00u;
-    m.w[P+4u]=0cu;m.w[P+20u]=0x00510800u;
+    m.w[P+4u]=0xcu;m.w[P+20u]=0x00510800u;
     m.w[P+24u]=0x00510400u;m.w[P+32u]=0x1ffu;
     m.w[P+36u]=0x27fu;m.w[P+40u]=0x210u;m.w[P+44u]=0u;
     Bus b{};b.ctx=&m;b.read32=&rd;

@@ -858,6 +858,17 @@
         "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
       ],
       "note": "Added native Intel KB MODPC 655h decode/AOT and conservative process-controls handling based on primary manual: mask-zero read and priority-only nondecreasing supervisor changes with old-PC destination, rejecting unknown process-control source, user privilege fault, unsupported fields and priority-lowering pending-check requirement. Synthetic GCC/Clang UBSan tests; no architected TYPE.MISMATCH fault, pending interrupt scan, actual IRQ delivery or cabinet proof. cpu.interrupts=15%, CPU 55%, HOTD1 overall 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.interrupts",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "tests/test_i960_modpc_native.py"
+      ],
+      "note": "Pre-CI test audit corrected the synthetic MODPC priority replacement pattern so non-priority marker bits do not accidentally set priority bits; corrected one C++ literal spelling in modeled IAC setup. No runtime, Intel semantics or authenticity progress changed."
     }
   ]
 }
