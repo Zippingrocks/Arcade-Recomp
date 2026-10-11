@@ -84,6 +84,7 @@ REGISTER = {
     0x701: ("mulo", "sss"),
     0x78b: ("divr", "sss"),
     0x78c: ("mulr", "sss"),
+    0x78d: ("subr", "sss"),
     0x78f: ("addr", "sss"),
 }
 MEMORY = {

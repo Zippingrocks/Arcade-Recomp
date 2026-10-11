@@ -154,6 +154,19 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!multiply_real32_exact(cpu, cpu.r[{first}], "
                 f"cpu.r[{second}], {dst}u)) return false;")
 
+    if ins.form == "REG" and op == "subr":
+        # Intel 80960KB SUBR 78D: src2 - src1, using normal IEEE real32
+        # GPRs only. Reuse exact integer-significand ADDR after flipping
+        # source1 sign. Operand values are captured by value so that
+        # destination/source register aliasing is safe.
+        if word & (0x20 | 0x40 | 0x800 | 0x1000 | 0x2000):
+            return None
+        first = word & 31
+        second = (word >> 14) & 31
+        dst = (word >> 19) & 31
+        return (f"if (!add_real32_exact(cpu, cpu.r[{second}], "
+                f"(cpu.r[{first}] ^ 0x80000000u), {dst}u)) return false;")
+
     if ins.form == "REG" and op == "addr":
         # Intel KB ADDR 78F, original arcade candidate 0xC00:
         # real32 + real32 -> real32. No host arithmetic, and never
