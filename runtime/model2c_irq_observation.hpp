@@ -126,4 +126,14 @@ inline Model2CIRQPriorityReview review_model2c_irq_priorities(
     return review;
 }
 
+// Explicitly refuses to infer a priority from a zero-initialized CPU or
+// unknown/mutated process controls. This is still observation only: no CPU
+// priority update, pending write or interrupt delivery is performed.
+inline std::optional<Model2CIRQPriorityReview> review_model2c_irq_known_cpu_priority(
+    const Model2CIRQObservation& snapshot,
+    const arcaderecomp_generated::CPU& cpu) {
+    const auto priority = arcaderecomp_generated::kb_known_cpu_program_priority(cpu);
+    if (!priority) return std::nullopt;
+    return review_model2c_irq_priorities(snapshot, *priority);
+}
 } // namespace arcaderecomp_model2c

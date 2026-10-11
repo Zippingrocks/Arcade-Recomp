@@ -79,6 +79,8 @@ static inline bool perform_iac_93_reinitialize(CPU& cpu, const Bus& bus) {
     // Initial state: priority 31 (bits 16..20), interrupted (bit 13),
     // supervisor execution (bit 1). Trace state is initialized to zero.
     cpu.process_controls = (31u << 16) | (1u << 13) | (1u << 1);
+    cpu.known_process_controls = cpu.process_controls;
+    cpu.process_controls_priority_known = true;
     cpu.trace_controls = 0;
     // AC is architecturally undefined on KB reinitialization. Do NOT
     // allow a stale pre-reinitialization CC to determine a later branch.

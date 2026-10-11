@@ -146,3 +146,36 @@ priority-31 special case, the original `hotdo` ICR `0x0F0E0D0C`
 rejection. This advances documented CPU *priority research* and tests,
 but **does not establish actual Model 2C interrupt acceptance, timing,
 priority-state accuracy, supervisor frames or original-cabinet behavior**.
+
+
+## Proven-known CPU priority after partial IAC 0x93 (2026-10-11)
+
+The native `CPU` now carries a **knowledge marker and committed source
+value** for Intel process controls. `frame_init` invalidates the marker:
+a default-constructed CPU has `process_controls=0` as a host convenience,
+**not an established Intel priority of zero**.
+
+Only *successful, explicitly enabled and validated* IAC 0x93
+reinitialization records the documented `process_controls=0x001F2002`
+(initial program priority 31) as known. Failure to validate the PRCB or
+frame leaves priority unknown; the default strict original-ROM path
+still refuses unsupported reinitialization. The new
+`kb_known_cpu_program_priority(cpu)` refuses unverified state or a CPU
+process-controls word that differs from the last committed source value.
+`review_model2c_irq_known_cpu_priority` integrates this guard with the
+existing board IRQ snapshot, returning **no review** when the priority
+is unknown. No direct priority write, `MODPC` instruction, IRQ
+arbitration, pending-table mutation, interrupt service or supervisor
+frame is implemented.
+
+After opt-in IAC 0x93, the documented original HOTD1 ICR vectors
+12–15 are **priority 1** and would be pending at program priority 31.
+This is an *architectural research inference conditional on our partial
+reinitialization model*, not an observed HOTD1 board interrupt or proof
+of any original handler execution. The synthetic GCC/Clang test checks
+failed and successful IAC validation, lack of false default knowledge,
+manual PC changes, frame initialization invalidation and read-only IRQ
+review. Future `MODPC` and fault-return implementations must explicitly
+update or invalidate the knowledge marker. A direct external rewrite
+that restores the exact same process-controls bits is not independently
+observable by this helper, so it must not serve as a security boundary.

@@ -826,6 +826,22 @@
         "tests/test_i960_interrupt_priority_native.py"
       ],
       "note": "Corrected synthetic Intel ICR fixture byte fields to actually express the stated reserved/vector priority scenarios: vectors 12,245,20,16 at external priority1, and 16,255,20,12 at external priority31. Intel priority helper unchanged; this makes the exhaustive and integrated regression assertions meaningful, with no new hardware fidelity claims."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.interrupts",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "runtime/i960_frame_runtime.hpp",
+        "runtime/i960_reinitialize.hpp",
+        "runtime/i960_interrupt_priority.hpp",
+        "runtime/model2c_irq_observation.hpp",
+        "tests/test_i960_known_priority_native.py",
+        "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
+      ],
+      "note": "Added explicitly tracked initial Intel KB program priority after successful opt-in IAC 0x93, invalidated for ordinary frame_init, failed PRCB validation or out-of-band process-control modifications. Read-only IRQ observer now has a guarded known-CPU-priority API, refusing unknown state rather than assuming zero. ROM-free GCC/Clang UBSan integration tests cover provenance and pending-priority review. No MODPC handler, actual pending writes/interrupt delivery/frames or physical Model2C evidence; cpu.interrupts 15%, CPU 55%, Model2C 20%, HOTD1 10% unchanged."
     }
   ]
 }
