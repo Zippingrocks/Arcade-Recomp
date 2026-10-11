@@ -894,6 +894,20 @@
         "tests/test_i960_pending_interrupt_snapshot_native.py"
       ],
       "note": "Hardened read-only Intel KB pending record evaluator so all reserved vector and priority-bitmap consistency checks finish before any eligible candidate fields can be populated. Invalid inputs cannot expose a misleading partial candidate; synthetic native regressions enforce zero eligible/candidate fields on malformed snapshots. No IRQ delivery or hardware fidelity progress claimed."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.interrupts",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "runtime/i960_frame_runtime.hpp",
+        "runtime/i960_pending_interrupt_acquisition.hpp",
+        "tests/test_i960_pending_bus_contract_native.py",
+        "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
+      ],
+      "note": "Added a fail-closed optional native CPU bus contract for provider-asserted coherent/locked 36-byte KB pending-table capture; StrictBus does not implement it and ordinary read32 cannot substitute. Validates known priority, aligned bounded table address, provider success and snapshot consistency before exposing metadata; refuses poisoned/partial data. Synthetic GCC/Clang native tests only. No actual Intel lock/atomic read-modify-write, pending memory updates, interrupt delivery, MODPC lowering or cabinet proof; cpu.interrupts remains 15%, CPU 55%, Model2C 20%, overall HOTD1 10%."
     }
   ]
 }

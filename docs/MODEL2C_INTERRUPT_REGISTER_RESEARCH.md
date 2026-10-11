@@ -255,3 +255,31 @@ read-only state preservation and the unchanged fail-closed MODPC guard.
 
 Reference: Intel 80960KB Programmer's Reference Manual (1988),
 https://www.arithmazium.org/classroom/lib/Intel_80960KB_Programmers_Reference_Manual_Mar88.pdf
+
+## Optional locked pending-table capture contract (2026-10-11)
+
+The native `Bus` now exposes optional `read_pending_record_locked`
+for one coherent/exclusive 36-byte Intel pending-table snapshot. There is
+**no implementation** of this callback in the current Model 2C StrictBus.
+Ordinary `read32` is deliberately **not** a fallback, since Intel KB
+pending-interrupt checks require an atomic read/modify/write transaction
+under a table lock. A callback returning true is the provider's assertion
+of locking, **not independent hardware proof**.
+
+`runtime/i960_pending_interrupt_acquisition.hpp` requires proven CPU
+priority, an aligned nonwrapping PRCB interrupt-table address, a registered
+provider and a complete well-formed vector/priority record. Missing or
+declined providers and corrupt records refuse without exposing candidates
+or raw table bytes. Read-only results are always labeled
+`provider_asserted_unverified`. No pending-table modification, bus LOCK
+waveform, Intel interrupt entry/return, vector delivery or `MODPC`
+priority lowering is implemented. The default original-game boot path
+and all Model 2C completion gates remain unchanged.
+
+Synthetic GCC/Clang UBSan tests cover missing/failed provider, poisoned
+partial buffers, invalid CPU/address, reserved and inconsistent records,
+and successful synthetic observation without delivery. This is software
+interface groundwork, not original-cabinet evidence.
+
+Intel 80960KB manual Ch. 8 pp. 8-8–8-9:
+https://www.arithmazium.org/classroom/lib/Intel_80960KB_Programmers_Reference_Manual_Mar88.pdf
