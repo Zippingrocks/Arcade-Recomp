@@ -73,6 +73,7 @@ REGISTER = {
     0x615: ("synld", "sd"),
     0x602: ("synmovq", "ss"), 0x603: ("cmpstr", "sss"),
     0x604: ("movqstr", "sss"), 0x605: ("movstr", "sss"),
+    0x66d: ("flushreg", ""),
     0x701: ("mulo", "sss"),
 }
 MEMORY = {

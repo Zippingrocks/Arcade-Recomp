@@ -190,6 +190,41 @@ static inline bool frame_call(CPU& cpu, const Bus& bus,
     return true;
 }
 
+// FLUSHREG (Intel 80960KB, 66Dh): write each cached inactive local
+// register set to its stack frame, then invalidate those cache entries.
+// The *active* r[0..15] set must remain live and must NOT be stored.
+// The current Bus write callback cannot report mid-transfer bus faults;
+// exact exception/interrupt restart timing remains unimplemented.
+static inline bool frame_flush(CPU& cpu, const Bus& bus) {
+    if (!cpu.frame_initialized)
+        return stop(cpu, StopCode::frame_uninitialized);
+
+    // Validate all pending stores first; do not cause partial writes for
+    // invalid internal frame metadata or missing write callbacks.
+    bool any = false;
+    for (unsigned slot = 0; slot < 4; ++slot) {
+        if (!cpu.saved_valid[slot])
+            continue;
+        any = true;
+        const std::uint32_t fp = cpu.saved_fp[slot];
+        if ((fp & 63u) != 0u || fp > 0xffffffc0u)
+            return stop(cpu, StopCode::bad_frame_pointer);
+    }
+    if (any && !bus.write32)
+        return stop(cpu, StopCode::missing_bus);
+
+    for (unsigned slot = 0; slot < 4; ++slot) {
+        if (!cpu.saved_valid[slot])
+            continue;
+        const std::uint32_t fp = cpu.saved_fp[slot];
+        for (unsigned i = 0; i < 16; ++i)
+            bus.write32(bus.ctx, fp + 4u * i, cpu.saved_local[slot][i]);
+        cpu.saved_valid[slot] = false;
+        ++cpu.frame_spills;
+    }
+    return true;
+}
+
 static inline bool frame_return(CPU& cpu, const Bus& bus) {
     if (!cpu.frame_initialized)
         return stop(cpu, StopCode::frame_uninitialized);

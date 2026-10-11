@@ -115,6 +115,13 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     f"bus.write{suffix}(bus.ctx, {address}, "
                     f"static_cast<std::uint{suffix}_t>(cpu.r[{dest}]));")
 
+    if ins.form == "REG" and op == "flushreg":
+        # Intel KB FLUSHREG has no operands. Refuse reserved/noncanonical
+        # operand fields instead of pretending they have no side effects.
+        if word != 0x66003e80:
+            return None
+        return "if (!frame_flush(cpu, bus)) return false;"
+
     if ins.form == "REG" and op == "synld":
         # Intel KB: synchronous load from [src1 register] into dst register.
         # Do not accept literal or special register encodings for this form.
