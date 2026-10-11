@@ -33,7 +33,8 @@ enum class StopCode : std::uint32_t {
     iac_invalid_prcb = 15,
     undefined_condition_code = 16,
     undefined_integer_controls = 17,
-    integer_overflow_pending = 18
+    integer_overflow_pending = 18,
+    undefined_floating_point_register = 19
 };
 
 // A diagnostic handoff, not an architected in-memory fault record.
@@ -43,10 +44,22 @@ struct PendingIntegerOverflow {
     std::uint32_t resume_ip = 0;
 };
 
+// 80960KB's 80-bit FP payload. Keep the exact original bit pattern rather
+// than passing through host long double (whose representation is not portable).
+struct ExtendedReal {
+    std::uint32_t low = 0;
+    std::uint32_t middle = 0;
+    std::uint16_t high = 0;
+};
+
 struct CPU {
     // r0-r15 are the active local window, g0-g15 occupy indices 16-31.
     // g15 (r[31]) is the global frame pointer (FP).
     std::uint32_t r[32]{};
+    // Four physical 80-bit floating registers; contents after reset are
+    // unknown until written by an independently supported instruction.
+    ExtendedReal fp[4]{};
+    bool fp_defined[4]{};
     std::uint32_t ip = 0;
     int cc = 0;                        // Temporary compare model, NOT full AC.cc
     std::uint32_t stop_ip = 0;
@@ -131,8 +144,10 @@ static inline bool frame_init(CPU& cpu, std::uint32_t initial_fp,
     cpu.integer_overflow_mask_defined = false;
     cpu.integer_overflow_flag_defined = false;
     cpu.pending_integer_overflow = {};
-    for (unsigned slot = 0; slot < 4; ++slot)
+    for (unsigned slot = 0; slot < 4; ++slot) {
         cpu.saved_valid[slot] = false;
+        cpu.fp_defined[slot] = false;  // Reset does not invent FP values.
+    }
     return true;
 }
 

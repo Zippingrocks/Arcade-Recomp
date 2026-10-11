@@ -115,6 +115,29 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     f"bus.write{suffix}(bus.ctx, {address}, "
                     f"static_cast<std::uint{suffix}_t>(cpu.r[{dest}]));")
 
+    if ins.form == "REG" and op == "movre":
+        # Intel 80960KB MOVRE 6E1: bit-exact 80-bit transfer with 16-bit
+        # high-word padding when moving from fp0..fp3 to a GPR triple.
+        # No floating arithmetic, normalization or rounding takes place.
+        # Floating literal encodings and GP-to-GP forms remain unsupported.
+        src = word & 31
+        dst = (word >> 19) & 31
+        src_fp = bool(word & 0x20)
+        dst_fp = bool(word & 0x2000)
+        if not (word & 0x1000) or word & (0x40 | 0x800):
+            return None
+        if (word >> 14) & 31:  # Unused src2 field must be zero.
+            return None
+        if not src_fp and not dst_fp:
+            return None
+        if (src_fp and src >= 4) or (dst_fp and dst >= 4):
+            return None
+        if (not src_fp and (src & 3)) or (not dst_fp and (dst & 3)):
+            return None
+        return (f"if (!move_extended_real(cpu, {src}u, "
+                f"{'true' if src_fp else 'false'}, {dst}u, "
+                f"{'true' if dst_fp else 'false'})) return false;"
+
     if ins.form == "REG" and op == "flushreg":
         # Intel KB FLUSHREG has no operands. Refuse reserved/noncanonical
         # operand fields instead of pretending they have no side effects.
@@ -433,6 +456,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_sync_runtime.hpp"
 #include "i960_transfer_shift.hpp"
 #include "i960_integer_arithmetic.hpp"
+#include "i960_fp_registers.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {

@@ -76,6 +76,7 @@ REGISTER = {
     0x640: ("spanbit", "sd"), 0x641: ("scanbit", "sd"),
     0x650: ("modify", "sss"),
     0x66d: ("flushreg", ""),
+    0x6e1: ("movre", "sd"),
     0x701: ("mulo", "sss"),
 }
 MEMORY = {
@@ -208,6 +209,17 @@ def decode(image: bytes, pc: int) -> Instruction:
     extended = (major << 4) | ((word >> 7) & 15)
     if extended in REGISTER:
         name, form = REGISTER[extended]
+        if name == "movre":
+            # Unlike the integer REG forms, s1/m3 select the four on-chip
+            # 80-bit floating-point registers. A later native pass validates
+            # reserved fields, allowed source/destination types and alignment.
+            src = word & 31
+            dst = (word >> 19) & 31
+            if (word & 0x20 and src >= 4) or (word & 0x2000 and dst >= 4):
+                return _unknown(pc, word, "MOVRE FP register outside fp0..fp3")
+            a = f"fp{src}" if word & 0x20 else reg(src)
+            d = f"fp{dst}" if word & 0x2000 else reg(dst)
+            return Instruction(pc, word, 4, "REG", name, (a, d))
         def operand(index: int, literal: int, special: int) -> str | None:
             if literal and special:
                 return None  # Reserved
