@@ -19,6 +19,7 @@ executed=1910
 serial_access ordinal=1 direction=write address=0x1c00014 width=1 completed=yes value=0xff
 serial_access ordinal=2 direction=write address=0x1c00012 width=1 completed=yes value=0x1
 serial_access ordinal=3 direction=read address=0x1c0001a width=1 completed=no value=UNOBSERVED
+serial_trace_summary total=3 retained=3 dropped=0 truncated=no limit=4096
 required hardware not implemented
 """
 
@@ -197,20 +198,36 @@ class SerialAccessComparisonTests(unittest.TestCase):
             self.assertEqual(main(arguments), 3)
 
     def test_native_bounded_capture_summary_rejects_evidence_loss(self):
-        native = NATIVE + (
-            "serial_trace_summary total=3 retained=3 dropped=0 "
-            "truncated=no limit=4096\n")
+        native = NATIVE.replace("limit=4096", "limit=3")
         self.assertEqual(parse_native(native), parse_native(NATIVE))
         summary = ("serial_trace_summary total=6 retained=3 dropped=3 "
                    "truncated=yes limit=3\n")
+        truncated = NATIVE.replace(
+            "serial_trace_summary total=3 retained=3 dropped=0 truncated=no limit=4096\n", summary)
         with self.assertRaisesRegex(TraceError, "truncated native"):
-            parse_native(NATIVE + summary)
+            parse_native(truncated)
         with tempfile.TemporaryDirectory(prefix="arcade-trace-loss-") as d:
             root = Path(d)
             source = root / "native.log"
             comparison = root / "observed.json"
             output = root / "report.json"
-            source.write_text(NATIVE + summary)
+            source.write_text(truncated)
+            comparison.write_text(json.dumps(capture()))
+            self.assertEqual(main(["--native-log", str(source),
+                                   "--observed-json", str(comparison),
+                                   "--output", str(output)]), 2)
+            self.assertFalse(output.exists())
+
+    def test_cut_off_summary_cannot_be_mistaken_for_complete_capture(self):
+        prefix = NATIVE.split("serial_trace_summary", 1)[0]
+        with self.assertRaisesRegex(TraceError, "summary required"):
+            parse_native(prefix)
+        with tempfile.TemporaryDirectory(prefix="arcade-trace-missing-") as d:
+            root = Path(d)
+            source, comparison, output = (root / "native.log",
+                                          root / "observed.json",
+                                          root / "result.json")
+            source.write_text(prefix)
             comparison.write_text(json.dumps(capture()))
             self.assertEqual(main(["--native-log", str(source),
                                    "--observed-json", str(comparison),
@@ -232,7 +249,8 @@ class SerialAccessComparisonTests(unittest.TestCase):
         for summary in suffixes:
             with self.subTest(summary=summary[:95]):
                 with self.assertRaises(TraceError):
-                    parse_native(NATIVE + summary)
+                    parse_native(NATIVE.replace(
+                        "serial_trace_summary total=3 retained=3 dropped=0 truncated=no limit=4096\n", summary))
 
     def test_atomic_report_cannot_overwrite_input_or_hardlink(self):
         with tempfile.TemporaryDirectory(prefix="arcade-serial-safe-") as tmp:

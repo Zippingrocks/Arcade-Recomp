@@ -48,6 +48,15 @@ observation JSON:
 
     python -m arcaderecomp.serial_access_compare --native-log /private/strict-boot.log --observed-json /private/observed-cpu-bus.json --output /private/compare-metadata.json
 
+The native input **must contain exactly one final**
+`serial_trace_summary total=... retained=... dropped=... truncated=... limit=...`
+record, produced by the strict boot probe. The comparator refuses logs
+without this footer: otherwise a cut-off file with contiguous ordinals
+could silently masquerade as a complete capture. It also refuses reported
+dropped accesses, inconsistent counters, and access records after the
+summary. Older native logs without a summary must be recaptured; do not
+fabricate a footer to make an incomplete trace pass.
+
 The report contains SHA-256 input fingerprints, counts, and discrepancy
 locations/reason codes. It deliberately omits received/status byte values.
 The output write is atomic and refuses to alias either input via path,
