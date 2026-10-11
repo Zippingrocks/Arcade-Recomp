@@ -206,6 +206,40 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     "cpu.cc_defined = true;")
         if op == "not":
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>(~({a}));"
+        if op in ("notand", "nor", "xnor", "ornot", "notor", "nand"):
+            # Intel 80960KB manual: operations are over src2 and src1.
+            # The asymmetric cases must not silently swap operands:
+            # NOTAND = (~src2) & src1; NOTOR = (~src2) | src1;
+            # ORNOT = src2 | (~src1).
+            expressions = {
+                "notand": f"(~({b}) & {a})",
+                "nor": f"~({b} | {a})",
+                "xnor": f"~({b} ^ {a})",
+                "ornot": f"({b} | ~({a}))",
+                "notor": f"(~({b}) | {a})",
+                "nand": f"~({b} & {a})",
+            }
+            return (f"cpu.r[{dst}] = static_cast<std::uint32_t>"
+                    f"({expressions[op]});")
+        if op == "alterbit":
+            # The Intel KB condition-code bit 010 decides set/clear.
+            # An unknown AC.cc is not a valid implied zero. Capture operands
+            # before writing dst, including dst==src1 and dst==src2.
+            return ("if (!cpu.cc_defined) "
+                    "return stop(cpu, StopCode::undefined_condition_code); "
+                    f"{{ const std::uint32_t bit = ({a}) & 31u; "
+                    f"const std::uint32_t value = {b}; "
+                    "const std::uint32_t mask = 1u << bit; "
+                    f"cpu.r[{dst}] = (cpu.cc & 2) ? "
+                    "(value | mask) : (value & ~mask); }")
+        if op == "rotate":
+            # Intel KB: rotate src2 left by src1 modulo 32. Avoid
+            # shifting by 32 in C++; also preserve source/dst aliasing.
+            return (f"{{ const std::uint32_t count = ({a}) & 31u; "
+                    f"const std::uint32_t value = {b}; "
+                    f"cpu.r[{dst}] = count ? "
+                    "((value << count) | (value >> (32u - count))) "
+                    ": value; }")
         if op == "andnot":
             # Operand order matters: src2 AND NOT src1 (Intel KB 11-11).
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} & ~({a}));"
