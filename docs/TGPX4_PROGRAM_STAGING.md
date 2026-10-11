@@ -11,13 +11,13 @@ hardware, distinct from the older TGP in Models 1, 2 and 2A and the SHARC
 implementation of Model 2B. Do not reuse those instruction decoders for 2C.
 
 Public Model 2C hardware descriptions identify a dedicated geometry
-coprocessor *program RAM* and a separate \`copro_data\` ROM region.
+coprocessor *program RAM* and a separate `copro_data` ROM region.
 They also identify a host path supplying 32-bit upload words that build
 candidate 64-bit coprocessor program entries. These are architectural
 reference facts, **not** independently measured HOTD1 cabinet behavior.
 
-The \`copro_data\` chips \`epr-19707.29\` and \`epr-19706.30\` are represented
-by the existing original \`hotdo\` ROM manifest. This ROM *data* must not be
+The `copro_data` chips `epr-19707.29` and `epr-19706.30` are represented
+by the existing original `hotdo` ROM manifest. This ROM *data* must not be
 confused with an independently identified uploaded *program*. Neither
 reconstruction of the ROM data nor packing 32-bit host writes is TGPx4
 instruction decoding.
@@ -26,13 +26,13 @@ References (research only; implementation written independently):
 - https://wiki.mamedev.org/index.php/TGP:Index (distinguishes TGPx4 from TGP)
 - https://github.com/mamedev/mame/blob/master/src/mame/sega/model2.cpp
   (public Model 2C host upload arrangement and coprocessor memory map)
-- [Original \`hotdo\` manifest](../targets/hotd1/original.json)
+- [Original `hotdo` manifest](../targets/hotd1/original.json)
 
 ## Delivered offline capture tool
 
-\`arcaderecomp/tgpx4_program.py\` accepts **only a contiguous externally
+`arcaderecomp/tgpx4_program.py` accepts **only a contiguous externally
 provided byte capture of host 32-bit words**, not raw RS-422 bytes or the
-\`copro_data\` ROM image. The caller must specify:
+`copro_data` ROM image. The caller must specify:
 
 - the *expected* even number of 32-bit writes (not inferred from file length);
 - the input word endianness (little or big);
@@ -55,7 +55,7 @@ An independently captured start/end/expected-write count remains required.
 Example using **invented, locally captured host-write binary**, not supplied
 by this repository:
 
-\`\`\`sh
+```sh
 python -m arcaderecomp.tgpx4_program \
   --input /private/tgpx4-host-writes.bin \
   --output /private/tgpx4-metadata.json \
@@ -63,23 +63,23 @@ python -m arcaderecomp.tgpx4_program \
   --word-endian little --pair-order low-first \
   --provenance external_capture_unverified \
   --source-note "Board, acquisition method, and bounded capture window"
-\`\`\`
+```
 
 The example count and word pairing are *illustrative assumptions*, not a
 verified HOTD1 upload length or confirmed cabinet halfword order. Alternative
-\`high-first\` and \`big\` paths remain explicit for differential captures.
+`high-first` and `big` paths remain explicit for differential captures.
 The CLI refuses incomplete pairs, count mismatches, oversized input,
 unsupported provenance claims and output paths aliasing the evidence input.
 
 Regression (synthetic, no Sega code or ROMs):
-\`\`\`sh
+```sh
 python -m unittest discover -s tests -p test_tgpx4_program.py -v
-\`\`\`
+```
 
 ## Next requirements for native geometry recompiler
 
 1. Capture or derive the original *host program upload* independently from
-   i960-side native game execution (not from the unrelated \`copro_data\`
+   i960-side native game execution (not from the unrelated `copro_data`
    region), preserving ordering and start/end conditions.
 2. Confirm observed half ordering, program RAM range, entry point and
    control-register semantics against original hardware.
@@ -90,4 +90,4 @@ python -m unittest discover -s tests -p test_tgpx4_program.py -v
    compare its geometry command output with original-cabinet captures.
 
 These steps are incomplete. CPU-visible geometry accesses still fault
-under \`StrictBus\` and all Model 2C completion gates stay open.
+under `StrictBus` and all Model 2C completion gates stay open.
