@@ -81,3 +81,49 @@ of the reconstructed data region.
 does not actually delay a CPU cycle. Reset contents and unaligned transfers
 still need validation against original Model 2C behavior. Neither the bus
 nor the current AOT translator constitutes completed board support.
+
+
+## Floating-point silicon capability: conflicting evidence (unresolved)
+
+The **Intel 80960KB Programmer's Reference Manual (March 1988), preface
+and Chapter 12**, explicitly identifies the KB's on-chip floating-point
+support and distinguishes the future KA variant as lacking on-chip floating
+point/decimal support. Intel's i960 floating-point library documentation
+also identifies KB and SB hardware floating-point implementations.
+These primary Intel documents support *KB architectural* floating-point
+instructions, including the LOGBNR, ADDR, and CVTZRI sequence identified in
+the authenticated original HOTD1 program at 0x00000BFC, 0x00000C00 and
+0x00000C04 (with additional repeated instances).
+
+However, the third-party `biggestsonicfan/m2-sdk` Model 2B project
+reports that native i960 FP instructions did not work on its real Model 2B
+test setup, although MAME accepted them, and defaults to soft-float.
+That report is not a test of the original HOTD Model 2C cabinet, and it
+conflicts with the documented Intel KB capabilities. Potential
+explanations (exact chip variant/marking, board differences, firmware
+configuration, or test-environment limitations) are **hypotheses**, not
+confirmed conclusions.
+
+**Rules for ArcadeRecomp:**
+- Keep the exact-subset native floating-point implementations and their
+  ROM-free/original-site synthetic-state validations: these establish
+  functional behavior under the Intel KB architecture, *not* original
+  cabinet execution or a complete FPU.
+- Do not count statically decoded FP instructions as proof that any
+  original cabinet actually reached them; that requires independent
+  runtime traces and a confirmed CPU part/stepping.
+- Do not disable FP instructions, silently replace them with soft-float,
+  or emulate a fault on the basis of the Model 2B anecdote alone.
+- Any physical-board test should record the CPU part marking/stepping,
+  exact tested instruction/flags, and observed fault/results. Comparing
+  Model 2B and original HOTD Model 2C is a **separate** evidence step.
+
+References:
+- Intel 80960KB Programmer's Reference Manual (1988), preface and
+  floating-point Chapter 12:
+  https://www.bitsavers.org/components/intel/i960/80960KB_Programmers_Reference_Manual_Mar88.pdf
+- Intel i960 floating-point library guide (KB/SB vs. software variants):
+  https://datasheets.chipdb.org/Intel/80960/manuals/65123104.pdf
+- Model 2B SDK's hardware-test statement, explicitly marked as
+  non-Model-2C evidence:
+  https://github.com/biggestsonicfan/m2-sdk
