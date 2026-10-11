@@ -161,7 +161,7 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return None
         # The destination-mode field is irrelevant for compare-only REG
         # instructions. Some legitimate ROM instructions set it.
-        if word & 0x2000 and op not in ("cmpo", "cmpi", "chkbit", "scanbyte"):
+        if word & 0x2000 and op not in ("cmpo", "cmpi", "concmpo", "concmpi", "chkbit", "scanbyte"):
             return None
         a = _operand(word & 31, bool(word & 0x800))
         b = _operand((word >> 14) & 31, bool(word & 0x1000))
@@ -277,6 +277,21 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return f"cpu.r[{dst}] = {a};"
         if op in ("shlo", "shro", "shri", "shrdi"):
             return f"cpu.r[{dst}] = kb_{op}({a}, {b});"
+        if op in ("concmpo", "concmpi"):
+            # Intel 80960KB KB (1988), conditional compare 5A2/5A3.
+            # If incoming CC bit 2 is set, do absolutely nothing; otherwise
+            # *inclusive* src1 <= src2 yields 010, all others yield 001.
+            # This is NOT a normal three-way CMP and is important for bounds.
+            if op == "concmpi":
+                left = f"(({a}) ^ 0x80000000u)"
+                right = f"(({b}) ^ 0x80000000u)"
+            else:
+                left, right = a, b
+            return ("if (!cpu.cc_defined) "
+                    "return stop(cpu, StopCode::undefined_condition_code); "
+                    "if ((cpu.cc & 4) == 0) { "
+                    f"cpu.cc = ({left} <= {right}) ? 2 : 1; "
+                    "cpu.cc_defined = true; }")
         if op in ("cmpo", "cmpi"):
             # Intel i960 AC.cc[2:0]: L=0b100, E=0b010, G=0b001,
             # measured as src1 compared with src2, NOT src2 vs src1.
