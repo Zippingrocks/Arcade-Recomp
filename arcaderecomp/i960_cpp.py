@@ -132,6 +132,26 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!convert_integer_to_real_exact(cpu, {value}, "
                 f"{dst}u, {'true' if dest_fp else 'false'})) return false;")
 
+    if ins.form == "REG" and op == "movrl":
+        # Intel KB MOVRL 6D9: 64-bit IEEE long-real <-> FP extended-real.
+        # No host floating-point operations. Handle only exact normal/zero
+        # conversions; fail closed on subnormals/specials/required rounding.
+        src = word & 31
+        dst = (word >> 19) & 31
+        src_fp = bool(word & 0x20)
+        dst_fp = bool(word & 0x2000)
+        if not (word & 0x1000) or word & (0x40 | 0x800):
+            return None
+        if (word >> 14) & 31 or not (src_fp or dst_fp):
+            return None
+        if (src_fp and src >= 4) or (dst_fp and dst >= 4):
+            return None
+        if (not src_fp and (src & 1)) or (not dst_fp and (dst & 1)):
+            return None
+        return (f"if (!move_long_real_exact(cpu, {src}u, "
+                f"{'true' if src_fp else 'false'}, {dst}u, "
+                f"{'true' if dst_fp else 'false'})) return false;")
+
     if ins.form == "REG" and op == "movre":
         # Intel 80960KB MOVRE 6E1: bit-exact 80-bit transfer with 16-bit
         # high-word padding when moving from fp0..fp3 to a GPR triple.
@@ -475,6 +495,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_integer_arithmetic.hpp"
 #include "i960_fp_registers.hpp"
 #include "i960_fp_convert.hpp"
+#include "i960_fp_long_real.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {

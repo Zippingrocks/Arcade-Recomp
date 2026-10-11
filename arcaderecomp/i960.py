@@ -77,6 +77,7 @@ REGISTER = {
     0x650: ("modify", "sss"),
     0x66d: ("flushreg", ""),
     0x674: ("cvtir", "sd"),
+    0x6d9: ("movrl", "sd"),
     0x6e1: ("movre", "sd"),
     0x701: ("mulo", "sss"),
 }
@@ -216,6 +217,16 @@ def decode(image: bytes, pc: int) -> Instruction:
             if word & 0x20 or (word & 0x2000 and dst >= 4):
                 return _unknown(pc, word, "CVTIR unsupported special/FP register")
             a = str(src) if word & 0x800 else reg(src)
+            d = f"fp{dst}" if word & 0x2000 else reg(dst)
+            return Instruction(pc, word, 4, "REG", name, (a, d))
+        if name == "movrl":
+            # M1=0 and S1=1 select fp0..fp3; M3 selects FP destination.
+            # Actual 64-bit real values live in an even-aligned GPR pair.
+            src = word & 31
+            dst = (word >> 19) & 31
+            if (word & 0x20 and src >= 4) or (word & 0x2000 and dst >= 4):
+                return _unknown(pc, word, "MOVRL FP register outside fp0..fp3")
+            a = f"fp{src}" if word & 0x20 else reg(src)
             d = f"fp{dst}" if word & 0x2000 else reg(dst)
             return Instruction(pc, word, 4, "REG", name, (a, d))
         if name == "movre":
