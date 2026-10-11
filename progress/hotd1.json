@@ -688,6 +688,31 @@
         "docs/TGPX4_PROGRAM_STAGING.md"
       ],
       "note": "Added strict offline host-side TGPx4 control-bracketed write-transcript audit, rejecting incomplete/unsupported CPU FIFO captures and fingerprinting candidate 64-bit program slots without exporting proprietary bytes. ROM-free synthetic parser/CLI tests only; no actual original HOTD1 program upload or physical control-state proof. The TGPx4 research estimate remains 15%, graphics 0%, Model 2C 20%, HOTD1 overall 10%."
+    },
+    {
+      "date": "2026-10-10",
+      "kind": "review",
+      "scope": "graphics.research",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "runtime/model2c_bus.hpp",
+        "tools/hotd1_strict_boot_probe.cpp",
+        "tests/test_model2c_geometry_trace_native.py",
+        "docs/TGPX4_PROGRAM_STAGING.md"
+      ],
+      "note": "Added bounded opt-in native i960 geometry MMIO attempt tracing, private strict-boot --geometry-trace diagnostics, and synthetic native callback/probe tests. Refused writes have known attempted values but completed=no; refused reads remain UNOBSERVED and the accepted-upload tool cannot treat these as a real DSP program. No original HOTD1 upload, actual cabinet event stream, MB86235 opcode, FIFO acceptance or hardware timing proven; research 15%, graphics 0%, Model2C 20%, HOTD1 10% remain unchanged."
+    },
+    {
+      "date": "2026-10-10",
+      "kind": "review",
+      "scope": "graphics.research",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "tests/test_model2c_geometry_trace_native.py"
+      ],
+      "note": "CI caught and corrected two syntax-only comprehension typos in the new ROM-free geometry native test module; retained all fail-closed runtime behavior and original evidence limitations. Target metrics unchanged pending successful GCC/Clang regression results: TGPx4 research 15%, Model2C 20%, HOTD1 10%."
     }
   ]
 }

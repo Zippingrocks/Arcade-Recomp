@@ -114,6 +114,19 @@ struct SerialBusAccess {
     std::uint32_t value;
 };
 
+// A refused write has a known attempted value, but is NEVER a completed
+// MB86235 transaction. Denied reads have no observed hardware byte.
+struct GeometryBusAccess {
+    std::uint64_t ordinal;
+    std::uint32_t address;
+    unsigned width;
+    bool write;
+    bool completed;
+    bool value_known;
+    std::uint32_t value;
+    Region region;
+};
+
 class StrictBus final {
 public:
     static constexpr std::uint32_t kProgramSize = 0x00200000u;
@@ -208,6 +221,39 @@ public:
     std::uint64_t serial_access_trace_dropped() const { return serial_trace_dropped_; }
     bool serial_access_trace_truncated() const { return serial_trace_dropped_ != 0u; }
 
+    // Bounded, prefix-only diagnostic. Unlike accepted FIFO transcripts,
+    // this logs *attempted*, always rejected native geometry accesses.
+    static constexpr std::size_t kDefaultGeometryTraceLimit = 4096u;
+    void enable_geometry_access_trace(bool enabled = true) {
+        geometry_trace_enabled_ = enabled;
+    }
+    void set_geometry_access_trace_limit(std::size_t limit) {
+        if (limit < geometry_trace_.size())
+            throw std::invalid_argument(
+                "cannot shrink geometry trace below retained entries");
+        geometry_trace_limit_ = limit;
+    }
+    void clear_geometry_access_trace() {
+        geometry_trace_.clear();
+        geometry_trace_total_ = 0u;
+        geometry_trace_dropped_ = 0u;
+    }
+    const std::vector<GeometryBusAccess>& geometry_access_trace() const {
+        return geometry_trace_;
+    }
+    std::size_t geometry_access_trace_limit() const {
+        return geometry_trace_limit_;
+    }
+    std::uint64_t geometry_access_trace_total() const {
+        return geometry_trace_total_;
+    }
+    std::uint64_t geometry_access_trace_dropped() const {
+        return geometry_trace_dropped_;
+    }
+    bool geometry_access_trace_truncated() const {
+        return geometry_trace_dropped_ != 0u;
+    }
+
     arcaderecomp_generated::Bus callbacks() {
         return arcaderecomp_generated::Bus{
             this, &bridge_read32, &bridge_write32, &bridge_read8,
@@ -255,6 +301,16 @@ public:
 
     void write(std::uint32_t address, unsigned width, std::uint32_t value) {
         const auto reg = classify(address);
+        if (is_geometry_region(reg)) {
+            try { validate_access(address, width, true, reg); }
+            catch (const DeviceAccessFault&) {
+                record_geometry_access(address, width, true, true, value, reg);
+                throw;
+            }
+            record_geometry_access(address, width, true, true, value, reg);
+            throw DeviceAccessFault(address, width, true, reg,
+                                    "geometry device write unimplemented");
+        }
         if (reg == Region::serial_io) {
             try {
                 validate_access(address, width, true, reg);
@@ -319,6 +375,44 @@ private:
     mutable std::vector<SerialBusAccess> serial_trace_{};
     mutable std::uint64_t serial_trace_total_ = 0u;
     mutable std::uint64_t serial_trace_dropped_ = 0u;
+    bool geometry_trace_enabled_ = false;
+    std::size_t geometry_trace_limit_ = kDefaultGeometryTraceLimit;
+    mutable std::vector<GeometryBusAccess> geometry_trace_{};
+    mutable std::uint64_t geometry_trace_total_ = 0u;
+    mutable std::uint64_t geometry_trace_dropped_ = 0u;
+
+    static bool is_geometry_region(Region reg) {
+        switch (reg) {
+        case Region::geometry_interface:
+        case Region::geometry_program_port:
+        case Region::coprocessor_function_port:
+        case Region::coprocessor_fifo_port:
+        case Region::geometry_buffer:
+        case Region::coprocessor_control:
+        case Region::geometry_control:
+        case Region::coprocessor_status:
+        case Region::geometry_fifo_status:
+        case Region::video_control:
+            return true;
+        default: return false;
+        }
+    }
+
+    void record_geometry_access(std::uint32_t address, unsigned width,
+                                bool write, bool value_known,
+                                std::uint32_t value, Region reg) const {
+        if (!geometry_trace_enabled_) return;
+        if (geometry_trace_total_ == UINT64_MAX)
+            throw std::overflow_error("geometry trace ordinal exhausted");
+        const auto ordinal = ++geometry_trace_total_;
+        if (geometry_trace_.size() >= geometry_trace_limit_) {
+            ++geometry_trace_dropped_;
+            return;
+        }
+        geometry_trace_.push_back({
+            ordinal, address, width, write, false, value_known, value, reg
+        });
+    }
 
     void record_serial_access(std::uint32_t address, unsigned width,
                               bool write, bool completed, bool value_known,
@@ -465,6 +559,16 @@ private:
 
     std::uint32_t read_value(std::uint32_t address, unsigned width) const {
         const auto reg = classify(address);
+        if (is_geometry_region(reg)) {
+            try { validate_access(address, width, false, reg); }
+            catch (const DeviceAccessFault&) {
+                record_geometry_access(address, width, false, false, 0u, reg);
+                throw;
+            }
+            record_geometry_access(address, width, false, false, 0u, reg);
+            throw DeviceAccessFault(address, width, false, reg,
+                                    "geometry device read unimplemented");
+        }
         if (reg == Region::serial_io) {
             try {
                 validate_access(address, width, false, reg);
