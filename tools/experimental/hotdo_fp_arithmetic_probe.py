@@ -1,4 +1,4 @@
-"""Validate ORIGINAL hotdo MULR/DIVR native AOT sites with synthetic registers.
+"""Validate ORIGINAL hotdo MULR/DIVR/SUBR native AOT sites with synthetic registers.
 
 This is an isolated, authenticated-original-byte CPU instruction test, not
 continuous boot, an Intel floating-point fault model, or arcade hardware proof.
@@ -30,6 +30,12 @@ ORIGINAL_SHA = "da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75
 SITES = (
     (0x000011f8, "divr", ("r4", "g4", "g6"), 4, 20, 22),
     (0x00001390, "mulr", ("g5", "g13", "g4"), 21, 29, 20),
+    (0x000031d4, "subr", ("g7", "g4", "g4"), 23, 20, 20),
+    (0x000037a0, "subr", ("g5", "g4", "g4"), 21, 20, 20),
+    (0x00003858, "subr", ("g4", "g5", "g5"), 20, 21, 21),
+    (0x00003d3c, "subr", ("g4", "g5", "r6"), 20, 21, 6),
+    (0x00004aa4, "subr", ("g5", "g4", "g4"), 21, 20, 20),
+    (0x00004abc, "subr", ("g5", "g4", "g4"), 21, 20, 20),
     (0x00013d88, "mulr", ("g5", "r7", "g5"), 21, 7, 21),
 )
 MIN_NORMAL = Fraction(1, 1 << 126)
@@ -50,6 +56,29 @@ def oracle(mnemonic: str, a: int, b: int) -> tuple[int, int]:
     af, bf = a & 0x7fffff, b & 0x7fffff
     if ae == 255 or be == 255 or (ae == 0 and af) or (be == 0 and bf):
         return 2, 0
+    if mnemonic == "subr":
+        # Independently evaluate src2-src1 as an exact rational result,
+        # including signed zero rules. Never call the native ADDR helper.
+        neg_a = a ^ 0x80000000
+        az, bz = ae == 0, be == 0
+        if az and bz:
+            return ((1, 0) if ((neg_a ^ b) & 0x80000000) else (0, b))
+        if az or bz:
+            return (0, b if az else neg_a)
+        if abs(ae - be) > 32:
+            return (1, 0)
+        exact = Fraction.from_float(_float32(b)) - Fraction.from_float(_float32(a))
+        if exact == 0:
+            return (1, 0)  # cancellation sign requires AC rounding semantics
+        if abs(exact) < MIN_NORMAL or abs(exact) > MAX_NORMAL:
+            return (2, 0)
+        try:
+            bits = struct.unpack("<I", struct.pack("<f", float(exact)))[0]
+        except (OverflowError, ValueError):
+            return (2, 0)
+        if (bits & 0x7f800000) == 0:
+            return (2, 0)
+        return (0, bits) if Fraction.from_float(_float32(bits)) == exact else (1, 0)
     sign = (a ^ b) & 0x80000000
     if mnemonic == "divr" and ae == 0:
         return 3, 0
@@ -144,7 +173,7 @@ def verify(image: bytes, compilers: list[str]) -> dict:
         if inst.mnemonic != name or inst.form != "REG" or inst.operands != operand_names:
             raise ValueError("original floating-point instruction/register mismatch")
         sparse[pc:pc + 4] = image[pc:pc + 4]
-    generated, report = emit_cpp(bytes(sparse), SITES[0][0], 16,
+    generated, report = emit_cpp(bytes(sparse), SITES[0][0], 32,
                                  additional_entries=tuple(x[0] for x in SITES[1:]))
     if (report.translated != len(SITES) or report.limit_reached or
             any(pc in report.unsupported for pc, *_ in SITES)):
@@ -175,7 +204,7 @@ def verify(image: bytes, compilers: list[str]) -> dict:
                 raise ValueError("original native arithmetic diverged from independent oracle")
             checked.append({"compiler": Path(compiler).name,
                             "passed_vectors": len(records), "ubsan": True})
-    return {"schema": "hotdo-original-native-fp-arithmetic-v1",
+    return {"schema": "hotdo-original-native-fp-arithmetic-v2",
             "cpu_sha256": digest,
             "site_addresses": [f"0x{p:08x}" for p, *_ in SITES],
             "samples_per_site": len(pairs),
@@ -221,7 +250,7 @@ def main() -> int:
         print("private arithmetic validation failed: " + type(exc).__name__,
               file=sys.stderr)
         return 2
-    print("Verified three original CPU arithmetic sites with synthetic state.")
+    print("Verified nine original CPU arithmetic sites with synthetic state.")
     return 0
 
 

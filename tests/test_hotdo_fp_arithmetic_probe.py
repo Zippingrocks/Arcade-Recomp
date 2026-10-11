@@ -32,6 +32,28 @@ class OriginalFPArithmeticProbeTests(unittest.TestCase):
         self.assertEqual(oracle("divr", bits(2), 0x7fc00001)[0], 2)
         self.assertEqual(oracle("mulr", 0x00800000, bits(0.5))[0], 2)
 
+    def test_subr_exact_direction_and_fail_closed_cases(self):
+        oracle = MODULE["oracle"]
+        self.assertEqual(oracle("subr", bits(3), bits(7)), (0, bits(4)))
+        self.assertEqual(oracle("subr", bits(7), bits(3)), (0, bits(-4)))
+        self.assertEqual(oracle("subr", bits(-4), bits(2)), (0, bits(6)))
+        self.assertEqual(oracle("subr", bits(2), bits(0)), (0, bits(-2)))
+        self.assertEqual(oracle("subr", bits(-0.0), bits(0.0)),
+                         (0, bits(0.0)))
+        self.assertEqual(oracle("subr", bits(0.0), bits(0.0))[0], 1)
+        self.assertEqual(oracle("subr", bits(3), bits(3))[0], 1)
+        self.assertEqual(oracle("subr", bits(3), bits(1))[0], 0)
+        self.assertEqual(oracle("subr", 0x7f800000, bits(1))[0], 2)
+
+    def test_original_site_metadata_contains_six_subr_sites(self):
+        sites = MODULE["SITES"]
+        self.assertEqual(len(sites), 9)
+        self.assertEqual(len([x for x in sites if x[1] == "subr"]), 6)
+        self.assertEqual([x[0] for x in sites], sorted(x[0] for x in sites))
+        self.assertEqual(len({x[0] for x in sites}), 9)
+        self.assertIn((0x31d4, "subr", ("g7", "g4", "g4"), 23, 20, 20),
+                      sites)
+
     def test_verifier_rejects_wrong_digest_and_size_before_compilation(self):
         verify = MODULE["verify"]
         with self.assertRaisesRegex(ValueError, "not authenticated original"):

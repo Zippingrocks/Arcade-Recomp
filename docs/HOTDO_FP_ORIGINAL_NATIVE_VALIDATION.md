@@ -28,20 +28,27 @@ for **10,956 native executions per compiler**:
 | 0x00000C7C | LOGBNR, ADDR, CVTZRI |
 
 The new opt-in checker at tools/experimental/hotdo_fp_arithmetic_probe.py
-authenticates the same original CPU image and verifies three other isolated
+authenticates the same original CPU image and verifies nine other isolated
 original-ROM instructions under GCC and Clang with UBSan:
 
 | Address | Original instruction | Status |
 | --- | --- | --- |
 | 0x000011F8 | DIVR r4,g4,g6 | Passed |
 | 0x00001390 | MULR g5,g13,g4 | Passed |
+| 0x000031D4 | SUBR g7,g4,g4 | Passed |
+| 0x000037A0 | SUBR g5,g4,g4 | Passed |
+| 0x00003858 | SUBR g4,g5,g5 | Passed |
+| 0x00003D3C | SUBR g4,g5,r6 | Passed |
+| 0x00004AA4 | SUBR g5,g4,g4 | Passed |
+| 0x00004ABC | SUBR g5,g4,g4 | Passed |
 | 0x00013D88 | MULR g5,r7,g5 | Passed |
 
 For each original instruction, 2,039 synthetic pairs (edge cases, exact powers
 of two, random finite values and exceptions) are checked against independent
 Python Fraction rational arithmetic, verifying normal exact binary32 outcomes,
 signed zero, operand direction and overlapping destination registers.
-**6,117 native arithmetic executions passed per compiler.** Inexact results,
+**18,351 native arithmetic executions passed per compiler** (nine original
+sites × 2,039 input pairs). Inexact results,
 invalid values, subnormal operands, over/underflow and divisor zero must
 stop without modifying CPU state. That is a controlled incompleteness, not
 an implemented architected floating-point fault.
