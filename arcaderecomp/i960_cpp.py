@@ -282,14 +282,16 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             # If incoming CC bit 2 is set, do absolutely nothing; otherwise
             # *inclusive* src1 <= src2 yields 010, all others yield 001.
             # This is NOT a normal three-way CMP and is important for bounds.
-            if op == "concmpi":
-                left = f"(({a}) ^ 0x80000000u)"
-                right = f"(({b}) ^ 0x80000000u)"
-            else:
-                left, right = a, b
+            # Snapshot each operand into a distinct temporary, even when
+            # src1/src2 refer to the same register. Clang -Werror correctly
+            # rejects syntactic self-comparisons in AOT-generated C++.
+            left = "(left_raw ^ 0x80000000u)" if op == "concmpi" else "left_raw"
+            right = "(right_raw ^ 0x80000000u)" if op == "concmpi" else "right_raw"
             return ("if (!cpu.cc_defined) "
                     "return stop(cpu, StopCode::undefined_condition_code); "
                     "if ((cpu.cc & 4) == 0) { "
+                    f"const std::uint32_t left_raw = {a}; "
+                    f"const std::uint32_t right_raw = {b}; "
                     f"cpu.cc = ({left} <= {right}) ? 2 : 1; "
                     "cpu.cc_defined = true; }")
         if op in ("cmpo", "cmpi"):
