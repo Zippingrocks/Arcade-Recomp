@@ -9,7 +9,9 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <stdexcept>
+#include "i960_frame_runtime.hpp"
 
 namespace arcaderecomp_generated {
 
@@ -60,5 +62,17 @@ inline KBVectorPriorityReview review_kb_vector_priority(
         ? KBVectorDisposition::higher_priority_candidate
         : KBVectorDisposition::would_post_pending;
     return result;
+}
+// Knowledge audit, not MODPC or processor priority tracking. The native
+// runtime only proves an initialized priority on successful opt-in IAC 0x93.
+// A direct CPU{} (whose process_controls is zero), an initial frame_init,
+// failed IAC, or a manually modified PC word must remain unknown. Comparing
+// the whole captured PC word guards against silent external mutations.
+inline std::optional<unsigned> kb_known_cpu_program_priority(const CPU& cpu) {
+    if (!cpu.process_controls_priority_known ||
+        !cpu.prcb_loaded || cpu.reinitialize_count == 0u ||
+        cpu.process_controls != cpu.known_process_controls)
+        return std::nullopt;
+    return static_cast<unsigned>((cpu.process_controls >> 16u) & 31u);
 }
 } // namespace arcaderecomp_generated

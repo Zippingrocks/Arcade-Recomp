@@ -87,6 +87,11 @@ struct CPU {
     std::uint32_t interrupt_stack_address = 0;
     std::uint32_t fault_table_address = 0;
     std::uint32_t process_controls = 0;
+    // Unknown by default. A successfully validated opt-in IAC 0x93
+    // establishes an initial priority-31 value, but a raw zero-initialized
+    // CPU or user-edited process-controls word proves no CPU priority.
+    bool process_controls_priority_known = false;
+    std::uint32_t known_process_controls = 0;
     std::uint32_t trace_controls = 0;
     // Intel 80960KB internal interrupt-pin vector routing (synmov/synld
     // at 0xFF000004). Initialized to FF000000h by processor reset.
@@ -145,6 +150,10 @@ static inline bool frame_init(CPU& cpu, std::uint32_t initial_fp,
     cpu.frame_depth = 0;
     cpu.stop_code = StopCode::none;
     cpu.interrupt_control_register = 0xff000000u;
+    // frame_init is also used for initial/test frames: do not confuse this
+    // with successful Intel PRCB reinitialization or an established priority.
+    cpu.process_controls_priority_known = false;
+    cpu.known_process_controls = 0u;
     cpu.integer_overflow_mask_defined = false;
     cpu.integer_overflow_flag_defined = false;
     cpu.pending_integer_overflow = {};
