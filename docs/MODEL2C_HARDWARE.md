@@ -24,6 +24,26 @@ The following preliminary CPU-visible address regions are documented in the MAME
 
 All timings, interrupts, geometry FIFO behavior, lightgun calibration, and the complete Model 2C address mapping require further original research and tests.
 
+### Strict geometry/video aperture recognition (2026-10-10)
+
+`StrictBus` now distinguishes the four published i960-visible geometry and
+video ranges listed above instead of reporting them all as generic unmapped
+accesses. It provides separate fault categories for the geometry interface
+registers, mirrored geometry buffer window, FIFO status register and video
+control register. Both reads and writes **always fault**: neither register
+contents nor buffer data, FIFO ready signals, coprocessor upload semantics,
+rendering, or timing can be responsibly inferred from an address map.
+Unlisted gaps (including `0x00980000` and `0x00980008`) remain unmapped,
+and no 8/16/32-bit transfer returns fabricated values.
+
+Synthetic native GCC/Clang UBSan tests exercise exact aperture boundaries,
+CPU bus callback faults, and a synchronous-access refusal. This is a
+*diagnostic memory-map improvement*, not MB86235 execution or arcade-hardware
+verification. The independent original-`hotdo` startup probe remains strict
+and does not enable geometry emulation. Source of address-map facts:
+https://github.com/mamedev/mame/blob/master/src/mame/sega/model2.cpp
+
+
 ## Component split
 
 - **CPU core:** Intel i960KB; instruction addressing, register frames, interrupts and native translation.

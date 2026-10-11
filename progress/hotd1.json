@@ -635,6 +635,19 @@
         "docs/MODEL2C_SERIAL_CAPTURE_COMPARISON.md"
       ],
       "note": "Required the strict native serial-access footer before comparing captures; missing summaries now fault instead of silently accepting truncated prefixes, with synthetic CLI and malformed-footer regression tests. This hardens the evidence boundary but does not add independently captured Sega serial RX/status bytes or Model 2C timing, so the 80% comparison-tool estimate, 20% Model 2C and 10% overall HOTD1 remain unchanged."
+    },
+    {
+      "date": "2026-10-10",
+      "kind": "review",
+      "scope": "model2c.map",
+      "percent_before": 45,
+      "percent_after": 45,
+      "evidence": [
+        "runtime/model2c_bus.hpp",
+        "tests/test_model2c_geometry_apertures_native.py",
+        "docs/MODEL2C_HARDWARE.md"
+      ],
+      "note": "Added explicit fault-only CPU address classifications for Model 2C geometry interface, mirrored buffer, FIFO status and video control windows, with synthetic GCC/Clang UBSan address-boundary and native callback tests. This improves diagnosis but implements no MB86235 program execution, device register semantics, FIFO timing or rendering; map estimate stays 45%, Model 2C stays 20%, and original HOTD1 stays 10%."
     }
   ]
 }
