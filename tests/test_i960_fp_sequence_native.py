@@ -107,6 +107,17 @@ int main() {
 """
         self.assertEqual(native_run(harness).translated, 3)
 
+    def test_private_original_verifier_rejects_untrusted_input(self):
+        # The opt-in checker MUST validate the full original CPU SHA before
+        # any native compilation, game code translation, or artifact emission.
+        import runpy
+        verify_path = ROOT / "tools" / "experimental" / "hotdo_fp_sequence_probe.py"
+        verifier = runpy.run_path(str(verify_path))["verify"]
+        with self.assertRaisesRegex(ValueError, "verified original hotdo"):
+            verifier(b"\x00" * 0x200000, ["g++"])
+        with self.assertRaisesRegex(ValueError, "verified original hotdo"):
+            verifier(b"", ["g++"])
+
     def test_special_values_stop_at_first_step_without_partial_state(self):
         native_run(r"""
 using namespace arcaderecomp_generated;
