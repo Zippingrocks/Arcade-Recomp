@@ -127,3 +127,32 @@ References:
 - Model 2B SDK's hardware-test statement, explicitly marked as
   non-Model-2C evidence:
   https://github.com/biggestsonicfan/m2-sdk
+
+
+## Opt-in provisional Model 2C timer countdowns (2026-10-10)
+
+The published Model 2C CPU map exposes four 32-bit countdown registers
+at `0x00F00000`, `0x00F00004`, `0x00F00008`, and `0x00F0000C`. Public
+Model 2 research describes a **25 MHz** timer tick and timer interrupt
+sources associated with IRQ bits **2 through 5**. This public information
+guides our independent implementation; it is NOT an original HOTD1 cabinet
+measurement or a copied emulator implementation.
+
+`runtime/model2c_timers.hpp` adds an **opt-in research model**:
+`StrictBus::enable_partial_timers()` permits aligned, 32-bit nonzero
+timer loads. `StrictBus::advance_external_timer_ticks(ticks)` advances
+the four independent countdowns using an **explicit caller-supplied tick
+count**, never host wall time or one tick per native CPU instruction. With
+the separately opt-in partial IRQ register controller enabled, expiration
+raises source bits 2-5 only when their enables are active. This does not
+deliver an Intel i960 interrupt frame or establish physical IRQ timing.
+
+**Strict unsupported cases:** power-on timer readback is unknown; zero
+timer loads are rejected; expired timer readback is unknown until rewritten;
+subword/misaligned operations and access with timers disabled fault.
+Other board registers and serial RX/status remain unimplemented. The
+strict original boot probe does not enable timers or fake a board clock.
+
+Evidence level: ROM-free GCC/Clang UBSan tests only, with explicitly
+synthetic tick counts. Reference (architecture facts, not code):
+https://github.com/mamedev/mame/blob/master/src/mame/sega/model2.cpp

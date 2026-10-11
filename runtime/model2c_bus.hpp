@@ -11,6 +11,7 @@
 #include "i960_frame_runtime.hpp"
 #include "sega3155649_serial.hpp"
 #include "model2c_irq_registers.hpp"
+#include "model2c_timers.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -30,6 +31,7 @@ enum class Region {
     game_data_rom,
     serial_io,
     irq_registers,
+    timer_registers,
     unmapped
 };
 
@@ -41,6 +43,7 @@ static inline const char* region_name(Region region) {
     case Region::game_data_rom: return "game data ROM";
     case Region::serial_io: return "Sega 315-5649 I/O controller (serial partial)";
     case Region::irq_registers: return "Model 2C IRQ request/enable registers (partial)";
+    case Region::timer_registers: return "Model 2C countdown timer registers (partial)";
     case Region::unmapped: return "unmapped or unimplemented Model 2C device";
     }
     return "unknown";
@@ -128,6 +131,14 @@ public:
     void enable_partial_irq_registers(bool enabled = true) {
         irq_enabled_ = enabled;
     }
+    void enable_partial_timers(bool enabled = true) { timers_enabled_ = enabled; }
+    PartialModel2CTimers& timer_registers() { return timers_; }
+    const PartialModel2CTimers& timer_registers() const { return timers_; }
+    void advance_external_timer_ticks(std::uint64_t ticks) {
+        if (!timers_enabled_)
+            throw std::logic_error("timer model disabled; no implicit clock");
+        timers_.advance_external_ticks(ticks, irq_, irq_enabled_);
+    }
     PartialIRQRegisters& irq_registers() { return irq_; }
     const PartialIRQRegisters& irq_registers() const { return irq_; }
     IO3155649& serial_device() { return io_; }
@@ -175,6 +186,7 @@ public:
         if (inside(address, kWorkStart, kWorkSize)) return Region::work_ram;
         if (inside(address, kControlStart, kControlSize)) return Region::cpu_control;
         if (inside(address, kIOStart, kIOSize)) return Region::serial_io;
+        if (inside(address, PartialModel2CTimers::BASE, 16u)) return Region::timer_registers;
         if (inside(address, PartialIRQRegisters::REQUEST, 8u))
             return Region::irq_registers;
         if (inside(address, kDataStart, kDataSize) ||
@@ -204,6 +216,14 @@ public:
             return;
         }
         validate_access(address, width, true, reg);
+        if (reg == Region::timer_registers) {
+            try { timers_.write(address, value); }
+            catch (const PartialModel2CTimers::Unverified& error) {
+                throw DeviceAccessFault(address, width, true, reg, error.what());
+            }
+            writes_.push_back({address, value, width, reg});
+            return;
+        }
         if (reg == Region::irq_registers) {
             if (address == PartialIRQRegisters::REQUEST)
                 irq_.acknowledge(value);
@@ -265,6 +285,8 @@ private:
     }
     bool irq_enabled_ = false;
     PartialIRQRegisters irq_{};
+    bool timers_enabled_ = false;
+    PartialModel2CTimers timers_{};
 
     static bool inside(std::uint32_t address, std::uint32_t start,
                        std::uint32_t length) {
@@ -293,6 +315,8 @@ private:
         case Region::serial_io: return kIOSize - (address - kIOStart);
         case Region::irq_registers:
             return 8u - (address - PartialIRQRegisters::REQUEST);
+        case Region::timer_registers:
+            return 16u - (address - PartialModel2CTimers::BASE);
         case Region::game_data_rom:
             if (inside(address, kExtraStart, kExtraSize))
                 return kExtraSize - (address - kExtraStart);
@@ -309,6 +333,12 @@ private:
         // uncertain misaligned bus behavior rather than returning a guess.
         if (width > 1 && (address % width) != 0)
             throw DeviceAccessFault(address, width, write, reg, "unaligned transfer unsupported");
+        if (reg == Region::timer_registers) {
+            if (!timers_enabled_ || width != 4u ||
+                ((address - PartialModel2CTimers::BASE) & 3u) != 0u)
+                throw DeviceAccessFault(address, width, write, reg,
+                                        "timer disabled or unverified access width");
+        }
         if (reg == Region::irq_registers) {
             if (!irq_enabled_ || width != 4u ||
                 (address != PartialIRQRegisters::REQUEST &&
@@ -360,6 +390,12 @@ private:
             }
         }
         validate_access(address, width, false, reg);
+        if (reg == Region::timer_registers) {
+            try { return timers_.read(address); }
+            catch (const PartialModel2CTimers::Unverified& error) {
+                throw DeviceAccessFault(address, width, false, reg, error.what());
+            }
+        }
         if (reg == Region::irq_registers) {
             if (address == PartialIRQRegisters::REQUEST)
                 return irq_.request();

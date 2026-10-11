@@ -209,7 +209,7 @@
         {
           "id": "model2c.timers",
           "title": "Hardware timers",
-          "percent": 0
+          "percent": 15
         },
         {
           "id": "model2c.f80000",
@@ -607,6 +607,21 @@
         "tests/test_serial_access_compare.py"
       ],
       "note": "Fixed the progress history baseline assertion to check the first immutable entry rather than the latest review. The new bounded trace/comparator tests passed under GCC and Clang, but full CI needs to rerun; subjective trace tooling and HOTD1 estimates remain unchanged."
+    },
+    {
+      "date": "2026-10-10",
+      "kind": "estimate",
+      "scope": "model2c.timers",
+      "percent_before": 0,
+      "percent_after": 15,
+      "evidence": [
+        "runtime/model2c_timers.hpp",
+        "runtime/model2c_bus.hpp",
+        "runtime/model2c_irq_registers.hpp",
+        "tests/test_model2c_timers_native.py",
+        "docs/MODEL2C_HARDWARE.md"
+      ],
+      "note": "Implemented opt-in four-channel 25 MHz tick-countdown and partial timer-to-IRQ source wiring using explicit externally supplied ticks; GCC/Clang synthetic tests exercise masking, independent expiry and fault preservation. Unknown reset, zero-load, post-expiry readback, actual cabinet cycle/IRQ timing, and CPU interrupt entry still halt or remain unmodeled. Parent Model 2C and overall HOTD1 percentages remain unchanged."
     }
   ]
 }

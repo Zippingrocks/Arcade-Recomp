@@ -39,6 +39,16 @@ public:
         pending_cycles_ = 0u;
     }
 
+    // Provisional timer IRQ source (T0..T3 => bits 2..5). The timer
+    // must be advanced from independently supplied 25-MHz ticks. This
+    // does NOT enter an i960 interrupt frame or verify cabinet timing.
+    void observe_timer_expiration(unsigned timer) {
+        if (timer >= 4u)
+            throw std::out_of_range("invalid Model 2C timer channel");
+        const std::uint32_t mask = std::uint32_t(1u) << (timer + 2u);
+        if (enable_ & mask) request_ |= mask;
+    }
+
     // Synthetic test hook. NOT wired to real Model 2C interrupt sources.
     void inject_enabled_source_for_test(unsigned bit) {
         if (bit >= 12u)
