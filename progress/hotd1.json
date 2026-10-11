@@ -763,6 +763,30 @@
         "tests/test_sega_serial_cpu_replay.py"
       ],
       "note": "Corrected C++ test-fixture escaped newline tokens for the new replay-owner move/destroy regression. The source fixture uses actual newline separators when parsed in native C++, not literal backslash-n text; replay runtime behavior and all authenticity claims are unchanged. Await CI verification."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.frames",
+      "percent_before": 75,
+      "percent_after": 75,
+      "evidence": [
+        "runtime/i960_frame_runtime.hpp",
+        "tests/test_i960_return_guard_native.py",
+        "docs/I960_FRAMES.md"
+      ],
+      "note": "Fixed native i960 local RET diagnostic so malformed restored caller RIP stops before mutating cached/spilled frame state or reload counters, preserving the actual stop IP and supporting safe correction/retry in synthetic GCC/Clang UBSan tests. This is fail-closed CPU diagnostic behavior, NOT proven original Intel fault-entry/restart timing or hardware fidelity. CPU frames 75%, CPU overall 55%, original HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.frames",
+      "percent_before": 75,
+      "percent_after": 75,
+      "evidence": [
+        "tests/test_i960_return_guard_native.py"
+      ],
+      "note": "Adjusted GCC/Clang C++17 native return-guard harness for portable -Wextra -Werror compilation: helper functions are inline and aggregate Bus callbacks initialized explicitly. No runtime or hardware semantics changed, CPU frames 75%, CPU 55%, original HOTD1 10%."
     }
   ]
 }

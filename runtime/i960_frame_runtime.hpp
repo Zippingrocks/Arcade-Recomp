@@ -259,6 +259,7 @@ static inline bool frame_return(CPU& cpu, const Bus& bus) {
     const unsigned previous_slot = (cpu.frame_depth - 1u) & 3u;
     const unsigned departing_slot = cpu.frame_depth & 3u;
     std::uint32_t restored[16]{};
+    bool needs_reload = false;
 
     if (cpu.saved_valid[previous_slot]) {
         if (cpu.saved_fp[previous_slot] != previous_fp)
@@ -272,8 +273,16 @@ static inline bool frame_return(CPU& cpu, const Bus& bus) {
             return stop(cpu, StopCode::bad_frame_pointer);
         for (unsigned i = 0; i < 16; ++i)
             restored[i] = bus.read32(bus.ctx, previous_fp + 4u * i);
-        ++cpu.frame_reloads;
+        needs_reload = true;
     }
+
+    // This is an explicit diagnostic stop, NOT implemented Intel fault
+    // delivery. Validate the restored caller RIP *before* invalidating
+    // cached frames or changing IP/SP/FP/register windows. Previously a
+    // malformed RIP corrupted the live frame and blamed the wrong stop IP.
+    if ((restored[2] & 3u) != 0u)
+        return stop(cpu, StopCode::bad_instruction_pointer);
+    if (needs_reload) ++cpu.frame_reloads;
 
     cpu.saved_valid[departing_slot] = false;
     cpu.saved_valid[previous_slot] = false; // becomes the active local window
@@ -281,9 +290,7 @@ static inline bool frame_return(CPU& cpu, const Bus& bus) {
     for (unsigned i = 0; i < 16; ++i)
         cpu.r[i] = restored[i];
     cpu.r[31] = previous_fp;
-    cpu.ip = cpu.r[2]; // caller's saved RIP (instruction after original CALL)
-    if (cpu.ip & 3u)
-        return stop(cpu, StopCode::bad_instruction_pointer);
+    cpu.ip = restored[2]; // caller's saved RIP (checked above)
     return true;
 }
 

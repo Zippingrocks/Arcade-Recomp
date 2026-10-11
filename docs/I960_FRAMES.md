@@ -30,3 +30,21 @@ We are not calling Gate A or Gate B complete. See `MODEL2C_DEFINITION_OF_DONE.md
 ## Authorship policy
 
 The source is independently authored and tested against Intel's published specifications; factual references to external projects do not imply importing their code.
+
+## Diagnostic bad-return-IP guard (2026-10-11)
+
+The independent native frame runtime now validates the **restored caller's
+RIP** before invalidating cached locals, decrementing frame depth or
+replacing the live IP/FP. On an invalid 4-byte-alignment return address, it
+stops at the *current RET instruction* with `bad_instruction_pointer`
+instead of corrupting the active caller/callee frame and reporting a
+misleading stop IP. Spilled-frame reload accounting is committed only
+after the restored RIP passes validation.
+
+ROM-free native GCC/Clang UndefinedBehaviorSanitizer regression tests cover
+both cached and spilled caller windows, a deliberately corrupted RIP, and
+successful retry after the synthetic input is corrected. The external bus
+can still have read side effects before an invalid return is detected;
+full 80960KB fault delivery and exact restart behavior are **not**
+implemented or claimed. CPU-frame and overall HOTD1 fidelity estimates
+remain unchanged.
