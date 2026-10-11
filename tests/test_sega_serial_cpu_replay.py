@@ -148,13 +148,13 @@ static_assert(std::is_move_constructible<SerialCPUReplay>::value,
               "a bound replay must survive safe relocation");
 int main() {
     const std::string fixture =
-      "arcade-serial-cpu-replay-v1\\n"
-      "count=4 dropped=0 complete=yes provenance=synthetic\\n"
-      "1 W 0x01c00014 0xff\\n"
-      "2 R 0x01c0001a 0x00\\n"
-      "3 R 0x01c00016 0x31\\n"
-      "4 R 0x01c0001a 0x0c\\n"
-      "END\\n";
+      "arcade-serial-cpu-replay-v1\n"
+      "count=4 dropped=0 complete=yes provenance=synthetic\n"
+      "1 W 0x01c00014 0xff\n"
+      "2 R 0x01c0001a 0x00\n"
+      "3 R 0x01c00016 0x31\n"
+      "4 R 0x01c0001a 0x0c\n"
+      "END\n";
     // The fixture is intentionally private synthetic data, not an arcade RX.
     std::istringstream source(fixture);
     auto initial = SerialCPUReplay::parse(source);
