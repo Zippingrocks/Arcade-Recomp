@@ -214,6 +214,13 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         if op in ("addo", "subo"):
             symbol = "+" if op == "addo" else "-"
             return f"cpu.r[{dst}] = static_cast<std::uint32_t>({b} {symbol} {a});"
+        if op == "mulo":
+            # Intel KB ordinal multiplication retains only the low 32 bits.
+            # No integer-overflow mask, sticky flag or comparison-code updates.
+            # UInt64 intermediates preserve both sources even when dst aliases.
+            return (f"cpu.r[{dst}] = static_cast<std::uint32_t>("
+                    f"static_cast<std::uint64_t>({a}) * "
+                    f"static_cast<std::uint64_t>({b}));")
         if op == "mov":
             return f"cpu.r[{dst}] = {a};"
         if op in ("shlo", "shro", "shri", "shrdi"):
