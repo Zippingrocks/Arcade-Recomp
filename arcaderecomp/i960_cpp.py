@@ -132,6 +132,16 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!convert_integer_to_real_exact(cpu, {value}, "
                 f"{dst}u, {'true' if dest_fp else 'false'})) return false;")
 
+    if ins.form == "REG" and op == "divr":
+        # Intel 80960KB DIVR: src2 / src1; exact finite GPR real32 only.
+        if word & (0x20 | 0x40 | 0x800 | 0x1000 | 0x2000):
+            return None
+        denominator = word & 31
+        numerator = (word >> 14) & 31
+        dst = (word >> 19) & 31
+        return (f"if (!divide_real32_exact(cpu, cpu.r[{denominator}], "
+                f"cpu.r[{numerator}], {dst}u)) return false;")
+
     if ins.form == "REG" and op == "mulr":
         # Intel 80960KB MULR 78C; source bits are IEEE real32 in GPRs.
         # Preserve GP aliases, refuse unsupported FP modes and any result
@@ -559,6 +569,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_to_integer.hpp"
 #include "i960_fp_add_exact.hpp"
 #include "i960_fp_multiply_exact.hpp"
+#include "i960_fp_divide_exact.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {

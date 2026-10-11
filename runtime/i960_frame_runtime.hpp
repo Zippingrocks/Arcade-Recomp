@@ -37,7 +37,8 @@ enum class StopCode : std::uint32_t {
     undefined_floating_point_register = 19,
     unsupported_floating_rounding = 20,
     unsupported_floating_format = 21,
-    unsupported_floating_integer_range = 22
+    unsupported_floating_integer_range = 22,
+    unsupported_floating_division_fault = 23
 };
 
 // A diagnostic handoff, not an architected in-memory fault record.
