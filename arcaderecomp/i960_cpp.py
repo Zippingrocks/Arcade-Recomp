@@ -132,6 +132,25 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!convert_integer_to_real_exact(cpu, {value}, "
                 f"{dst}u, {'true' if dest_fp else 'false'})) return false;")
 
+    if ins.form == "REG" and op == "logbnr":
+        # IEEE-754 logb(x) returns the integral binary exponent in FP
+        # format (e.g. logb(3249) = 11.0). Extract integer exponents
+        # directly from bit patterns. Zero/subnormals/NaNs/Inf require
+        # floating exception and special-value handling not implemented.
+        src = word & 31
+        dst = (word >> 19) & 31
+        src_fp = bool(word & 0x20)
+        dst_fp = bool(word & 0x2000)
+        if not (word & 0x1000) or word & (0x40 | 0x800):
+            return None
+        if (word >> 14) & 31:
+            return None
+        if (src_fp and src >= 4) or (dst_fp and dst >= 4):
+            return None
+        return (f"if (!log_binary_real_exact(cpu, {src}u, "
+                f"{'true' if src_fp else 'false'}, {dst}u, "
+                f"{'true' if dst_fp else 'false'})) return false;")
+
     if ins.form == "REG" and op == "movrl":
         # Intel KB MOVRL 6D9: 64-bit IEEE long-real <-> FP extended-real.
         # No host floating-point operations. Handle only exact normal/zero
@@ -496,6 +515,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_registers.hpp"
 #include "i960_fp_convert.hpp"
 #include "i960_fp_long_real.hpp"
+#include "i960_fp_logb.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {
