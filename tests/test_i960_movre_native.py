@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def movre(src, dst, *, src_fp=False, dst_fp=False, literal=False):
-    return (0x6e100080 | 0x1000 |
+    return (0x6e000080 | 0x1000 |
             src | (dst << 19) |
             (0x20 if src_fp else 0) |
             (0x2000 if dst_fp else 0) |
