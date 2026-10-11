@@ -82,6 +82,7 @@ REGISTER = {
     0x6d9: ("movrl", "sd"),
     0x6e1: ("movre", "sd"),
     0x701: ("mulo", "sss"),
+    0x78c: ("mulr", "sss"),
     0x78f: ("addr", "sss"),
 }
 MEMORY = {

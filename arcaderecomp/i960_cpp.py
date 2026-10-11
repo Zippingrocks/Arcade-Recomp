@@ -132,6 +132,18 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!convert_integer_to_real_exact(cpu, {value}, "
                 f"{dst}u, {'true' if dest_fp else 'false'})) return false;")
 
+    if ins.form == "REG" and op == "mulr":
+        # Intel 80960KB MULR 78C; source bits are IEEE real32 in GPRs.
+        # Preserve GP aliases, refuse unsupported FP modes and any result
+        # that requires unmodeled inexact/underflow/overflow handling.
+        if word & (0x20 | 0x40 | 0x800 | 0x1000 | 0x2000):
+            return None
+        first = word & 31
+        second = (word >> 14) & 31
+        dst = (word >> 19) & 31
+        return (f"if (!multiply_real32_exact(cpu, cpu.r[{first}], "
+                f"cpu.r[{second}], {dst}u)) return false;")
+
     if ins.form == "REG" and op == "addr":
         # Intel KB ADDR 78F, original arcade candidate 0xC00:
         # real32 + real32 -> real32. No host arithmetic, and never
@@ -546,6 +558,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_logb.hpp"
 #include "i960_fp_to_integer.hpp"
 #include "i960_fp_add_exact.hpp"
+#include "i960_fp_multiply_exact.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {
