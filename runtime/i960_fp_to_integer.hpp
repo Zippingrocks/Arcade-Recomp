@@ -23,9 +23,14 @@ static inline bool convert_real_to_integer_exact(CPU& cpu, unsigned source,
     unsigned fraction_position = 0;
 
     if (source_fp) {
-        if (!cpu.fp_defined[source])
+        // The emitter can specialize source_fp=false with a GPR index
+        // like g4 (20). Keep even the unreachable FP access statically
+        // within fp0..fp3 for GCC -Warray-bounds without bypassing the
+        // source>=4 validation above.
+        const unsigned fp_index = source & 3u;
+        if (!cpu.fp_defined[fp_index])
             return stop(cpu, StopCode::undefined_floating_point_register);
-        const ExtendedReal source_bits = cpu.fp[source];
+        const ExtendedReal source_bits = cpu.fp[fp_index];
         const std::uint32_t raw_exp = source_bits.high & 0x7fffu;
         negative = (source_bits.high & 0x8000u) != 0u;
         significand = static_cast<std::uint64_t>(source_bits.low) |
