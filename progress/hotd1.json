@@ -154,7 +154,7 @@
         {
           "id": "model2c.map",
           "title": "CPU-visible memory map",
-          "percent": 45
+          "percent": 50
         },
         {
           "id": "model2c.ram",
@@ -662,6 +662,19 @@
         "targets/hotd1/original.json"
       ],
       "note": "Independently documented Model 2C MB86235 candidate 64-bit program staging from externally recorded pairs of 32-bit host writes and created a ROM-free bounded offline packing/metadata tool. Synthetic tests cover explicit endianness, low/high hypotheses, strict length and provenance validation, and private evidence preservation. This is research (15% estimate), NOT extraction of the actual HOTD1 upload, verified 64-bit opcode decoding, DSP execution, FIFO semantics, native AOT, or original-cabinet validation. Graphics overall stays 0%, Model 2C 20%, HOTD1 10%."
+    },
+    {
+      "date": "2026-10-10",
+      "kind": "estimate",
+      "scope": "model2c.map",
+      "percent_before": 45,
+      "percent_after": 50,
+      "evidence": [
+        "runtime/model2c_bus.hpp",
+        "tests/test_model2c_geometry_apertures_native.py",
+        "docs/MODEL2C_HARDWARE.md"
+      ],
+      "note": "Resolved previously unmapped published Model 2C i960-side TGPx4 FIFO/program-upload, function, coprocessor control/status, and geometry program/control apertures; added precise fail-closed region classification and synthetic GCC/Clang UBSan boundary/CPU-callback tests. This corrects the typed bus map, not actual program upload acceptance, MB86235 execution, FIFO behavior, hardware timing or ROM/cabinet evidence. Estimated map task 45->50%; Model 2C overall remains 20%, original HOTD1 10%."
     }
   ]
 }
