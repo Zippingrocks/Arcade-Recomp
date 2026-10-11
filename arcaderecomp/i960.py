@@ -78,6 +78,7 @@ REGISTER = {
     0x66d: ("flushreg", ""),
     0x674: ("cvtir", "sd"),
     0x68a: ("logbnr", "sd"),
+    0x6c2: ("cvtzri", "sd"),
     0x6d9: ("movrl", "sd"),
     0x6e1: ("movre", "sd"),
     0x701: ("mulo", "sss"),
@@ -220,6 +221,16 @@ def decode(image: bytes, pc: int) -> Instruction:
             a = str(src) if word & 0x800 else reg(src)
             d = f"fp{dst}" if word & 0x2000 else reg(dst)
             return Instruction(pc, word, 4, "REG", name, (a, d))
+        if name == "cvtzri":
+            # Intel KB: real32 (GPR) or extended80 (FP reg) to signed i32,
+            # with round-to-zero semantics. Exception behavior is handled
+            # conservatively in native code, not by this format decoder.
+            src = word & 31
+            dst = (word >> 19) & 31
+            if word & 0x20 and src >= 4:
+                return _unknown(pc, word, "CVTZRI FP register outside fp0..fp3")
+            a = f"fp{src}" if word & 0x20 else reg(src)
+            return Instruction(pc, word, 4, "REG", name, (a, reg(dst)))
         if name == "logbnr":
             # Intel 80960KB 68Ah: binary exponent in real format.
             # Src1 is real32 in a GPR or 80-bit extended in fp0..fp3;

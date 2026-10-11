@@ -132,6 +132,21 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!convert_integer_to_real_exact(cpu, {value}, "
                 f"{dst}u, {'true' if dest_fp else 'false'})) return false;")
 
+    if ins.form == "REG" and op == "cvtzri":
+        # Intel KB CVTZRI 6C2: round toward zero, independent of AC
+        # rounding mode. Do not manufacture precision/invalid fault flags.
+        # Exact integral inputs can be translated without invoking host FP.
+        src = word & 31
+        dst = (word >> 19) & 31
+        source_fp = bool(word & 0x20)
+        if not (word & 0x1000) or word & (0x40 | 0x800 | 0x2000):
+            return None
+        if (word >> 14) & 31 or (source_fp and src >= 4):
+            return None
+        return (f"if (!convert_real_to_integer_exact(cpu, {src}u, "
+                f"{'true' if source_fp else 'false'}, {dst}u)) "
+                "return false;")
+
     if ins.form == "REG" and op == "logbnr":
         # IEEE-754 logb(x) returns the integral binary exponent in FP
         # format (e.g. logb(3249) = 11.0). Extract integer exponents
@@ -516,6 +531,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_convert.hpp"
 #include "i960_fp_long_real.hpp"
 #include "i960_fp_logb.hpp"
+#include "i960_fp_to_integer.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {
