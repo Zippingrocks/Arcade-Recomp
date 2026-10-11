@@ -365,6 +365,12 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     "} "
                     f"cpu.r[{dst}] = bits ? index : 0xffffffffu; "
                     "cpu.cc = bits ? 2 : 0; cpu.cc_defined = true; }")
+        if op == "modpc":
+            # Intel KB REG 655h: src1 is a dummy; SRC2 supplies MASK.
+            # The destination is also the proposed control word and receives
+            # the old controls after success. The runtime fails closed for
+            # unavailable fault/interrupt-pending semantics.
+            return f"if (!kb_modpc_checked(cpu, {b}, {dst}u)) return false;"
         if op == "modify":
             # Intel 80960KB MODIFY: src1 is a mask, src2 is replacement
             # bits, destination is BOTH the old source and the new value.
@@ -575,6 +581,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_sync_runtime.hpp"
 #include "i960_transfer_shift.hpp"
 #include "i960_integer_arithmetic.hpp"
+#include "i960_process_controls.hpp"
 #include "i960_fp_registers.hpp"
 #include "i960_fp_convert.hpp"
 #include "i960_fp_long_real.hpp"
