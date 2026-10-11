@@ -1,0 +1,584 @@
+{
+  "schema_version": 1,
+  "project": "ArcadeRecomp — original The House of the Dead (hotdo), Sega Model 2C",
+  "basis": {
+    "date": "2026-10-10",
+    "commit": "98d47da35b175d7da01e42f465d171ffe8ed4f73",
+    "passing_ci": "https://github.com/Zippingrocks/Arcade-Recomp/actions/runs/38113631456",
+    "tests_passed": 432
+  },
+  "disclaimer": "SUBJECTIVE, rounded engineering estimates, NOT an objective coverage calculation or a statement of hardware fidelity. Component percentages and overall estimate are separately reviewed; never take a simple average. Code/tests completing a scoped task do not complete its parent platform.",
+  "overall": {
+    "id": "hotd1",
+    "title": "Faithful native HOTD1 PC port (original hotdo)",
+    "percent": 10,
+    "scope": "Original 1997 HOTD1 arcade behavior, faithfully playable end to end, with separately native-translated program and all Model 2C devices. Estimate NOT computed from child areas.",
+    "next": "First capture and implement 315-5649 authentic status/RX to advance uninterrupted original boot; then MB86235/video, sound and verified gameplay."
+  },
+  "gates": [
+    {
+      "id": "A",
+      "name": "Original HOTD1 main CPU AOT operational",
+      "complete": false,
+      "definition": "docs/MODEL2C_DEFINITION_OF_DONE.md",
+      "evidence": []
+    },
+    {
+      "id": "B",
+      "name": "Model 2C platform operational for HOTD1",
+      "complete": false,
+      "definition": "docs/MODEL2C_DEFINITION_OF_DONE.md",
+      "evidence": []
+    },
+    {
+      "id": "C",
+      "name": "Faithful HOTD1 native port completed",
+      "complete": false,
+      "definition": "docs/MODEL2C_DEFINITION_OF_DONE.md",
+      "evidence": []
+    }
+  ],
+  "areas": [
+    {
+      "id": "rom",
+      "title": "ROM authenticity & reconstruction",
+      "percent": 95,
+      "next": "Keep ROM audit deterministic and compatible with legally supplied original 29-chip sets; do not publish proprietary bytes.",
+      "tasks": [
+        {
+          "id": "rom.identification",
+          "title": "Original ROM identification and verification",
+          "percent": 100
+        },
+        {
+          "id": "rom.loading",
+          "title": "Original ROM loading/reconstruction",
+          "percent": 95
+        }
+      ]
+    },
+    {
+      "id": "cpu",
+      "title": "Intel i960KB native AOT CPU",
+      "percent": 55,
+      "next": "Extend exercised original code coverage, Intel fault/interrupt delivery, FP rounding and exact memory effects; verify against independent original-board traces.",
+      "tasks": [
+        {
+          "id": "cpu.decode",
+          "title": "Instruction decoding",
+          "percent": 90
+        },
+        {
+          "id": "cpu.aot",
+          "title": "Native AOT C++ generation",
+          "percent": 80
+        },
+        {
+          "id": "cpu.integer",
+          "title": "Integer arithmetic",
+          "percent": 85
+        },
+        {
+          "id": "cpu.bitwise",
+          "title": "Bitwise operations and shifts",
+          "percent": 85
+        },
+        {
+          "id": "cpu.compare",
+          "title": "Comparisons and conditional branches",
+          "percent": 80
+        },
+        {
+          "id": "cpu.memory",
+          "title": "Memory loads and stores",
+          "percent": 75
+        },
+        {
+          "id": "cpu.transfer",
+          "title": "Register transfers",
+          "percent": 85
+        },
+        {
+          "id": "cpu.frames",
+          "title": "CALL/CALLX/RET",
+          "percent": 75
+        },
+        {
+          "id": "cpu.cache",
+          "title": "Register windows and spilling",
+          "percent": 65
+        },
+        {
+          "id": "cpu.floating",
+          "title": "Floating-point instructions",
+          "percent": 40
+        },
+        {
+          "id": "cpu.rounding",
+          "title": "Floating-point rounding and exceptions",
+          "percent": 10
+        },
+        {
+          "id": "cpu.reset",
+          "title": "Processor reset/reinitialization",
+          "percent": 50
+        },
+        {
+          "id": "cpu.faults",
+          "title": "CPU fault handling",
+          "percent": 15
+        },
+        {
+          "id": "cpu.interrupts",
+          "title": "CPU interrupt acceptance/delivery",
+          "percent": 10
+        },
+        {
+          "id": "cpu.timing",
+          "title": "Cycle-accurate execution and timing",
+          "percent": 5
+        }
+      ]
+    },
+    {
+      "id": "model2c",
+      "title": "Model 2C motherboard & I/O",
+      "percent": 20,
+      "next": "First secure independent 315-5649 status/RX captures; then model interrupts, timers, remaining MMIO and peripheral timing. Never invent ready bytes.",
+      "tasks": [
+        {
+          "id": "model2c.research",
+          "title": "Model 2C hardware research",
+          "percent": 55
+        },
+        {
+          "id": "model2c.map",
+          "title": "CPU-visible memory map",
+          "percent": 45
+        },
+        {
+          "id": "model2c.ram",
+          "title": "Work RAM and ROM mapping",
+          "percent": 80
+        },
+        {
+          "id": "model2c.wait",
+          "title": "CPU control/wait-state registers",
+          "percent": 20
+        },
+        {
+          "id": "model2c.width",
+          "title": "Bus access widths and alignment",
+          "percent": 65
+        },
+        {
+          "id": "model2c.tx",
+          "title": "Sega 315-5649 serial TX functionality",
+          "percent": 70
+        },
+        {
+          "id": "model2c.tx_callbacks",
+          "title": "Serial TX callback reliability (scoped task)",
+          "percent": 100
+        },
+        {
+          "id": "model2c.rx_framework",
+          "title": "Serial RX/status software framework",
+          "percent": 45
+        },
+        {
+          "id": "model2c.authentic_rx",
+          "title": "Authentic serial RX/status behavior",
+          "percent": 5
+        },
+        {
+          "id": "model2c.rs422_timing",
+          "title": "RS-422 communication timing",
+          "percent": 5
+        },
+        {
+          "id": "model2c.irq_registers",
+          "title": "Interrupt request/enable registers",
+          "percent": 30
+        },
+        {
+          "id": "model2c.irq_delivery",
+          "title": "Actual interrupt delivery",
+          "percent": 5
+        },
+        {
+          "id": "model2c.timers",
+          "title": "Hardware timers",
+          "percent": 0
+        },
+        {
+          "id": "model2c.f80000",
+          "title": "Unknown 0x00F80000 device",
+          "percent": 5
+        }
+      ]
+    },
+    {
+      "id": "gun",
+      "title": "Gun sensor & FLEX 8000 FPGA",
+      "percent": 5,
+      "next": "Capture exact 837-12079 gun board pin/protocol responses and prove circuit acceptance/behavior independently; streaming configuration parsing is not a recovered circuit.",
+      "tasks": [
+        {
+          "id": "gun.board",
+          "title": "Gun sensor board identification",
+          "percent": 85
+        },
+        {
+          "id": "gun.upload",
+          "title": "Original 5 KiB upload identification",
+          "percent": 95
+        },
+        {
+          "id": "gun.framing",
+          "title": "Upload framing and data analysis",
+          "percent": 80
+        },
+        {
+          "id": "gun.config_tools",
+          "title": "FLEX 8000 configuration stream tooling",
+          "percent": 70
+        },
+        {
+          "id": "gun.startup",
+          "title": "Configuration integrity and startup models",
+          "percent": 55
+        },
+        {
+          "id": "gun.lut",
+          "title": "FPGA LUT structure research",
+          "percent": 40
+        },
+        {
+          "id": "gun.netlist",
+          "title": "Actual FPGA circuit/netlist recovery",
+          "percent": 5
+        },
+        {
+          "id": "gun.serial_integration",
+          "title": "FPGA integration with Sega serial hardware",
+          "percent": 0
+        },
+        {
+          "id": "gun.protocol",
+          "title": "Authentic gun-board response protocol",
+          "percent": 0
+        }
+      ]
+    },
+    {
+      "id": "graphics",
+      "title": "MB86235 geometry & Model 2C video",
+      "percent": 0,
+      "next": "Start separate MB86235/TGPx4 AOT translator; implement geometry FIFO and original texture/video/raster pipelines, validated against cabinet reference captures.",
+      "tasks": [
+        {
+          "id": "graphics.research",
+          "title": "MB86235/TGPx4 architecture research",
+          "percent": 10
+        },
+        {
+          "id": "graphics.aot",
+          "title": "Native MB86235 instruction recompiler",
+          "percent": 0
+        },
+        {
+          "id": "graphics.programs",
+          "title": "Geometry program extraction/execution",
+          "percent": 0
+        },
+        {
+          "id": "graphics.fifo",
+          "title": "Geometry FIFO and scheduling",
+          "percent": 0
+        },
+        {
+          "id": "graphics.vector",
+          "title": "Matrix and vector processing",
+          "percent": 0
+        },
+        {
+          "id": "graphics.clip",
+          "title": "Polygon assembly and clipping",
+          "percent": 0
+        },
+        {
+          "id": "graphics.raster",
+          "title": "Rasterization",
+          "percent": 0
+        },
+        {
+          "id": "graphics.texture",
+          "title": "Texture decoding and mapping",
+          "percent": 0
+        },
+        {
+          "id": "graphics.palette",
+          "title": "Palette/color processing",
+          "percent": 0
+        },
+        {
+          "id": "graphics.overlay",
+          "title": "2D overlays and text",
+          "percent": 0
+        },
+        {
+          "id": "graphics.video_timing",
+          "title": "Video timing and display composition",
+          "percent": 0
+        },
+        {
+          "id": "graphics.camera",
+          "title": "Gameplay camera and rendered animation",
+          "percent": 0
+        }
+      ]
+    },
+    {
+      "id": "audio",
+      "title": "Motorola 68000 & Yamaha SCSP audio",
+      "percent": 0,
+      "next": "Begin original sound CPU code/data audit; implement sound-side AOT and SCSP with timed command/audio validation.",
+      "tasks": [
+        {
+          "id": "audio.m68k",
+          "title": "Motorola 68000 sound CPU recompilation",
+          "percent": 0
+        },
+        {
+          "id": "audio.rom",
+          "title": "Sound-side ROM execution",
+          "percent": 0
+        },
+        {
+          "id": "audio.scsp",
+          "title": "Yamaha SCSP implementation",
+          "percent": 0
+        },
+        {
+          "id": "audio.commands",
+          "title": "Audio command communication",
+          "percent": 0
+        },
+        {
+          "id": "audio.sfx",
+          "title": "Sound effects",
+          "percent": 0
+        },
+        {
+          "id": "audio.music",
+          "title": "Music playback",
+          "percent": 0
+        },
+        {
+          "id": "audio.voices",
+          "title": "Voice playback",
+          "percent": 0
+        },
+        {
+          "id": "audio.mix",
+          "title": "Audio mixing and timing",
+          "percent": 0
+        }
+      ]
+    },
+    {
+      "id": "gameplay",
+      "title": "Original HOTD1 end-to-end gameplay",
+      "percent": 0,
+      "next": "Gate on authentic cold boot reaching game logic; then validate both guns, all four chapters, branches, bosses, service modes and endings.",
+      "tasks": [
+        {
+          "id": "gameplay.boot_research",
+          "title": "Original CPU startup research",
+          "percent": 60
+        },
+        {
+          "id": "gameplay.boot",
+          "title": "Authentic startup reaching gameplay",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.gun1",
+          "title": "Player 1 lightgun",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.gun2",
+          "title": "Player 2 lightgun",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.calibration",
+          "title": "Trigger/reload/calibration",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.coin",
+          "title": "Coin/start inputs",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.service",
+          "title": "Service/operator test mode",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.enemy",
+          "title": "Enemy spawning and AI execution",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.chapter1",
+          "title": "Chapter 1 playable",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.chapter2",
+          "title": "Chapter 2 playable",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.chapter3",
+          "title": "Chapter 3 playable",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.chapter4",
+          "title": "Chapter 4 playable",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.routes",
+          "title": "Bosses and branching routes",
+          "percent": 0
+        },
+        {
+          "id": "gameplay.ending",
+          "title": "Endings and complete playthrough",
+          "percent": 0
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "title": "Development, analysis & automated verification",
+      "percent": 85,
+      "next": "Maintain deterministic ROM-free CI, reproduce private original-byte probes, collect original-cabinet reference measurements and refresh stale project docs.",
+      "tasks": [
+        {
+          "id": "tools.manifests",
+          "title": "Original ROM manifests and checksums",
+          "percent": 100
+        },
+        {
+          "id": "tools.rom_audit",
+          "title": "ROM audit and reconstruction tools",
+          "percent": 95
+        },
+        {
+          "id": "tools.i960",
+          "title": "i960 instruction-analysis tools",
+          "percent": 85
+        },
+        {
+          "id": "tools.original_validation",
+          "title": "Original-ROM isolated instruction verification",
+          "percent": 80
+        },
+        {
+          "id": "tools.tests",
+          "title": "Synthetic native CPU regression framework",
+          "percent": 90
+        },
+        {
+          "id": "tools.serial_trace",
+          "title": "Sega serial transaction tracing",
+          "percent": 90
+        },
+        {
+          "id": "tools.serial_compare",
+          "title": "Independent serial capture comparison",
+          "percent": 80
+        },
+        {
+          "id": "tools.fpga",
+          "title": "FPGA configuration research tools",
+          "percent": 70
+        },
+        {
+          "id": "tools.ci",
+          "title": "GitHub CI and test automation",
+          "percent": 95
+        },
+        {
+          "id": "tools.private_workflow",
+          "title": "Reproducible private ROM workflow",
+          "percent": 80
+        },
+        {
+          "id": "tools.arcade_capture",
+          "title": "Original-cabinet reference capture coverage",
+          "percent": 5
+        }
+      ]
+    }
+  ],
+  "future_targets": [
+    {
+      "id": "revision_a",
+      "title": "HOTD1 Revision A (hotd) integration",
+      "percent": 5,
+      "excluded_from_hotd1_overall": true
+    },
+    {
+      "id": "prototype",
+      "title": "HOTD1 prototype (hotdp) integration",
+      "percent": 5,
+      "excluded_from_hotd1_overall": true
+    },
+    {
+      "id": "other_model2c",
+      "title": "Other Sega Model 2C games",
+      "percent": 0,
+      "excluded_from_hotd1_overall": true
+    },
+    {
+      "id": "naomi",
+      "title": "HOTD2/NAOMI",
+      "percent": 0,
+      "excluded_from_hotd1_overall": true
+    },
+    {
+      "id": "chihiro",
+      "title": "HOTD3/Chihiro",
+      "percent": 0,
+      "excluded_from_hotd1_overall": true
+    },
+    {
+      "id": "lindbergh",
+      "title": "HOTD4/Lindbergh",
+      "percent": 0,
+      "excluded_from_hotd1_overall": true
+    }
+  ],
+  "history": [
+    {
+      "date": "2026-10-10",
+      "kind": "baseline",
+      "scope": "hotd1",
+      "percent_before": null,
+      "percent_after": 10,
+      "evidence": [
+        "docs/MODEL2C_DEFINITION_OF_DONE.md",
+        "docs/ROADMAP.md"
+      ],
+      "note": "Initial subjective estimates transcribed from the project-wide progress report; NOT derived mathematically, not independently validated against all original cabinet behavior."
+    }
+  ]
+}

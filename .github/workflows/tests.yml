@@ -8,9 +8,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
+      - name: Validate versioned progress and required contributor review
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          python -m arcaderecomp.progress validate
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            BASE="$PR_BASE_SHA"
+          else
+            BASE="$BEFORE_SHA"
+          fi
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            BASE="$(git merge-base HEAD origin/main)"
+          fi
+          python -m arcaderecomp.progress_guard --base "$BASE" --head HEAD
+
       - name: Check original target and synthetic ROM wiring
         run: python -m unittest discover -s tests -v
 
@@ -25,5 +44,9 @@ jobs:
             tools/
             targets/
             tests/
+            docs/
+            progress/
+            AGENTS.md
+            CLAUDE.md
           if-no-files-found: error
           retention-days: 3

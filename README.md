@@ -21,26 +21,43 @@ uses the separately named `epr-19696a.15` and `epr-19697a.16`. The manifest
 checks all 29 original chips by size, CRC32 and SHA-1. Archive names and
 MAME parent/clone relationships are not proof of release identity.
 
+## Project-wide progress and agent instructions
+
+**Original HOTD1 faithful native PC port: approximately 10% (subjective
+engineering estimate at the October 10, 2026 baseline).** This is NOT
+a measured code-coverage percentage, nor a statement that Model 2C boots
+or plays. No completion gate (A, B or C) has passed.
+
+- **[Current percentages for all subsystems and next tasks](progress/hotd1.json)**
+- **[Readable progress dashboard and update commands](docs/PROGRESS_TRACKING.md)**
+- **[Mandatory AI contributor rules](AGENTS.md)**
+- **[Binding Sega Model 2C Definition of Done](docs/MODEL2C_DEFINITION_OF_DONE.md)**
+
+```sh
+python -m arcaderecomp.progress status --tasks
+python -m arcaderecomp.progress validate
+```
+
+AI and human contributors MUST review progress with evidence after each
+substantive code/test/tool/CI change. GitHub Actions enforces an append-only
+review history, even when the percentage stays unchanged. Percentages never
+advance automatically just because a test passes.
+
 ## Current status — Model 2C NOT COMPLETE
 
-**Latest local validation: 137 tests passed.** The latest CPU pass adds
-NOT, ANDNOT, CHKBIT, BBC/BBS, all eight TEST conditions and CMPINCI/CMPINCO.
-It executes 54,978 synthetic case rows under each of GCC and Clang with
-UndefinedBehaviorSanitizer. The 17 newly supported original-ROM locations
-also pass 2,912 isolated synthetic-state checks per compiler.
-See the [implementation and validation report](docs/HOTDO_BIT_COMPARE_NATIVE.md).
+**Verified progress baseline (October 10, 2026): 432 automated tests passed**
+under the existing CI configuration.
+[Passing run](https://github.com/Zippingrocks/Arcade-Recomp/actions/runs/38113631456).
 
-The unchanged two-root original candidate graph contains **3,051 locations**:
-**3,042 emit native operations**, **9 deliberately stop**. Previously those
-counts were 3,025 and 26. These are static candidates, **not a game-completion
-percentage**, all discovered gameplay paths or a completed CPU.
-
-Earlier support includes local CALL/CALLX/RET frames, BAL/BALX/BX leaf
-branches, selected synchronous CPU-control operations, LDL/LDT/LDQ,
-STL/STT/STQ, MOVL/MOVT/MOVQ, and SHRI/SHRDI with large-count logical shifts.
-Precise exceptions, retry, tracing and timing remain incomplete. A later
-fault in a multiword store can leave earlier writes committed; diagnostic
-stops must not be resumed as if the operation were atomic.
+The i960 native recompiler has substantial instruction coverage and authentic
+original-ROM instruction sites have passed isolated synthetic-state validation.
+**None of Gates A, B or C is complete.** Floating-point exception and rounding,
+full CPU fault/interrupt delivery, serial RX/status and original cabinet parity
+remain unsupported. Older detailed reports below reflect historical milestones;
+use the versioned [tracker](progress/hotd1.json) for current estimates.
+The earlier original candidate graph contained **3,051 static candidate
+locations** and **3,042 emitting native operations**. It was NOT a percentage
+of complete CPU correctness, executable gameplay or original-board fidelity.
 
 ### Authentic startup boundary remains unchanged
 
