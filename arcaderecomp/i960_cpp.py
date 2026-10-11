@@ -161,7 +161,7 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return None
         # The destination-mode field is irrelevant for compare-only REG
         # instructions. Some legitimate ROM instructions set it.
-        if word & 0x2000 and op not in ("cmpo", "cmpi", "chkbit"):
+        if word & 0x2000 and op not in ("cmpo", "cmpi", "chkbit", "scanbyte"):
             return None
         a = _operand(word & 31, bool(word & 0x800))
         b = _operand((word >> 14) & 31, bool(word & 0x1000))
@@ -199,6 +199,17 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     f"cpu.cc = ({ordered_a} < {ordered_b}) ? 4 : "
                     f"({ordered_a} > {ordered_b}) ? 1 : 2; "
                     f"cpu.r[{dst}] = rhs {adjustment} 1u; cpu.cc_defined = true; }}")
+        if op == "scanbyte":
+            # Intel 80960KB SCANBYTE (5ACh): corresponding bytes in src1
+            # and src2 are checked for equality, not the entire words.
+            # CC becomes 010 when any byte matches, otherwise 000.
+            # All four byte comparisons are independent; preserve registers.
+            return (f"{{ const std::uint32_t diff = ({a}) ^ ({b}); "
+                    "cpu.cc = (((diff & 0x000000ffu) == 0u) || "
+                    "((diff & 0x0000ff00u) == 0u) || "
+                    "((diff & 0x00ff0000u) == 0u) || "
+                    "((diff & 0xff000000u) == 0u)) ? 2 : 0; "
+                    "cpu.cc_defined = true; }")
         if op == "chkbit":
             # Intel KB 11-31: replace the complete condition code with 010
             # for a set bit or 000 for a clear bit. Position is modulo 32.
