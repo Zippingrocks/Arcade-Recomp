@@ -280,7 +280,7 @@
         {
           "id": "graphics.research",
           "title": "MB86235/TGPx4 architecture research",
-          "percent": 10
+          "percent": 15
         },
         {
           "id": "graphics.aot",
@@ -648,6 +648,20 @@
         "docs/MODEL2C_HARDWARE.md"
       ],
       "note": "Added explicit fault-only CPU address classifications for Model 2C geometry interface, mirrored buffer, FIFO status and video control windows, with synthetic GCC/Clang UBSan address-boundary and native callback tests. This improves diagnosis but implements no MB86235 program execution, device register semantics, FIFO timing or rendering; map estimate stays 45%, Model 2C stays 20%, and original HOTD1 stays 10%."
+    },
+    {
+      "date": "2026-10-10",
+      "kind": "estimate",
+      "scope": "graphics.research",
+      "percent_before": 10,
+      "percent_after": 15,
+      "evidence": [
+        "arcaderecomp/tgpx4_program.py",
+        "tests/test_tgpx4_program.py",
+        "docs/TGPX4_PROGRAM_STAGING.md",
+        "targets/hotd1/original.json"
+      ],
+      "note": "Independently documented Model 2C MB86235 candidate 64-bit program staging from externally recorded pairs of 32-bit host writes and created a ROM-free bounded offline packing/metadata tool. Synthetic tests cover explicit endianness, low/high hypotheses, strict length and provenance validation, and private evidence preservation. This is research (15% estimate), NOT extraction of the actual HOTD1 upload, verified 64-bit opcode decoding, DSP execution, FIFO semantics, native AOT, or original-cabinet validation. Graphics overall stays 0%, Model 2C 20%, HOTD1 10%."
     }
   ]
 }
