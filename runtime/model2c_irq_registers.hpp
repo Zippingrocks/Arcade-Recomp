@@ -57,13 +57,18 @@ public:
         if (enable_ & mask) request_ |= mask;
     }
 
-    // Observed IRQ0..3 line groups. Does not enter a CPU interrupt frame.
-    bool line_level(unsigned pin) const {
+    // Public provisional source-bit grouping; no claim of physical IRQ timing.
+    static std::uint32_t pin_source_mask(unsigned pin) {
         if (pin >= 4u) throw std::out_of_range("i960 has four IRQ pins");
         static constexpr std::uint32_t PIN_MASKS[4] = {
             0x0001u, 0x0002u, 0x03fcu, 0x0c00u
         };
-        return (request_ & PIN_MASKS[pin]) != 0u;
+        return PIN_MASKS[pin];
+    }
+
+    // Observed IRQ0..3 line groups. Does not enter a CPU interrupt frame.
+    bool line_level(unsigned pin) const {
+        return (request_ & pin_source_mask(pin)) != 0u;
     }
 private:
     std::uint32_t request_ = 0;

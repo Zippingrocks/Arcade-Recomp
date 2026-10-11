@@ -787,6 +787,20 @@
         "tests/test_i960_return_guard_native.py"
       ],
       "note": "Adjusted GCC/Clang C++17 native return-guard harness for portable -Wextra -Werror compilation: helper functions are inline and aggregate Bus callbacks initialized explicitly. No runtime or hardware semantics changed, CPU frames 75%, CPU 55%, original HOTD1 10%."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.interrupts",
+      "percent_before": 10,
+      "percent_after": 10,
+      "evidence": [
+        "runtime/model2c_irq_observation.hpp",
+        "runtime/model2c_irq_registers.hpp",
+        "tests/test_model2c_irq_observation_native.py",
+        "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
+      ],
+      "note": "Added pure side-effect-free board-to-Intel 80960KB IRQ pin snapshot showing synthetic pending sources and configured ICR pin roles, without priority arbitration, timing or CPU interrupt acceptance. Exposed one authoritative provisional board source mask and tested all 4096 possible synthetic 12-bit pending masks with GCC/Clang UBSan. This is CPU IRQ research infrastructure (10% unchanged), NOT fault/interrupt entry, original board trace, verified IRQ signal timing or HOTD1 progress (10% overall)."
     }
   ]
 }
