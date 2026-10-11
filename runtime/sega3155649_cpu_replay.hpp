@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <istream>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -15,6 +16,15 @@ namespace arcaderecomp_model2c {
 
 class SerialCPUReplay final {
 public:
+    // Exactly one C++ replay instance owns an external capture session.
+    // Moving that owner is safe: chip callbacks use weak state references,
+    // and fail closed after the final owner is destroyed.
+    SerialCPUReplay() = default;
+    SerialCPUReplay(const SerialCPUReplay&) = delete;
+    SerialCPUReplay& operator=(const SerialCPUReplay&) = delete;
+    SerialCPUReplay(SerialCPUReplay&&) noexcept = default;
+    SerialCPUReplay& operator=(SerialCPUReplay&&) noexcept = default;
+
     static constexpr std::size_t kMaxRecords = 100000u;
     struct Record {
         std::uint32_t address;
@@ -43,7 +53,7 @@ public:
         if (count_value == 0u || count_value > kMaxRecords)
             throw std::invalid_argument("serial replay length outside safety cap");
         SerialCPUReplay replay;
-        replay.records_.reserve(static_cast<std::size_t>(count_value));
+        replay.state_->records.reserve(static_cast<std::size_t>(count_value));
         for (std::size_t i = 0; i < count_value; ++i) {
             if (!next_line(input, line))
                 throw std::invalid_argument("serial replay missing event");
@@ -62,7 +72,7 @@ public:
                          address != IO3155649::BASE + 2u * IO3155649::SERIAL_RX2 &&
                          address != IO3155649::BASE + 2u * IO3155649::SERIAL_STATUS))
                 throw std::invalid_argument("serial replay address/direction invalid");
-            replay.records_.push_back({address, byte, write});
+            replay.state_->records.push_back({address, byte, write});
         }
         if (!next_line(input, line) || line != "END" || next_line(input, line))
             throw std::invalid_argument("serial replay lacks exact terminal marker");
@@ -70,49 +80,78 @@ public:
     }
 
     void bind(IO3155649& io) {
-        if (bound_)
+        if (owned_state().bound)
             throw std::logic_error("serial replay already attached");
-        io.set_serial_tx_observer([this](std::uint8_t value, unsigned channel) {
+        // Only the replay owns shared state; observers retain *weak*
+        // references, not dangling pointers to a moveable replay object.
+        // A disconnected replay must never become a synthetic status byte.
+        const std::weak_ptr<ReplayState> weak = state_;
+        io.set_serial_tx_observer([weak](std::uint8_t value, unsigned channel) {
             if (channel != 1u && channel != 2u)
                 throw std::logic_error("invalid serial transmit channel");
-            consume(IO3155649::BASE + 2u *
+            auto state = lock_state(weak);
+            consume(*state, IO3155649::BASE + 2u *
                     (channel == 1u ? IO3155649::SERIAL_TX1 : IO3155649::SERIAL_TX2),
                     true, value);
         });
-        io.set_serial_status_source([this]() -> std::uint8_t {
-            return consume(IO3155649::BASE + 2u * IO3155649::SERIAL_STATUS,
+        io.set_serial_status_source([weak]() -> std::uint8_t {
+            auto state = lock_state(weak);
+            return consume(*state,
+                           IO3155649::BASE + 2u * IO3155649::SERIAL_STATUS,
                            false, 0u);
         });
-        io.set_serial_rx([this](std::uint8_t, unsigned channel) -> std::uint8_t {
+        io.set_serial_rx([weak](std::uint8_t, unsigned channel) -> std::uint8_t {
             if (channel != 1u && channel != 2u)
                 throw std::logic_error("invalid serial receive channel");
-            return consume(IO3155649::BASE + 2u *
+            auto state = lock_state(weak);
+            return consume(*state, IO3155649::BASE + 2u *
                            (channel == 1u ? IO3155649::SERIAL_RX1 : IO3155649::SERIAL_RX2),
                            false, 0u);
         });
-        bound_ = true;
+        owned_state().bound = true;
     }
 
-    std::size_t consumed() const { return next_; }
-    std::size_t total() const { return records_.size(); }
-    std::size_t remaining() const { return records_.size() - next_; }
-    bool exhausted() const { return next_ == records_.size(); }
+    std::size_t consumed() const { return owned_state().next; }
+    std::size_t total() const { return owned_state().records.size(); }
+    std::size_t remaining() const {
+        return owned_state().records.size() - owned_state().next;
+    }
+    bool exhausted() const {
+        return owned_state().next == owned_state().records.size();
+    }
 
 private:
-    std::vector<Record> records_{};
-    std::size_t next_ = 0u;
-    bool bound_ = false;
+    struct ReplayState {
+        std::vector<Record> records{};
+        std::size_t next = 0u;
+        bool bound = false;
+    };
+    std::shared_ptr<ReplayState> state_ = std::make_shared<ReplayState>();
 
-    std::uint8_t consume(std::uint32_t address, bool write, std::uint8_t byte) {
-        if (next_ >= records_.size())
+    const ReplayState& owned_state() const {
+        if (!state_) throw std::logic_error("serial replay moved from");
+        return *state_;
+    }
+    ReplayState& owned_state() {
+        if (!state_) throw std::logic_error("serial replay moved from");
+        return *state_;
+    }
+    static std::shared_ptr<ReplayState> lock_state(
+        const std::weak_ptr<ReplayState>& weak) {
+        auto state = weak.lock();
+        if (!state)
+            throw std::logic_error("serial replay source disconnected");
+        return state;
+    }
+    static std::uint8_t consume(ReplayState& state, std::uint32_t address,
+                                bool write, std::uint8_t byte) {
+        if (state.next >= state.records.size())
             throw std::logic_error("serial replay exhausted; unknown CPU bus response");
-        const auto& expected = records_[next_];
+        const auto& expected = state.records[state.next];
         if (expected.address != address || expected.write != write ||
             (write && expected.value != byte))
             throw std::logic_error("serial replay diverged; no substituted response");
-        // Advance only on an exact request. TX callbacks are invoked before
-        // IO3155649 commits, and its event-backed backend must not be mixed.
-        ++next_;
+        ++state.next;
         return expected.value;
     }
 
