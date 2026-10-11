@@ -223,6 +223,15 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     "} "
                     f"cpu.r[{dst}] = bits ? index : 0xffffffffu; "
                     "cpu.cc = bits ? 2 : 0; cpu.cc_defined = true; }")
+        if op == "modify":
+            # Intel 80960KB MODIFY: src1 is a mask, src2 is replacement
+            # bits, destination is BOTH the old source and the new value.
+            # Snapshot everything: all three registers may alias.
+            return (f"{{ const std::uint32_t mask = {a}; "
+                    f"const std::uint32_t replacement = {b}; "
+                    f"const std::uint32_t old_value = cpu.r[{dst}]; "
+                    f"cpu.r[{dst}] = (replacement & mask) | "
+                    "(old_value & ~mask); }")
         if op == "chkbit":
             # Intel KB 11-31: replace the complete condition code with 010
             # for a set bit or 000 for a clear bit. Position is modulo 32.
