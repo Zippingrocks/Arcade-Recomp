@@ -147,9 +147,9 @@ int main() {
        reset.pins[1].vector.disposition!=
            KBVectorDisposition::invalid_vector)return 2;
 
-    cpu.interrupt_control_register=0x0002f501u;
+    cpu.interrupt_control_register=0x1014f50cu; // vectors 12,245,20,16
     auto configured=review_model2c_irq_priorities(
-        observe_model2c_irq(board,cpu),0u);
+        observe_model2c_irq(board,cpu),1u);
     if(configured.non_direct_asserted_pins!=0u ||
        configured.invalid_or_reserved_vectors!=1u ||
        configured.higher_priority_candidates!=2u ||
@@ -157,7 +157,7 @@ int main() {
     if(configured.pins[1].vector.disposition!=
         KBVectorDisposition::reserved_vector)return 4;
 
-    cpu.interrupt_control_register=0x0002ff01u;
+    cpu.interrupt_control_register=0x0c14ff10u; // 16,255,20,12
     auto highest=review_model2c_irq_priorities(
         observe_model2c_irq(board,cpu),31u);
     if(highest.higher_priority_candidates!=1u ||

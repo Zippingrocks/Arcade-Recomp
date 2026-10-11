@@ -815,6 +815,17 @@
         "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
       ],
       "note": "Implemented independently documented Intel 80960KB interrupt vector priority/eligibility classification and pending-table bit/offset metadata; 8192 exhaustive ROM-free native vector/program-priority combinations and Sega-to-ICR candidate tests. Caller must explicitly supply known/hypothetical CPU priority, and all IAC/INTR/INTA/invalid vectors remain non-deliverable by this API. CPU IRQ subsystem estimate 10->15% for documented priority groundwork ONLY: no actual interrupt acceptance, pending-memory writes, pin arbitration, stack frame, source timing, original-board proof or authentic HOTD1 boot. CPU overall 55%, Model2C 20%, HOTD1 overall 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.interrupts",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "tests/test_i960_interrupt_priority_native.py"
+      ],
+      "note": "Corrected synthetic Intel ICR fixture byte fields to actually express the stated reserved/vector priority scenarios: vectors 12,245,20,16 at external priority1, and 16,255,20,12 at external priority31. Intel priority helper unchanged; this makes the exhaustive and integrated regression assertions meaningful, with no new hardware fidelity claims."
     }
   ]
 }
