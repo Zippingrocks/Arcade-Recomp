@@ -70,6 +70,19 @@ inline KBPendingSnapshotReview review_kb_pending_snapshot(
         const unsigned priority = vector / 8u;
         result.derived_priority_mask |= std::uint32_t{1u} << priority;
         ++result.vectors_set;
+    }
+
+    // Never expose even a candidate from a malformed/incoherent table.
+    // Complete validation precedes ALL priority/eligibility selection.
+    if (result.reported_priority_mask != result.derived_priority_mask) {
+        result.status = KBPendingSnapshotStatus::inconsistent_priority_mask;
+        return result;
+    }
+    for (unsigned vector = 8u; vector < 256u; ++vector) {
+        const unsigned index = 4u + vector / 8u;
+        if (!(record[index] & (1u << (vector & 7u))))
+            continue;
+        const unsigned priority = vector / 8u;
         if (priority != 31u && priority <= current_priority)
             continue;
         ++result.eligible_count;
@@ -77,13 +90,6 @@ inline KBPendingSnapshotReview review_kb_pending_snapshot(
         // vector number wins when equal priorities are pending.
         result.highest_eligible_vector = vector;
         result.highest_eligible_priority = priority;
-    }
-
-    // Both halves of the Intel record must agree. A stale priority bit
-    // might otherwise hide work or turn a candidate into a false absence.
-    if (result.reported_priority_mask != result.derived_priority_mask) {
-        result.status = KBPendingSnapshotStatus::inconsistent_priority_mask;
-        return result;
     }
     if (result.eligible_count)
         result.status = KBPendingSnapshotStatus::eligible_candidate_only;

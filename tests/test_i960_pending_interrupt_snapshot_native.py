@@ -128,12 +128,16 @@ int main() {
        KBPendingSnapshotStatus::no_eligible_vector)return 1;
     Table one{};add(one,14u);
     one[0]=0u; // priority bit missing
-    if(review_kb_pending_snapshot(one,0u).status!=
-       KBPendingSnapshotStatus::inconsistent_priority_mask)return 2;
+    const auto missing=review_kb_pending_snapshot(one,0u);
+    if(missing.status!=KBPendingSnapshotStatus::inconsistent_priority_mask ||
+       missing.eligible_count || missing.highest_eligible_vector ||
+       missing.highest_eligible_priority)return 2;
     one={};add(one,14u);
     one[3]=0x80u; // priority 31 falsely posted
-    if(review_kb_pending_snapshot(one,31u).status!=
-       KBPendingSnapshotStatus::inconsistent_priority_mask)return 3;
+    const auto phantom=review_kb_pending_snapshot(one,31u);
+    if(phantom.status!=KBPendingSnapshotStatus::inconsistent_priority_mask ||
+       phantom.eligible_count || phantom.highest_eligible_vector ||
+       phantom.highest_eligible_priority)return 3;
     one={};add(one,244u);
     if(review_kb_pending_snapshot(one,0u).status!=
        KBPendingSnapshotStatus::reserved_vector_present)return 4;

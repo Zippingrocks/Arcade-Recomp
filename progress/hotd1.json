@@ -882,6 +882,18 @@
         "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
       ],
       "note": "Implemented Intel 80960KB manual-based read-only 36-byte pending-interrupt record parser, priority/vector cross-check, reserved-vector refusal and highest potentially eligible vector selection for explicit current priority. ROM-free GCC/Clang UBSan tests cover 8192 vector/priority cases, mixed queues, corrupt records and unchanged MODPC priority-lowering guard. Does NOT read live CPU bus, lock the interrupt table, change pending state, service interrupts or prove real cabinet behavior; cpu.interrupts=15%, CPU 55%, Model2C 20%, original HOTD1 10% remain unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.interrupts",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "runtime/i960_pending_interrupt_snapshot.hpp",
+        "tests/test_i960_pending_interrupt_snapshot_native.py"
+      ],
+      "note": "Hardened read-only Intel KB pending record evaluator so all reserved vector and priority-bitmap consistency checks finish before any eligible candidate fields can be populated. Invalid inputs cannot expose a misleading partial candidate; synthetic native regressions enforce zero eligible/candidate fields on malformed snapshots. No IRQ delivery or hardware fidelity progress claimed."
     }
   ]
 }
