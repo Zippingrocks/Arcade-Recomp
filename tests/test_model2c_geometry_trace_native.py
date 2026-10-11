@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def native(body):
-    compilers = [p for name in ("g++", "clang++") if (p := shutil.which(name)]
+    compilers = [p for name in ("g++", "clang++") if (p := shutil.which(name))]
     if not compilers:
         raise unittest.SkipTest("C++17 host compiler unavailable")
     for compiler in compilers:
@@ -124,7 +124,7 @@ int main() {
 """)
 
     def test_synthetic_strict_boot_probe_observes_refusal_only(self):
-        compilers = [p for name in ("g++", "clang++") if (p := shutil.which(name)]
+        compilers = [p for name in ("g++", "clang++") if (p := shutil.which(name))]
         if not compilers:
             raise unittest.SkipTest("C++17 host compiler unavailable")
         for compiler in compilers:

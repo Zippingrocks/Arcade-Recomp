@@ -702,6 +702,17 @@
         "docs/TGPX4_PROGRAM_STAGING.md"
       ],
       "note": "Added bounded opt-in native i960 geometry MMIO attempt tracing, private strict-boot --geometry-trace diagnostics, and synthetic native callback/probe tests. Refused writes have known attempted values but completed=no; refused reads remain UNOBSERVED and the accepted-upload tool cannot treat these as a real DSP program. No original HOTD1 upload, actual cabinet event stream, MB86235 opcode, FIFO acceptance or hardware timing proven; research 15%, graphics 0%, Model2C 20%, HOTD1 10% remain unchanged."
+    },
+    {
+      "date": "2026-10-10",
+      "kind": "review",
+      "scope": "graphics.research",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "tests/test_model2c_geometry_trace_native.py"
+      ],
+      "note": "CI caught and corrected two syntax-only comprehension typos in the new ROM-free geometry native test module; retained all fail-closed runtime behavior and original evidence limitations. Target metrics unchanged pending successful GCC/Clang regression results: TGPx4 research 15%, Model2C 20%, HOTD1 10%."
     }
   ]
 }
