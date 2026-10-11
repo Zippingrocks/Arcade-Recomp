@@ -283,3 +283,30 @@ interface groundwork, not original-cabinet evidence.
 
 Intel 80960KB manual Ch. 8 pp. 8-8–8-9:
 https://www.arithmazium.org/classroom/lib/Intel_80960KB_Programmers_Reference_Manual_Mar88.pdf
+
+
+## Read-only draft pending bitmap posting/removal (2026-10-11)
+
+The independent i960_pending_interrupt_record_edit.hpp builds a
+**pure, uncommitted** draft of the Intel 80960KB's 36-byte pending
+interrupt bitmap after posting a valid vector or removing the highest
+eligible pending vector. It maintains paired priority and vector bits,
+is idempotent on duplicate posting, respects highest-vector tie order,
+and clears a priority bit only after its final pending vector is gone.
+
+All inputs are checked against the existing Intel record validator
+before any edited bytes or candidate metadata are returned. Invalid
+records or reserved vectors are refused with zero candidate and zero
+output. Neither operation modifies original input RAM or CPU state.
+
+This is **NOT a real Intel locked table transaction**: there is no
+bus-lock capture, atomic commit, CPU supervisor entry/return, IRQ ACK,
+priority lowering or connection to the default Sega Model 2C StrictBus.
+Ordinary writes of these returned bytes would be wrong and must not
+be used. ROM-free GCC/Clang UBSan tests cover 256 vectors x 32
+priorities, every valid same-priority vector pair, a full 240-vector
+drain, malformed source records, duplicates and state immutability.
+Project hardware-fidelity estimates remain unchanged.
+
+Primary Intel manual (Mar 1988), Chapter 8:
+https://www.arithmazium.org/classroom/lib/Intel_80960KB_Programmers_Reference_Manual_Mar88.pdf
