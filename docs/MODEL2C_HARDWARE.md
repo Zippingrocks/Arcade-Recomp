@@ -11,9 +11,15 @@ The following preliminary CPU-visible address regions are documented in the MAME
 | 0x00000000–0x001FFFFF | i960 program ROM, 2 MiB |
 | 0x00500000–0x005FFFFF | Shared working RAM, 1 MiB |
 | 0x00800000–0x00803FFF | Geometry interface registers |
+| 0x00804000–0x00807FFF | Geometry program/write port |
+| 0x00880000–0x00883FFF | TGPx4 coprocessor function port |
+| 0x00884000–0x00887FFF | TGPx4 coprocessor FIFO/program-upload port |
 | 0x00900000–0x0097FFFF | Geometry buffer RAM, mirrored |
+| 0x00980000–0x00980003 | TGPx4 coprocessor control |
 | 0x00980004–0x00980007 | Geometry FIFO status |
+| 0x00980008–0x0098000B | Geometry upload/control |
 | 0x0098000C–0x0098000F | Video control registers |
+| 0x00980014–0x00980017 | Coprocessor status (read-side role referenced publicly) |
 | 0x00E00000–0x00E00037 | CPU control / wait-state configuration registers |
 | 0x00E80000–0x00E80007 | Interrupt request, acknowledge and enable |
 | 0x00F00000–0x00F0000F | Hardware timers |
@@ -26,22 +32,35 @@ All timings, interrupts, geometry FIFO behavior, lightgun calibration, and the c
 
 ### Strict geometry/video aperture recognition (2026-10-10)
 
-`StrictBus` now distinguishes the four published i960-visible geometry and
-video ranges listed above instead of reporting them all as generic unmapped
-accesses. It provides separate fault categories for the geometry interface
-registers, mirrored geometry buffer window, FIFO status register and video
-control register. Both reads and writes **always fault**: neither register
-contents nor buffer data, FIFO ready signals, coprocessor upload semantics,
-rendering, or timing can be responsibly inferred from an address map.
-Unlisted gaps (including `0x00980000` and `0x00980008`) remain unmapped,
-and no 8/16/32-bit transfer returns fabricated values.
+`StrictBus` distinguishes the ten published i960-visible geometry and video
+address windows listed above instead of reporting them all as generic unmapped
+accesses. Crucially, it now names the **coprocessor control port at
+`0x00980000`** and the **TGPx4 FIFO/program upload window at
+`0x00884000–0x00887FFF`**, neither of which was recognized in the earlier
+diagnostic bus. The geometry program/write port, TGPx4 function port, geometry
+control and coprocessor status also have specific fault categories.
+
+These labels are address-map evidence only. Reads and writes to every one
+of these windows still **always fault**; the hardware has not been made to
+accept fictitious program uploads, FIFO-ready signals, register contents,
+rendering, or timing. Unlisted gaps (for example `0x00980010`) remain
+unmapped, and no 8/16/32-bit transfer returns fabricated values.
 
 Synthetic native GCC/Clang UBSan tests exercise exact aperture boundaries,
-CPU bus callback faults, and a synchronous-access refusal. This is a
+CPU bus callback faults, rejected control/FIFO upload writes, and a
+synchronous-access refusal. This is a
 *diagnostic memory-map improvement*, not MB86235 execution or arcade-hardware
 verification. The independent original-`hotdo` startup probe remains strict
 and does not enable geometry emulation. Source of address-map facts:
 https://github.com/mamedev/mame/blob/master/src/mame/sega/model2.cpp
+
+In published Model 2C coprocessor research the program-upload path is
+controlled by an upload-mode control write, then 32-bit words presented to
+the TGPx4 FIFO port. Those observations motivate distinguishing the
+**addresses**, but do not establish original HOTD1 startup's exact values,
+captured upload contents, reset control state, or 64-bit instruction format.
+The project must still capture a real host-side upload and corroborate
+pair order. This is not a complete coprocessor implementation.
 
 
 ## Component split

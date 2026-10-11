@@ -45,9 +45,15 @@ int main() {
     struct Aperture {std::uint32_t lo, hi; Region region;};
     const Aperture known[] = {
         {0x00800000u, 0x00803fffu, Region::geometry_interface},
+        {0x00804000u, 0x00807fffu, Region::geometry_program_port},
+        {0x00880000u, 0x00883fffu, Region::coprocessor_function_port},
+        {0x00884000u, 0x00887fffu, Region::coprocessor_fifo_port},
         {0x00900000u, 0x0097ffffu, Region::geometry_buffer},
+        {0x00980000u, 0x00980003u, Region::coprocessor_control},
         {0x00980004u, 0x00980007u, Region::geometry_fifo_status},
-        {0x0098000cu, 0x0098000fu, Region::video_control}
+        {0x00980008u, 0x0098000bu, Region::geometry_control},
+        {0x0098000cu, 0x0098000fu, Region::video_control},
+        {0x00980014u, 0x00980017u, Region::coprocessor_status}
     };
     for (const auto& k : known) {
         if (bus.classify(k.lo) != k.region ||
@@ -65,9 +71,9 @@ int main() {
             }
         }
     }
-    for (const auto gap : {0x007fffffu, 0x00804000u, 0x008fffffu,
-                           0x00980000u, 0x00980008u, 0x00980010u,
-                           0x00a00000u}) {
+    for (const auto gap : {0x007fffffu, 0x00808000u, 0x0087ffffu,
+                           0x00888000u, 0x008fffffu, 0x00980010u,
+                           0x00980018u, 0x00a00000u}) {
         if (bus.classify(gap) != Region::unmapped) return 6;
     }
     if (!bus.writes().empty() || bus.pending_timing_writes()) return 7;
@@ -83,8 +89,11 @@ int main() {
 int main() {
     StrictBus bus(std::vector<std::uint8_t>(StrictBus::kProgramSize, 0u));
     auto cb = bus.callbacks();
-    for (const auto address : {0x00800000u, 0x00900000u,
-                               0x00980004u, 0x0098000cu}) {
+    for (const auto address : {0x00800000u, 0x00804000u,
+                               0x00880000u, 0x00884000u,
+                               0x00900000u, 0x00980000u,
+                               0x00980004u, 0x00980008u,
+                               0x0098000cu, 0x00980014u}) {
         std::uint32_t dst = 0xfeedbeefu;
         if (cb.read32_sync(cb.ctx, address, &dst) || dst != 0xfeedbeefu)
             return 1;
@@ -100,6 +109,33 @@ int main() {
         }
     }
     if (!bus.writes().empty() || bus.pending_timing_writes()) return 6;
+    return 0;
+}
+""")
+
+
+    def test_native_tgpx4_upload_ports_fault_without_writing_program(self):
+        native(r"""
+int main() {
+    StrictBus bus(std::vector<std::uint8_t>(StrictBus::kProgramSize, 0u));
+    const auto native = bus.callbacks();
+    const std::uint32_t controls[] = {0x80000000u, 0x00000000u};
+    for (auto control : controls) {
+        try {native.write32(native.ctx, 0x00980000u, control); return 1;}
+        catch(const DeviceAccessFault& e) {
+            if (!e.write || e.region != Region::coprocessor_control ||
+                e.address != 0x00980000u || e.width != 4u) return 2;
+        }
+    }
+    for (std::uint32_t value : {0x12345678u, 0xdeadbeefu}) {
+        try {native.write32(native.ctx, 0x00884000u, value); return 3;}
+        catch(const DeviceAccessFault& e) {
+            if (!e.write || e.region != Region::coprocessor_fifo_port ||
+                e.address != 0x00884000u || e.width != 4u) return 4;
+        }
+    }
+    // A documented aperture is NOT an accepted upload or copro execution.
+    if (!bus.writes().empty() || bus.pending_timing_writes()) return 5;
     return 0;
 }
 """)

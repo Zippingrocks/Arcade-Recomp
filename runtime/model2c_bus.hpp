@@ -33,7 +33,13 @@ enum class Region {
     irq_registers,
     timer_registers,
     geometry_interface,
+    geometry_program_port,
+    coprocessor_function_port,
+    coprocessor_fifo_port,
     geometry_buffer,
+    coprocessor_control,
+    geometry_control,
+    coprocessor_status,
     geometry_fifo_status,
     video_control,
     unmapped
@@ -49,6 +55,12 @@ static inline const char* region_name(Region region) {
     case Region::irq_registers: return "Model 2C IRQ request/enable registers (partial)";
     case Region::timer_registers: return "Model 2C countdown timer registers (partial)";
     case Region::geometry_interface: return "Model 2C geometry interface registers (unimplemented)";
+    case Region::geometry_program_port: return "Model 2C geometry program/write port (unimplemented)";
+    case Region::coprocessor_function_port: return "Model 2C coprocessor function port (unimplemented)";
+    case Region::coprocessor_fifo_port: return "Model 2C TGPx4 upload/data FIFO port (unimplemented)";
+    case Region::coprocessor_control: return "Model 2C TGPx4 control register (unimplemented)";
+    case Region::geometry_control: return "Model 2C geometry control register (unimplemented)";
+    case Region::coprocessor_status: return "Model 2C coprocessor status register (unimplemented)";
     case Region::geometry_buffer: return "Model 2C geometry buffer window (unimplemented)";
     case Region::geometry_fifo_status: return "Model 2C geometry FIFO status (unimplemented)";
     case Region::video_control: return "Model 2C video control registers (unimplemented)";
@@ -119,6 +131,13 @@ public:
     // address map is NOT permission to assume any FIFO/RAM side effects.
     static constexpr std::uint32_t kGeometryInterface = 0x00800000u;
     static constexpr std::uint32_t kGeometryInterfaceSize = 0x00004000u;
+    static constexpr std::uint32_t kGeometryProgramPort = 0x00804000u;
+    static constexpr std::uint32_t kCoproFunctionPort = 0x00880000u;
+    static constexpr std::uint32_t kCoproFifoPort = 0x00884000u;
+    static constexpr std::uint32_t kUploadPortSize = 0x00004000u;
+    static constexpr std::uint32_t kCoproControl = 0x00980000u;
+    static constexpr std::uint32_t kGeometryControl = 0x00980008u;
+    static constexpr std::uint32_t kCoproStatus = 0x00980014u;
     static constexpr std::uint32_t kGeometryBuffer = 0x00900000u;
     static constexpr std::uint32_t kGeometryBufferSize = 0x00080000u;
     static constexpr std::uint32_t kGeometryFifoStatus = 0x00980004u;
@@ -203,8 +222,20 @@ public:
         if (inside(address, kControlStart, kControlSize)) return Region::cpu_control;
         if (inside(address, kGeometryInterface, kGeometryInterfaceSize))
             return Region::geometry_interface;
+        if (inside(address, kGeometryProgramPort, kUploadPortSize))
+            return Region::geometry_program_port;
+        if (inside(address, kCoproFunctionPort, kUploadPortSize))
+            return Region::coprocessor_function_port;
+        if (inside(address, kCoproFifoPort, kUploadPortSize))
+            return Region::coprocessor_fifo_port;
         if (inside(address, kGeometryBuffer, kGeometryBufferSize))
             return Region::geometry_buffer;
+        if (inside(address, kCoproControl, 4u))
+            return Region::coprocessor_control;
+        if (inside(address, kGeometryControl, 4u))
+            return Region::geometry_control;
+        if (inside(address, kCoproStatus, 4u))
+            return Region::coprocessor_status;
         if (inside(address, kGeometryFifoStatus, 4u))
             return Region::geometry_fifo_status;
         if (inside(address, kVideoControl, 4u))
@@ -343,6 +374,18 @@ private:
             return 16u - (address - PartialModel2CTimers::BASE);
         case Region::geometry_interface:
             return kGeometryInterfaceSize - (address - kGeometryInterface);
+        case Region::geometry_program_port:
+            return kUploadPortSize - (address - kGeometryProgramPort);
+        case Region::coprocessor_function_port:
+            return kUploadPortSize - (address - kCoproFunctionPort);
+        case Region::coprocessor_fifo_port:
+            return kUploadPortSize - (address - kCoproFifoPort);
+        case Region::coprocessor_control:
+            return 4u - (address - kCoproControl);
+        case Region::geometry_control:
+            return 4u - (address - kGeometryControl);
+        case Region::coprocessor_status:
+            return 4u - (address - kCoproStatus);
         case Region::geometry_buffer:
             return kGeometryBufferSize - (address - kGeometryBuffer);
         case Region::geometry_fifo_status:
@@ -395,6 +438,12 @@ private:
         // the mirrored geometry window must NOT be treated as generic RAM;
         // FIFO fullness, coprocessor uploads and video timing are unknown.
         if (reg == Region::geometry_interface ||
+            reg == Region::geometry_program_port ||
+            reg == Region::coprocessor_function_port ||
+            reg == Region::coprocessor_fifo_port ||
+            reg == Region::coprocessor_control ||
+            reg == Region::geometry_control ||
+            reg == Region::coprocessor_status ||
             reg == Region::geometry_buffer ||
             reg == Region::geometry_fifo_status ||
             reg == Region::video_control)
