@@ -116,14 +116,18 @@ def parse_native(text: str) -> list[Access]:
         if len(found) > MAX_EVENTS:
             raise TraceError("too many native observations")
     entries = _sequence(found)
-    if summary is not None:
-        total, retained, dropped, truncated, limit = summary
-        if (retained != len(entries) or retained > limit or
-                total != retained + dropped or
-                (truncated == "yes") != (dropped > 0)):
-            raise TraceError("serial trace summary disagrees with captured events")
-        if dropped != 0:
-            raise TraceError("truncated native serial trace is not comparable")
+    # The strict native probe ALWAYS emits a bounded-capture summary.
+    # A missing footer may mean the file ended before lost accesses were
+    # reported. Never compare a seemingly contiguous but incomplete prefix.
+    if summary is None:
+        raise TraceError("native serial trace summary required (possibly truncated log)")
+    total, retained, dropped, truncated, limit = summary
+    if (retained != len(entries) or retained > limit or
+            total != retained + dropped or
+            (truncated == "yes") != (dropped > 0)):
+        raise TraceError("serial trace summary disagrees with captured events")
+    if dropped != 0:
+        raise TraceError("truncated native serial trace is not comparable")
     return entries
 
 
