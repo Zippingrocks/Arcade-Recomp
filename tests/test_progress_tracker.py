@@ -45,7 +45,7 @@ class ProgressTrackerTests(unittest.TestCase):
         self.assertEqual(changed["history"][-1]["kind"], "review")
         self.assertEqual(changed["history"][-1]["percent_before"], 20)
         self.assertEqual(changed["history"][-1]["percent_after"], 20)
-        self.assertEqual(self.baseline["history"][-1]["kind"], "baseline")
+        self.assertEqual(self.baseline["history"][0]["kind"], "baseline")
         validate(changed)
 
     def test_justified_increments_and_regressions_are_accepted(self):

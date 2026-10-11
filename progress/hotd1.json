@@ -594,6 +594,19 @@
         "tests/test_serial_access_compare.py"
       ],
       "note": "Added a bounded CPU-side serial-access trace with retained/dropped count metadata and strict rejection of incomplete captures. This hardens diagnostic integrity but does not supply any authentic Sega 315-5649 RX/status bytes or original cabinet timing; the 90% tooling estimate is unchanged."
+    },
+    {
+      "date": "2026-10-10",
+      "kind": "review",
+      "scope": "tools.serial_trace",
+      "percent_before": 90,
+      "percent_after": 90,
+      "evidence": [
+        "tests/test_progress_tracker.py",
+        "tests/test_sega_serial_bus_trace.py",
+        "tests/test_serial_access_compare.py"
+      ],
+      "note": "Fixed the progress history baseline assertion to check the first immutable entry rather than the latest review. The new bounded trace/comparator tests passed under GCC and Clang, but full CI needs to rerun; subjective trace tooling and HOTD1 estimates remain unchanged."
     }
   ]
 }
