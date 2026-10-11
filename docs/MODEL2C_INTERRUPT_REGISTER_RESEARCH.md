@@ -84,3 +84,31 @@ bypassed by this IRQ registration work.
 Outstanding work is tracked in
 [Issue #7](https://github.com/Zippingrocks/Arcade-Recomp/issues/7)
 and [Issue #2](https://github.com/Zippingrocks/Arcade-Recomp/issues/2).
+
+
+## Board-to-Intel IRQ pin observation (synthetic-only, 2026-10-11)
+
+The separate `runtime/model2c_irq_observation.hpp` provides an explicitly
+requested **read-only** snapshot joining the existing provisional Sega IRQ
+request bit grouping to Intel's independently documented i960KB ICR pin
+roles. It observes each pin's currently asserted source-bit mask, role
+(direct vector/IAC/INTR/INTA), and configured vector; source bits from a
+pin with no direct vector **remain unresolved** rather than being silently
+mapped to an arbitrary interrupt. A direct configured vector is only a
+*candidate*, not an interrupt the CPU has accepted.
+
+The observation has **no priority winner, pending event scheduler, IRQ
+entry, supervisor stack, interrupt return, cycle accounting, IRQ ACK or
+device side effect**. There is deliberately no API returning a selected
+vector or writing into the CPU. Board IRQ registers and injected events
+remain explicitly synthetic/opt-in, and the board's request-enable latency
+requires an externally advanced scheduler. This infrastructure must not
+be confused with original Model 2C IRQ acceptance or Intel fault frames.
+
+`tests/test_model2c_irq_observation_native.py` compiles with GCC and
+Clang UndefinedBehaviorSanitizer and tests the KB reset multiplexing
+rules, original HOTD1 ICR `0x0F0E0D0C`, explicit queued enable changes,
+ACK source grouping, 4096 possible synthetic 12-bit request combinations,
+and state immutability. All tests use invented request injections with no
+actual arcade trace. Original board IRQ timing, priority, line-level and
+entry/return proof remains missing; Issue #7 stays open.
