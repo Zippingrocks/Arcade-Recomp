@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import random
 import shutil
@@ -148,6 +149,31 @@ def verify(image:bytes,compilers:list[str])->dict:
         "rom_or_native_game_code_exported":False,
         "compilers":results}
 
+def write_private_metadata(image_path: Path, output_path: Path, result: dict) -> None:
+    """Safely write metadata without ever truncating an input ROM hardlink.
+
+    A temporary sibling is atomically renamed into place only AFTER the
+    entire original-ROM validation succeeds. No original-derived code or
+    image data is saved by this function.
+    """
+    if image_path.resolve() == output_path.resolve() or (
+            output_path.exists() and image_path.samefile(output_path)):
+        raise ValueError("report must not alias the original CPU image")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(
+                mode="w", encoding="utf-8",
+                dir=output_path.parent, prefix=".hotdo-fp-report-",
+                suffix=".tmp", delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(json.dumps(result, indent=2) + "\n")
+        os.replace(temporary, output_path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def main()->int:
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--image",type=Path,required=True)
@@ -155,11 +181,13 @@ def main()->int:
     p.add_argument("--cxx",action="append")
     args=p.parse_args()
     try:
-        if args.output.resolve()==args.image.resolve():
-            raise ValueError("must not overwrite original ROM")
+        # Check aliasing before any expensive native compile. Recheck in the
+        # atomic writer to catch changed links while verification is running.
+        if args.output.resolve() == args.image.resolve() or (
+                args.output.exists() and args.image.samefile(args.output)):
+            raise ValueError("report must not alias the original CPU image")
         result=verify(args.image.read_bytes(),args.cxx or ["g++","clang++"])
-        args.output.parent.mkdir(parents=True,exist_ok=True)
-        args.output.write_text(json.dumps(result,indent=2)+"\n",encoding="utf-8")
+        write_private_metadata(args.image,args.output,result)
     except (OSError,ValueError,subprocess.SubprocessError) as exc:
         # Never echo a compiler diagnostic containing derived original code.
         print("private verification failed: "+type(exc).__name__,file=sys.stderr)

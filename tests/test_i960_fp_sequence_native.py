@@ -118,6 +118,54 @@ int main() {
         with self.assertRaisesRegex(ValueError, "verified original hotdo"):
             verifier(b"", ["g++"])
 
+    def test_private_report_does_not_truncate_same_inode_or_symlink(self):
+        # These paths are all ROM-free dummy files. Mock only the costly
+        # original-ROM verifier so CLI output safety is exercised past its
+        # authenticated-image gate without distributing original bytes.
+        import json
+        import os
+        import runpy
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory(prefix="arcade-private-alias-") as tmp:
+            directory = Path(tmp)
+            source = directory / "original.bin"
+            source.write_bytes(b"private-original-image-must-stay-untouched")
+            hardlink = directory / "hardlink.json"
+            symlink = directory / "symlink.json"
+            os.link(source, hardlink)
+            symlink.symlink_to(source)
+            normal = directory / "metadata.json"
+
+            module = runpy.run_path(str(
+                ROOT / "tools" / "experimental" / "hotdo_fp_sequence_probe.py"))
+            main = module["main"]
+            report = {"schema": "synthetic-validation",
+                      "continuous_boot": False,
+                      "rom_or_native_game_code_exported": False}
+            fake = lambda image, compilers: dict(report)
+            for destination in (source, hardlink, symlink):
+                with self.subTest(destination=destination.name):
+                    with patch.dict(main.__globals__, {"verify": fake}):
+                        with patch("sys.argv", ["hotdo_fp_sequence_probe",
+                                "--image", str(source),
+                                "--output", str(destination)]):
+                            self.assertEqual(main(), 2)
+                    self.assertEqual(source.read_bytes(),
+                                     b"private-original-image-must-stay-untouched")
+            # A valid report is still written, but through a temporary
+            # sibling file and atomic rename. No temporary files remain.
+            with patch.dict(main.__globals__, {"verify": fake}):
+                with patch("sys.argv", ["hotdo_fp_sequence_probe",
+                        "--image", str(source), "--output", str(normal)]):
+                    self.assertEqual(main(), 0)
+            self.assertEqual(json.loads(normal.read_text()), report)
+            self.assertEqual(source.read_bytes(),
+                             b"private-original-image-must-stay-untouched")
+            self.assertEqual(
+                sorted(p.name for p in directory.iterdir()),
+                ["hardlink.json", "metadata.json", "original.bin",
+                 "symlink.json"])
+
     def test_special_values_stop_at_first_step_without_partial_state(self):
         native_run(r"""
 using namespace arcaderecomp_generated;
