@@ -131,6 +131,64 @@ int main() {
 }
 """)
 
+
+    def test_replay_move_and_owner_destruction_fail_closed(self):
+        # The 315-5649 retains callbacks. Moving the attached replay must not
+        # leave them pointing to a dead stack object; destroying its owner
+        # must preserve strict DeviceAccessFault, not use freed memory.
+        native(r"""
+#include <memory>
+#include <type_traits>
+#include <utility>
+static_assert(!std::is_copy_constructible<SerialCPUReplay>::value,
+              "capture sessions must not have implicit copies");
+static_assert(!std::is_copy_assignable<SerialCPUReplay>::value,
+              "capture ownership must be unique");
+static_assert(std::is_move_constructible<SerialCPUReplay>::value,
+              "a bound replay must survive safe relocation");
+int main() {
+    const std::string fixture =
+      "arcade-serial-cpu-replay-v1\\n"
+      "count=4 dropped=0 complete=yes provenance=synthetic\\n"
+      "1 W 0x01c00014 0xff\\n"
+      "2 R 0x01c0001a 0x00\\n"
+      "3 R 0x01c00016 0x31\\n"
+      "4 R 0x01c0001a 0x0c\\n"
+      "END\\n";
+    // The fixture is intentionally private synthetic data, not an arcade RX.
+    std::istringstream source(fixture);
+    auto initial = SerialCPUReplay::parse(source);
+    StrictBus board(std::vector<std::uint8_t>(StrictBus::kProgramSize, 0u));
+    board.enable_partial_serial_io();
+    board.enable_serial_access_trace();
+    initial.bind(board.serial_device());
+    // The replay object changes address after callbacks are registered.
+    auto relocated = std::make_unique<SerialCPUReplay>(std::move(initial));
+    try{(void)initial.consumed();return 1;}
+    catch (const std::logic_error&) {}
+    board.write(0x01c00014u, 1u, 0xffu);
+    if(relocated->consumed()!=1u)return 2;
+    if(board.read(0x01c0001au, 1u)!=0u)return 3;
+    if(board.read(0x01c00016u, 1u)!=0x31u)return 4;
+    if(relocated->consumed()!=3u)return 5;
+    relocated.reset(); // IO callbacks remain installed but source has gone.
+    try{(void)board.read(0x01c0001au, 1u);return 6;}
+    catch(const DeviceAccessFault& e) {
+        if(e.region!=Region::serial_io || e.write)return 7;
+    }
+    try{board.write(0x01c00014u, 1u, 0xffu);return 8;}
+    catch(const DeviceAccessFault& e) {
+        if(e.region!=Region::serial_io || !e.write)return 9;
+    }
+    const auto& trace=board.serial_access_trace();
+    if(trace.size()!=5u || trace[3].completed || trace[3].value_known ||
+       trace[4].completed || !trace[4].value_known ||
+       board.writes().size()!=1u ||
+       board.serial_device().transmissions().size()!=1u)return 10;
+    return 0;
+}
+""")
+
     def test_capture_validation_rejects_truncation_extra_and_spoofed_roles(self):
         native(r"""
 static bool rejects(const std::string& text) {

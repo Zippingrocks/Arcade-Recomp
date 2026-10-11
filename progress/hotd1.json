@@ -739,6 +739,19 @@
         "tests/test_sega_serial_cpu_replay.py"
       ],
       "note": "CI on initial strict CPU-side serial replay branch passed the new GCC/Clang synthetic replay tests but exposed the pre-existing progress CLI regression using a hardcoded 45->50 increase. Updated the fixture test to derive an actual +5 percentage from current baseline rather than wrongly requesting a no-op update. Serial replay remains optional and unverified, authentic Model 2C RX/status behavior remains 5%, motherboard 20%, HOTD1 overall 10%."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "model2c.rx_framework",
+      "percent_before": 50,
+      "percent_after": 50,
+      "evidence": [
+        "runtime/sega3155649_cpu_replay.hpp",
+        "tests/test_sega_serial_cpu_replay.py",
+        "docs/SEGA_IO3155649.md"
+      ],
+      "note": "Fixed lifetime and relocation safety of opt-in 315-5649 CPU-side serial replay callbacks. Replay is uniquely owned/movable with weak callback handles; destruction or disconnect now faults instead of dereferencing a stale pointer or returning fictional status/RX. Synthetic GCC/Clang UBSan tests cover moved-owner continuation and missing owner refusal. No original-cabinet bytes, protocol timings, startup progress or hardware fidelity established; rx_framework 50%, authentic_rx 5%, Model2C 20%, HOTD1 10% unchanged."
     }
   ]
 }
