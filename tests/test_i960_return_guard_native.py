@@ -22,13 +22,13 @@ struct Memory {
     unsigned reads = 0u;
     unsigned writes = 0u;
 };
-static std::uint32_t read32(void* context,std::uint32_t addr) {
+inline std::uint32_t read32(void* context,std::uint32_t addr) {
     auto& memory = *static_cast<Memory*>(context);
     ++memory.reads;
     const auto it=memory.words.find(addr);
     return it==memory.words.end()?0u:it->second;
 }
-static void write32(void* context,std::uint32_t addr,std::uint32_t value) {
+inline void write32(void* context,std::uint32_t addr,std::uint32_t value) {
     auto& memory = *static_cast<Memory*>(context);
     ++memory.writes;
     memory.words[addr]=value;
@@ -90,7 +90,10 @@ int main() {
 int main() {
     CPU cpu{};
     Memory memory{};
-    Bus bus{&memory,&read32,&write32};
+    Bus bus{};
+    bus.ctx=&memory;
+    bus.read32=&read32;
+    bus.write32=&write32;
     constexpr std::uint32_t BASE=0x00510400u;
     if(!frame_init(cpu,BASE,0x100u))return 1;
     for(unsigned i=0u;i<4u;++i) {
