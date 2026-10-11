@@ -210,6 +210,19 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     "((diff & 0x00ff0000u) == 0u) || "
                     "((diff & 0xff000000u) == 0u)) ? 2 : 0; "
                     "cpu.cc_defined = true; }")
+        if op in ("scanbit", "spanbit"):
+            # Intel 80960KB: find the most significant 1 (SCANBIT) or 0
+            # (SPANBIT). No match returns FFFFFFFFh and CC=000; otherwise
+            # the position 0..31 and CC=010. Snapshot before dst mutation.
+            # The unsigned search is bounded and cannot shift by 32.
+            source = f"~({a})" if op == "spanbit" else a
+            return (f"{{ const std::uint32_t bits = {source}; "
+                    "std::uint32_t index = 31u; "
+                    "if (bits != 0u) { "
+                    "while ((bits & (1u << index)) == 0u) --index; "
+                    "} "
+                    f"cpu.r[{dst}] = bits ? index : 0xffffffffu; "
+                    "cpu.cc = bits ? 2 : 0; cpu.cc_defined = true; }")
         if op == "chkbit":
             # Intel KB 11-31: replace the complete condition code with 010
             # for a set bit or 000 for a clear bit. Position is modulo 32.
