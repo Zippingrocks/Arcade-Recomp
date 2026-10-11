@@ -222,10 +222,12 @@ def compare(native: list[Access], observed: list[Access],
             })
     if counts["divergences"]:
         verdict = "diverged"
+    elif counts["implementation_gaps"]:
+        # A proven missing native bus implementation is actionable even
+        # when another event lacks enough evidence to be compared.
+        verdict = "implementation_gap"
     elif counts["insufficient_evidence"]:
         verdict = "insufficient_evidence"
-    elif counts["implementation_gaps"]:
-        verdict = "implementation_gap"
     else:
         verdict = "matches_supplied_observations"
     return {"schema": "model2c-serial-access-comparison-v1",
