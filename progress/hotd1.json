@@ -675,6 +675,19 @@
         "docs/MODEL2C_HARDWARE.md"
       ],
       "note": "Resolved previously unmapped published Model 2C i960-side TGPx4 FIFO/program-upload, function, coprocessor control/status, and geometry program/control apertures; added precise fail-closed region classification and synthetic GCC/Clang UBSan boundary/CPU-callback tests. This corrects the typed bus map, not actual program upload acceptance, MB86235 execution, FIFO behavior, hardware timing or ROM/cabinet evidence. Estimated map task 45->50%; Model 2C overall remains 20%, original HOTD1 10%."
+    },
+    {
+      "date": "2026-10-10",
+      "kind": "review",
+      "scope": "graphics.research",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "arcaderecomp/tgpx4_host_trace.py",
+        "tests/test_tgpx4_host_trace.py",
+        "docs/TGPX4_PROGRAM_STAGING.md"
+      ],
+      "note": "Added strict offline host-side TGPx4 control-bracketed write-transcript audit, rejecting incomplete/unsupported CPU FIFO captures and fingerprinting candidate 64-bit program slots without exporting proprietary bytes. ROM-free synthetic parser/CLI tests only; no actual original HOTD1 program upload or physical control-state proof. The TGPx4 research estimate remains 15%, graphics 0%, Model 2C 20%, HOTD1 overall 10%."
     }
   ]
 }
