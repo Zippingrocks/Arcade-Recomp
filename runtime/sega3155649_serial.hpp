@@ -91,15 +91,36 @@ public:
         if (reg != SERIAL_TX1 && reg != SERIAL_TX2)
             throw Unsupported(absolute_address, true, "device register write not implemented");
         const unsigned channel = (reg == SERIAL_TX1) ? 1u : 2u;
-        // HOTD1 uses channel 2 for a lightgun mux command. We preserve the
-        // transmitted byte; its detailed effect is external to this chip.
+        // HOTD1 uses channel 2 for a lightgun mux command. We preserve
+        // transmitted bytes but do not infer an external device response.
+        // Check the observed backend before calling an external observer:
+        // rejected TX-full writes must never escape to hardware adapters.
         if (observed_events_enabled_) {
-            try { observed_events_.transmit(channel, value); }
-            catch (const std::logic_error& e) { throw Unsupported(absolute_address, true, e.what()); }
+            try { observed_events_.validate_transmit(channel); }
+            catch (const std::exception&) {
+                throw Unsupported(absolute_address, true,
+                                  "observed serial transmit not permitted");
+            }
         }
+        // Reserve storage before asking the observer to act. A rejected
+        // callback must leave both the local TX event log and buffer state
+        // untouched. A successful callback only means the observer accepted
+        // the byte, NOT that physical UART transmission completed.
+        if (sequence_ == UINT64_MAX)
+            throw Unsupported(absolute_address, true, "serial transaction counter exhausted");
+        events_.reserve(events_.size() + 1u);
+        if (serial_tx_) {
+            try { serial_tx_(value, channel); }
+            catch (const std::exception&) {
+                throw Unsupported(absolute_address, true,
+                                  "external serial transmit observer failed");
+            }
+        }
+        if (observed_events_enabled_)
+            observed_events_.transmit(channel, value); // prevalidated
         last_tx_[channel - 1u] = value;
-        events_.push_back({channel, value, ++sequence_, absolute_address});
-        if (serial_tx_) serial_tx_(value, channel);
+        ++sequence_;
+        events_.push_back({channel, value, sequence_, absolute_address});
     }
 
     std::uint8_t read_bus_byte(std::uint32_t absolute_address) const {

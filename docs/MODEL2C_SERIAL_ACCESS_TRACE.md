@@ -52,3 +52,17 @@ Provider-specific exception messages are not copied into the game-side
 fault report. A later successful read becomes observed **only** if the
 provider explicitly returns a byte. This improves device-adapter
 resilience; it adds no actual 315-5649 receive/status implementation.
+
+
+### Atomic external TX observers (synthetic device-adapter contract)
+
+External TX observers are now called **after** checking the explicit
+observed-event buffer state but **before** any local transmit byte,
+token, mux selector or transaction counter is committed. If the
+observer throws a standard exception (such as a disconnected hardware
+adapter), the bus reports an address-specific `DeviceAccessFault`
+and the optional serial trace records a refused write. A retry may
+succeed only if the observer explicitly accepts the byte. TX-full
+writes never invoke the observer. This is a local software transaction
+contract, not evidence that a real 315-5649 can retract bytes already
+sent to the gun board. Callback success is not physical TX completion.

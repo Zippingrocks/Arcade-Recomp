@@ -214,6 +214,98 @@ int main(){
 }
 """)
 
+    def test_external_tx_observer_rejection_is_atomic_and_retryable(self):
+        # A failed external device adapter cannot silently record a TX.
+        native(r"""
+#include <string>
+int main(){
+    StrictBus board(std::vector<std::uint8_t>(StrictBus::kProgramSize,0u));
+    board.enable_partial_serial_io();
+    board.enable_serial_access_trace();
+    unsigned attempts=0;
+    board.serial_device().set_serial_tx_observer(
+        [&](std::uint8_t value,unsigned channel){
+            ++attempts;
+            if(value!=0x41u || channel!=2u)
+                throw std::runtime_error("wrong synthetic transmit");
+            if(attempts==1u)
+                throw std::runtime_error("private TX adapter failed");
+        });
+    try{board.write(0x01c00014u,1u,0x41u);return 1;}
+    catch(const DeviceAccessFault& e){
+        const std::string message=e.what();
+        if(!e.write||e.address!=0x01c00014u||e.width!=1u||
+           message.find("external serial transmit observer failed")==std::string::npos||
+           message.find("private TX adapter")!=std::string::npos)return 2;
+    }
+    if(attempts!=1u||board.writes().size()||
+       board.serial_device().transmissions().size()||
+       board.serial_device().last_tx(2u)!=0u||
+       board.serial_device().transaction_count()!=0u)return 3;
+    const auto& trace=board.serial_access_trace();
+    if(trace.size()!=1u||trace[0].completed||!trace[0].write||
+       !trace[0].value_known||trace[0].value!=0x41u)return 4;
+    board.write(0x01c00014u,1u,0x41u);
+    if(attempts!=2u||board.writes().size()!=1u||
+       board.serial_device().transmissions().size()!=1u||
+       board.serial_device().last_tx(2u)!=0x41u||
+       board.serial_device().transaction_count()!=1u||
+       trace.size()!=2u||!trace[1].completed||
+       trace[1].ordinal!=2u)return 5;
+    return 0;
+}
+""")
+
+    def test_observed_event_backend_preflights_tx_before_external_observer(self):
+        # If observed-buffer state has not been externally initialized or
+        # TX-full is still pending, do not call an attached TX observer.
+        native(r"""
+int main(){
+    StrictBus board(std::vector<std::uint8_t>(StrictBus::kProgramSize,0u));
+    board.enable_partial_serial_io();
+    board.enable_serial_access_trace();
+    auto& events=board.serial_device().use_observed_events();
+    unsigned seen=0;
+    board.serial_device().set_serial_tx_observer(
+        [&](std::uint8_t,unsigned){
+            ++seen;
+            if(seen==1u)throw std::runtime_error("synthetic adapter offline");
+        });
+    try{board.write(0x01c00014u,1u,0x71u);return 1;}
+    catch(const DeviceAccessFault&){}
+    if(seen!=0u||board.serial_device().transaction_count()!=0u)return 2;
+    events.observe_idle(100);
+    try{board.write(0x01c00014u,1u,0x71u);return 3;}
+    catch(const DeviceAccessFault&){}
+    if(seen!=1u||board.serial_device().transaction_count()!=0u||
+       events.status()!=0u)return 4;
+    board.write(0x01c00014u,1u,0x71u);
+    if(seen!=2u||board.serial_device().transaction_count()!=1u||
+       events.status()!=2u)return 5;
+    const auto token=events.outstanding_token(2u);
+    try{board.write(0x01c00014u,1u,0x72u);return 6;}
+    catch(const DeviceAccessFault&){}
+    if(seen!=2u||events.status()!=2u||
+       board.serial_device().transaction_count()!=1u||
+       board.serial_device().last_tx(2u)!=0x71u)return 7;
+    events.complete_transmit(2u,token,101u);
+    board.write(0x01c00014u,1u,0x72u);
+    if(seen!=3u||events.status()!=2u||
+       events.outstanding_token(2u)==token||
+       board.serial_device().transaction_count()!=2u||
+       board.serial_device().last_tx(2u)!=0x72u||
+       board.writes().size()!=2u)return 8;
+    const auto& trace=board.serial_access_trace();
+    if(trace.size()!=5u)return 9;
+    const bool completed[]={false,false,true,false,true};
+    for(unsigned i=0;i<5u;++i)
+        if(trace[i].ordinal!=i+1u ||
+           trace[i].completed!=completed[i] ||
+           !trace[i].write)return 10;
+    return 0;
+}
+""")
+
     def test_trace_not_enabled_by_default(self):
         native(r"""
 int main(){

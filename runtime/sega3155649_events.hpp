@@ -24,10 +24,18 @@ public:
     void advance_to(std::uint64_t tick) {
         require(); check_time(tick); tick_=tick;
     }
-    TX transmit(unsigned channel, std::uint8_t byte) {
-        require(); auto& c=get(channel);
+    // Preflight is deliberately side-effect-free, so a host-side
+    // transmit observer can decline the operation before any device
+    // state changes. This is NOT a prediction of real 315-5649 timing.
+    void validate_transmit(unsigned channel) const {
+        require();
+        const auto& c=get(channel);
         if (c.tx_full) throw std::logic_error("unverified TX-full overwrite behavior");
         if (next_token_ == UINT64_MAX) throw std::overflow_error("serial event token exhausted");
+    }
+    TX transmit(unsigned channel, std::uint8_t byte) {
+        validate_transmit(channel);
+        auto& c=get(channel);
         c.tx_full=true; c.token=++next_token_;
         return {c.token,channel,byte};
     }
