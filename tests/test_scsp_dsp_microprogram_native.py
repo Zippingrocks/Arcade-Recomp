@@ -41,10 +41,12 @@ int main(){SoundROMBus bus(std::vector<std::uint8_t>(0x80000u,0));
  if(bus.read16(0x100800u)!=0x1234u||bus.read16(0x100bfeu)!=0xa55au||
     bus.dsp_microprogram().completed_discarded_reads()!=1u||
     bus.dsp_microprogram().completed_writes()!=3u)return 1;
- for(unsigned a:{0x1007c0u,0x1007feu,0x100c00u}){
-  try{bus.read16_discard(a);return 2;}catch(const BusFault&){}
-  try{bus.write16(a,0);return 3;}catch(const BusFault&){}
+ for(unsigned a:{0x1007c0u,0x1007feu}){
+  try{(void)bus.read16(a);return 2;}catch(const BusFault&){}
+  try{bus.write16(a,1);return 3;}catch(const BusFault&){}
  }
+ try{bus.read16_discard(0x100c00u);return 4;}catch(const BusFault&){}
+ try{bus.write16(0x100c00u,0);return 5;}catch(const BusFault&){}
  return 0;}
 ''')
 

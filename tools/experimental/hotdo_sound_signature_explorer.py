@@ -33,7 +33,7 @@ HARNESS = r'''
 #include <vector>
 using namespace arcaderecomp_m68k_generated;
 using Key=std::tuple<unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
-    unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
+    unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
 static void byte(SoundROMBus& bus,unsigned a,unsigned v) {
     if(!bus.establish_sound_ram_byte_research(a,static_cast<std::uint8_t>(v)))throw std::runtime_error("premise");
 }
@@ -59,7 +59,12 @@ static Key run(const std::vector<std::uint8_t>& image,unsigned kind,unsigned sav
             static_cast<unsigned>(bus.dsp_coefficients().completed_discarded_reads()),
             static_cast<unsigned>(bus.dsp_coefficients().completed_writes()),
             static_cast<unsigned>(bus.dsp_memory_addresses().completed_discarded_reads()),
-            static_cast<unsigned>(bus.dsp_memory_addresses().completed_writes())};
+            static_cast<unsigned>(bus.dsp_memory_addresses().completed_writes()),
+            static_cast<unsigned>(bus.dsp_prohibited_clear_window().completed_discarded_word_reads()),
+            static_cast<unsigned>(bus.dsp_prohibited_clear_window().completed_zero_word_writes()),
+            static_cast<unsigned>(bus.dsp_microprogram().completed_discarded_reads()),
+            static_cast<unsigned>(bus.dsp_microprogram().completed_writes()),
+            static_cast<unsigned>(bus.slot_input_mixer_control().completed_writes())};
 }
 int main(int argc,char** argv) {
     if(argc!=2)return 2;
@@ -74,7 +79,10 @@ int main(int argc,char** argv) {
             std::get<4>(a)==std::get<4>(b)&&std::get<7>(a)==std::get<7>(b)&&
             std::get<8>(a)==std::get<8>(b)&&std::get<9>(a)==std::get<9>(b)&&
             std::get<10>(a)==std::get<10>(b)&&std::get<11>(a)==std::get<11>(b)&&
-            std::get<12>(a)==std::get<12>(b)&&std::get<13>(a)==std::get<13>(b);
+            std::get<12>(a)==std::get<12>(b)&&std::get<13>(a)==std::get<13>(b)&&
+            std::get<14>(a)==std::get<14>(b)&&std::get<15>(a)==std::get<15>(b)&&
+            std::get<16>(a)==std::get<16>(b)&&std::get<17>(a)==std::get<17>(b)&&
+            std::get<18>(a)==std::get<18>(b);
     };
     if(!same_boundary(first,second)||std::get<6>(first)!=0u||std::get<6>(second)!=0u)return 5;
     unsigned marker_completed=0;
@@ -96,7 +104,12 @@ int main(int argc,char** argv) {
        <<",\"dsp_coefficient_discarded_reads\":"<<std::get<10>(first)
        <<",\"dsp_coefficient_writes\":"<<std::get<11>(first)
        <<",\"dsp_address_discarded_reads\":"<<std::get<12>(first)
-       <<",\"dsp_address_writes\":"<<std::get<13>(first)<<"}}\n";
+       <<",\"dsp_address_writes\":"<<std::get<13>(first)
+       <<",\"dsp_prohibited_discarded_reads\":"<<std::get<14>(first)
+       <<",\"dsp_prohibited_zero_writes\":"<<std::get<15>(first)
+       <<",\"dsp_microprogram_discarded_reads\":"<<std::get<16>(first)
+       <<",\"dsp_microprogram_writes\":"<<std::get<17>(first)
+       <<",\"slot_input_mixer_writes\":"<<std::get<18>(first)<<"}}\n";
     return 0;
 }
 '''
