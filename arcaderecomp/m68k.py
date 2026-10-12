@@ -44,6 +44,16 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         return Instruction(pc, 4, "move_to_sr", (word(2),))
     if op & 0xf100 == 0x7000:
         return Instruction(pc, 2, "moveq", ((op >> 9) & 7, _signed(op & 255, 8)))
+    if (op & 0xff00 in (0x0000, 0x0200, 0x0a00) and
+            ((op >> 6) & 3) != 3 and (op >> 3) & 7 == 0):
+        # Immediate logic to Dn only; memory and CCR/SR forms stay unsupported.
+        size = (1, 2, 4)[(op >> 6) & 3]
+        immediate, length = word(2), 4
+        if size == 4:
+            immediate, length = immediate << 16 | word(4), 6
+        immediate &= (1 << (size * 8)) - 1
+        kind = {0x0000: 0, 0x0200: 1, 0x0a00: 2}[op & 0xff00]
+        return Instruction(pc, length, "logic_immediate_d", (size, kind, op & 7, immediate))
     if op & 0xff00 == 0x0c00 and ((op >> 6) & 3) != 3:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         # Non-updating destinations only. CMPI PC-relative is NOT MC68000.

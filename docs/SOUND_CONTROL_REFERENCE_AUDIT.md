@@ -44,10 +44,19 @@ candidates, all to `0x00400001`:
 | `0x006004dc` | D1 | No |
 | `0x00600584` | D0 | No |
 
-Only the first is in the currently supported startup graph. The separate
+At the initial audit checkpoint, only the first was in the supported startup graph. The separate
 native probe has independently reached that attempted write; this offline
 tool does not execute it. Do not infer that the remaining stores are zero
 from the first write, or that any store is a no-op.
+
+After native immediate logic support, the first two candidates are in the
+48-site supported graph. The metadata-only audit still does not infer D1.
+Separate [original-byte native checks](M68000_IMMEDIATE_LOGIC.md) establish
+an attempted value `0x08` at `0x6001AA` after isolated entry `0x60018C`,
+using synthetic memory and retaining refusal of that board write. Four
+independent supplied-state checks also derive `08/0C/0E/0F` from supplied
+D0 bytes `F0/78/3C/1E`; they do not prove accepted writes or hardware effects.
+The earlier continuous bootstrap stop at `0x60014C` is unchanged.
 
 There are six aligned address values with a zero upper byte and three
 additional masked-only matches. The latter are not promoted to pointers or
