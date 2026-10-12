@@ -23,14 +23,14 @@ class M68kMemoryLoadTests(unittest.TestCase):
                         for end in range(2, len(data)):
                             with self.assertRaises(ValueError):
                                 decode(data[:end], 0)
-            # Updating/indexed/PC-relative and memory-to-memory/address forms
-            # are deliberately outside this extension, even where legal.
+            # Updating/indexed/PC-relative forms remain outside this extension.
             for mode, source in ((3, 0), (4, 7), (6, 2), (7, 2), (7, 3), (7, 5)):
                 self.assertEqual(decode(move(size, mode, source, 0, 0, 0, 0), 0).mnemonic,
                                  "unsupported")
             for dest_mode in (1, 2, 3, 4, 5, 6, 7):
+                expected = "movea" if size != 1 and dest_mode == 1 else "unsupported"
                 self.assertEqual(decode(move(size, 2, 0, dest_mode, 0, 0, 0), 0).mnemonic,
-                                 "unsupported")
+                                 expected)
         for reg in range(8):
             for address in (0, 1, 0x7fff, 0x8000, 0xfffe, 0xffff):
                 ins = decode(words(0x41f8 | reg << 9, address), 0)
