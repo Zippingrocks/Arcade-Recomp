@@ -44,6 +44,19 @@ def _emit(ins):
             fetch += (f"std::uint32_t destination = 0; "
                       f"if (!read_operand(cpu, bus, {address}, {size}u, destination)) return false; ")
         return fetch + f"return compare_immediate(cpu, {size}u, destination, {_u(immediate)}, {next_pc});"
+    if op == "move_memory_to_d":
+        size, mode, source, displacement, dest = args
+        mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
+        fetch = ""
+        if mode in (2, 5):
+            fetch = f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state); "
+            address = f"cpu.a[{source}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        return (fetch + f"std::uint32_t value = 0; "
+                f"if (!read_operand(cpu, bus, {address}, {size}u, value)) return false; "
+                f"cpu.d[{dest}] = (cpu.d[{dest}] & ~{mask}) | value; cpu.d_known[{dest}] |= {mask}; "
+                f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
     if op == "move":
         size, source_kind, source, mode, reg, displacement = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
@@ -82,11 +95,20 @@ def _emit(ins):
     if op == "lea_absolute":
         dest, address = args
         return f"cpu.a[{dest}] = {_u(address)}; cpu.a_known[{dest}] = true; {done}"
-    if op == "clr_byte_displacement":
-        reg, displacement = args
-        return (f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state); "
-                f"const std::uint32_t address = (cpu.a[{reg}] + {_u(displacement)}) & 0x00ffffffu; "
-                f"bus.read8_discard(address); bus.write8(address, 0); logical_flags(cpu, false, true); {done}")
+    if op == "clr_memory":
+        size, mode, reg, displacement = args
+        statements = []
+        if mode in (2, 3, 5):
+            statements.append(f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{reg}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        statements.append(f"if (!clear_memory(cpu, bus, {address}, {size}u)) return false;")
+        if mode == 3:
+            increment = 2 if size == 1 and reg == 7 else size
+            statements.append(f"cpu.a[{reg}] += {increment}u;")
+        statements += ["logical_flags(cpu, false, true);", done]
+        return " ".join(statements)
     if op == "bcc":
         return (f"bool taken = false; if (!condition(cpu, {args[0]}u, taken)) return false; "
                 f"return finish(cpu, taken ? {_u(ins.target)} : {next_pc});")

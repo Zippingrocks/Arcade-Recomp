@@ -69,6 +69,14 @@ independent decoder/latch observations, including byte strobes, reset state
 and sample-ROM selects. The actual board control, sound reset wiring,
 SCSP timing/audio and authentic main-CPU serial startup remain unresolved.
 
+A separate first-hand [HOTD Model 2C-CRX repair report](https://forums.arcade-museum.com/threads/no-audio-sega-model-2c-crx-house-of-the-dead.543130/)
+by Flocke28 (2024-10-14, posts 1–3) reports restored audio after moving JP1
+from pins 1–2 to 2–3. This is a useful board-configuration observation,
+not a bus trace or proof of any `0x400001` bit. Future sound captures should
+record PCB revision and jumper positions. The JP1 nets and their possible
+relationship to the control latch remain unverified; no runtime behavior
+is inferred from this report.
+
 Tests cover syntactic data false positives, unknown register values, 24-bit
 address masking, aligned versus odd candidates, truncation, input bounds,
 separate graph/scan limits, original identity checks, metadata-only output,

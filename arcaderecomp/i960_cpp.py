@@ -165,6 +165,19 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!multiply_real32_exact(cpu, cpu.r[{first}], "
                 f"cpu.r[{second}], {dst}u)) return false;")
 
+    if ins.form == "REG" and op == "mulrl":
+        # Intel KB 79C: binary64 GPR pairs / extended80 FP operands.
+        # Destination format determines precision; only exact results commit.
+        if word & 0x60:
+            return None
+        indices = (word & 31, (word >> 14) & 31, (word >> 19) & 31)
+        modes = (bool(word & 0x800), bool(word & 0x1000), bool(word & 0x2000))
+        if any(i >= 4 if fp else (i & 1) != 0 for i, fp in zip(indices, modes)):
+            return None
+        arguments = ", ".join(f"{i}u, {'true' if fp else 'false'}"
+                              for i, fp in zip(indices, modes))
+        return f"if (!multiply_long_real_exact(cpu, {arguments})) return false;"
+
     if ins.form == "REG" and op == "subr":
         # Intel 80960KB SUBR 78D: src2 - src1, using normal IEEE real32
         # GPRs only. Reuse exact integer-significand ADDR after flipping
@@ -209,6 +222,21 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!{helper}(cpu, {src}u, "
                 f"{'true' if source_fp else 'false'}, {dst}u)) "
                 "return false;")
+
+    if ins.form == "REG" and op == "sqrtr":
+        # Intel KB 688: binary32 GPR / extended80 FP square root.
+        # Irrational, inexact and exceptional results explicitly stop.
+        src = word & 31
+        dst = (word >> 19) & 31
+        src_fp = bool(word & 0x800)
+        dst_fp = bool(word & 0x2000)
+        if not (word & 0x1000) or word & 0x60 or (word >> 14) & 31:
+            return None
+        if (src_fp and src >= 4) or (dst_fp and dst >= 4):
+            return None
+        return (f"if (!square_root_real_exact(cpu, {src}u, "
+                f"{'true' if src_fp else 'false'}, {dst}u, "
+                f"{'true' if dst_fp else 'false'})) return false;")
 
     if ins.form == "REG" and op == "logbnr":
         # IEEE-754 logb(x) returns the integral binary exponent in FP
@@ -642,6 +670,8 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_to_long_integer.hpp"
 #include "i960_fp_add_exact.hpp"
 #include "i960_fp_multiply_exact.hpp"
+#include "i960_fp_multiply_long_exact.hpp"
+#include "i960_fp_sqrt_exact.hpp"
 #include "i960_fp_divide_exact.hpp"
 #include "i960_fp_scale_exact.hpp"
 

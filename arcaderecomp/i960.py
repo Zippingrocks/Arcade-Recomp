@@ -80,6 +80,7 @@ REGISTER = {
     0x66d: ("flushreg", ""),
     0x674: ("cvtir", "sd"),
     0x677: ("scaler", "sss"),
+    0x688: ("sqrtr", "sd"),
     0x68a: ("logbnr", "sd"),
     0x6c2: ("cvtzri", "sd"),
     0x6c3: ("cvtzril", "sd"),
@@ -93,6 +94,7 @@ REGISTER = {
     0x78c: ("mulr", "sss"),
     0x78d: ("subr", "sss"),
     0x78f: ("addr", "sss"),
+    0x79c: ("mulrl", "sss"),
 }
 MEMORY = {
     0x80: "ldob", 0x82: "stob", 0x84: "bx", 0x85: "balx",
@@ -225,8 +227,8 @@ def decode(image: bytes, pc: int) -> Instruction:
     if extended in REGISTER:
         name, form = REGISTER[extended]
         floating = name in {
-            "cvtir", "cvtzri", "cvtzril", "logbnr", "movr", "movrl", "movre",
-            "cpysre", "cpyrsre", "scaler", "divr", "mulr", "subr", "addr",
+            "cvtir", "cvtzri", "cvtzril", "sqrtr", "logbnr", "movr", "movrl", "movre",
+            "cpysre", "cpyrsre", "scaler", "divr", "mulr", "mulrl", "subr", "addr",
         }
         # Intel KB Appendix B: bits 5/6 are reserved zero, NOT FP selectors.
         # For real source operands M1/M2=1 selects fp0..fp3 (indices 0..3).
@@ -245,7 +247,7 @@ def decode(image: bytes, pc: int) -> Instruction:
             a = str(src) if word & 0x800 else reg(src)
             d = f"fp{dst}" if word & 0x2000 else reg(dst)
             return Instruction(pc, word, 4, "REG", name, (a, d))
-        if name in ("cvtzri", "cvtzril", "logbnr", "movr", "movrl", "movre"):
+        if name in ("cvtzri", "cvtzril", "sqrtr", "logbnr", "movr", "movrl", "movre"):
             src = word & 31
             dst = (word >> 19) & 31
             a = floating_operand(src, bool(word & 0x800))
@@ -254,7 +256,7 @@ def decode(image: bytes, pc: int) -> Instruction:
             if a is None or d is None or (integer_destination and word & 0x2000):
                 return _unknown(pc, word, "unsupported floating operand encoding")
             return Instruction(pc, word, 4, "REG", name, (a, d))
-        if name in ("cpysre", "cpyrsre", "scaler", "divr", "mulr", "subr", "addr"):
+        if name in ("cpysre", "cpyrsre", "scaler", "divr", "mulr", "mulrl", "subr", "addr"):
             src1, src2, dst = word & 31, (word >> 14) & 31, (word >> 19) & 31
             a = ((str(src1) if word & 0x800 else reg(src1)) if name == "scaler"
                  else floating_operand(src1, bool(word & 0x800)))
