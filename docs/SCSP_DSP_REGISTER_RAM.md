@@ -14,8 +14,8 @@ defines:
   `0x100800..0x100bff`.
 
 `runtime/scsp_dsp_coefficients.hpp` models independent value knownness for
-every word. COEF rejects nonzero reserved bits 15:13 and records only the
-documented 13-bit field as known. MADRS uses all 16 register bits; sound-memory
+every word. Sega table 4.5 places COEF[12:0] in bus bits 15:3, so COEF rejects
+nonzero reserved bits 2:0 and records mask `0xfff8` as known. MADRS uses all 16 register bits; sound-memory
 address bit zero is implicitly absent from the named field. MPRO keeps all
 four big-endian words of each 64-bit instruction independently observable;
 it does not claim to decode or execute that instruction. Normal reads

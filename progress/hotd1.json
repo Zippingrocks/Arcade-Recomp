@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Determine documented/physical SCSP COEF byte-write handling for the original upload beginning at 0x100700, especially upper reserved or signed bits, then implement exact lanes without weakening field masks. Separately implement MC68000 autovector exception entry and recover reset wiring.",
+      "next": "Implement bounded MC68000 JMP (An) with proven AOT target enrollment for the authentic known A1 target 0x6002a2 at PC 0x600296; do not accept arbitrary dynamic addresses. Separately implement autovector exception entry and recover reset wiring.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -2008,6 +2008,21 @@
         "docs/M68000_SCSP_INTERRUPT_SAMPLING.md"
       ],
       "note": "Added fail-closed bus interrupt-level sampling: mask 7 is inherently safe; lower masks require a known level; accepted requests stop pending autovector entry. SCSP level derivation uses exact enable/pending/level knownness. The full suite passes 762/762. Authenticated init proves SCIEB=0x0c8 known 0x7ff and all enabled pending factors known clear, so all 257 classes advance from 287064..287067 to 308029..308032 instructions and a second DSP clear before the COEF byte upload at 0x100700. No asynchronous request is ignored; sound CPU remains 5%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.scsp",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "runtime/scsp_dsp_coefficients.hpp",
+        "tests/test_scsp_dsp_coefficients_native.py",
+        "tools/experimental/hotdo_sound_signature_explorer.py",
+        "docs/SCSP_COEF_BIT_PLACEMENT.md",
+        "docs/SCSP_DSP_REGISTER_RAM.md"
+      ],
+      "note": "Corrected COEF's bus placement from the earlier low-13-bit interpretation to Sega table 4.5's COEF[12:0] in bits 15:3 (mask 0xfff8, reserved bits 2:0). Exhaustive word/lane tests pass; the full suite is 762/762. The authentic known 0x7f high byte and matching low byte now write exactly one coefficient word; all 257 classes advance from 308029..308032 to 308040..308043 instructions and expose JMP (A1) at 0x600296 with known A1=0x6002a2. This is a correction, not a permissive reserved-bit workaround; SCSP remains 0%."
     }
   ]
 }
