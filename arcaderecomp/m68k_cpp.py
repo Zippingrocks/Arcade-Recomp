@@ -22,6 +22,10 @@ def _emit(ins):
     done = f"return finish(cpu, {next_pc});"
     if op == "nop":
         return done
+    if op == "bsr":
+        return f"return branch_subroutine(cpu, bus, {_u(ins.target)}, {next_pc});"
+    if op == "rts":
+        return "return return_subroutine(cpu, bus);"
     if op == "move_to_sr":
         return f"return move_sr(cpu, {args[0]}u, {next_pc});"
     if op == "moveq":

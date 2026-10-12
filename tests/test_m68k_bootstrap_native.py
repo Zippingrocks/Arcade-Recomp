@@ -44,7 +44,7 @@ class M68kBootstrapTests(unittest.TestCase):
         self.assertEqual((ins.size, ins.target), (2, 1))
         self.assertEqual(decode(words(0x6000, 0xfffc), 0x100, 0x100).target, 0xfe)
         self.assertEqual(decode(words(0x51cf, 0xfffe), 0).target, 0)
-        self.assertEqual(decode(words(0x6100, 0x1234), 0).mnemonic, "unsupported")
+        self.assertEqual(decode(words(0x6100, 0x1234), 0).mnemonic, "bsr")
         for data in (b"", b"\x4e", words(0x46fc), words(0x41f9, 0x1234),
                      words(0x6000), words(0x50c8), words(0x4228)):
             with self.assertRaises(ValueError):

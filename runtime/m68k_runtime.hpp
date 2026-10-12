@@ -132,6 +132,37 @@ inline bool read_operand(CPU& cpu, Bus& bus, std::uint32_t address, unsigned byt
     return true;
 }
 
+// BSR's stack push is HIGH word then LOW word, unlike MOVE.L predecrement.
+// Motorola US4325121, Appendix B Sheet E, bsri2/3 and bsrw2/3, columns 193-194.
+// SP arithmetic is 32-bit; only the separate physical bus addresses are 24-bit.
+// On a provider refusal, CPU state is retained diagnostically while already
+// accepted bus effects survive. This is NOT physical BERR/exception microstate.
+inline bool branch_subroutine(CPU& cpu, Bus& bus, std::uint32_t target,
+                              std::uint32_t return_pc) {
+    if (!cpu.a_known[7]) return stop(cpu, Stop::undefined_state);
+    const std::uint32_t stack = cpu.a[7] - 4u;
+    const std::uint32_t address = stack & 0x00ffffffu;
+    if (address & 1u) {
+        cpu.access_address = address; cpu.access_width = 4; cpu.access_write = true;
+        return stop(cpu, Stop::data_address);
+    }
+    bus.write16(address, static_cast<std::uint16_t>(return_pc >> 16u));
+    bus.write16((address + 2u) & 0x00ffffffu, static_cast<std::uint16_t>(return_pc));
+    cpu.a[7] = stack;
+    return finish(cpu, target);
+}
+
+// RTS obtains its destination from actual bus data, never a host call stack.
+// Like other direct branches, an odd or untranslated destination is diagnosed
+// at the next generated step. Prefetch and address-error frames are not modeled.
+inline bool return_subroutine(CPU& cpu, Bus& bus) {
+    if (!cpu.a_known[7]) return stop(cpu, Stop::undefined_state);
+    std::uint32_t target = 0;
+    if (!read_operand(cpu, bus, cpu.a[7], 4u, target)) return false;
+    cpu.a[7] += 4u;
+    return finish(cpu, target);
+}
+
 inline bool compare_immediate(CPU& cpu, unsigned bytes, std::uint32_t destination,
                               std::uint32_t immediate, std::uint32_t next) {
     if (bytes != 1u && bytes != 2u && bytes != 4u)

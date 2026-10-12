@@ -1374,6 +1374,35 @@
         "tools/hotd1_strict_boot_probe.cpp"
       ],
       "note": "Reviewed original sound instruction progress separately from platform fidelity. Full initial WSL suite620 passed; final six focused immediate-logic tests pass GCC/UBSan and strict Clang19 syntax checks, including every single unknown word/long bit. Final full suite is being rerun. Fresh sound probes remain17 strict atSCSPread0x100401 or18 optional atboardwrite0x400001; unchanged main-CPU binary rerun remains1910 instructions/318 mapped writes/two TX before unobserved0x01C0001A. Isolated original-byte synthetic-state checks are not cabinet observations. AudioCPU5%, audio0%, CPU55%, Model2C20%, overallHOTD1 10%; GatesA/B/C open."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.floating",
+      "percent_before": 40,
+      "percent_after": 40,
+      "evidence": [
+        "runtime/i960_fp_add_long_exact.hpp",
+        "runtime/i960_fp_long_operand.hpp",
+        "tests/test_i960_addrl_native.py",
+        "docs/I960_ADDRL.md"
+      ],
+      "note": "Added exact native Intel KB ADDRL for all eight GPR-pair/FP modes with portable two-limb arithmetic and source-backed signed-zero AC knownness. Seven new GCC/UBSan tests and strict Clang19 syntax checks pass; independent review plus 17 related long-real regressions pass. Original 0x121C passes 6728 isolated synthetic-state checks. Bounded two-root graph grows 3248/3247 to 3311/3311; not exhaustive dynamic coverage or continuous boot. Inexact, special/subnormal, fault and interrupt cases remain explicit limits. Floating 40%, CPU 55%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_subroutine_native.py",
+        "docs/M68000_SUBROUTINES.md"
+      ],
+      "note": "Added native BSR short/word and RTS with actual bus-supplied returns, 32-bit A7 and 24-bit word cycles, preserved CCR knownness, explicit unknown/alignment/refusal stops and observable partial bus effects. Motorola primary patent diagrams visually verify high-first stack transfers. Six new GCC/UBSan tests and strict Clang19 syntax checks pass; independent review clean. Authenticated original BSR 0x6001BE passes 3072 isolated synthetic-stack checks and reaches next unsupported 0x60035E after four instructions; strict stack write still refused. Static sound graph 48/47 to 88/77; continuous probes unchanged at 17 strict or 18 optional SCSP-control instructions. No sound RAM, board-control acceptance or audio invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

@@ -165,8 +165,8 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!multiply_real32_exact(cpu, cpu.r[{first}], "
                 f"cpu.r[{second}], {dst}u)) return false;")
 
-    if ins.form == "REG" and op == "mulrl":
-        # Intel KB 79C: binary64 GPR pairs / extended80 FP operands.
+    if ins.form == "REG" and op in ("mulrl", "addrl"):
+        # Intel KB 79C/79F: binary64 GPR pairs / extended80 FP operands.
         # Destination format determines precision; only exact results commit.
         if word & 0x60:
             return None
@@ -176,7 +176,8 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return None
         arguments = ", ".join(f"{i}u, {'true' if fp else 'false'}"
                               for i, fp in zip(indices, modes))
-        return f"if (!multiply_long_real_exact(cpu, {arguments})) return false;"
+        helper = "multiply_long_real_exact" if op == "mulrl" else "add_long_real_exact"
+        return f"if (!{helper}(cpu, {arguments})) return false;"
 
     if ins.form == "REG" and op == "subr":
         # Intel 80960KB SUBR 78D: src2 - src1, using normal IEEE real32
@@ -669,6 +670,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_to_integer.hpp"
 #include "i960_fp_to_long_integer.hpp"
 #include "i960_fp_add_exact.hpp"
+#include "i960_fp_add_long_exact.hpp"
 #include "i960_fp_multiply_exact.hpp"
 #include "i960_fp_multiply_long_exact.hpp"
 #include "i960_fp_sqrt_exact.hpp"
