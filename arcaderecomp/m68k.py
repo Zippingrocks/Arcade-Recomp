@@ -106,6 +106,9 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         size = {1: 1, 2: 4, 3: 2}[op >> 12]
         src_mode, src_reg = (op >> 3) & 7, op & 7
         dst_mode, dst_reg = (op >> 6) & 7, (op >> 9) & 7
+        if size in (2, 4) and src_mode == 1 and dst_mode == 0:
+            return Instruction(pc, 2, "move_address_to_d",
+                               (size, src_reg, dst_reg))
         if src_mode == 3 and dst_mode == 3:
             return Instruction(pc, 2, "move_memory_postincrement",
                                (size, src_reg, dst_reg))
