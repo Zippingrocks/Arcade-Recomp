@@ -79,6 +79,36 @@ inline void logical_flags(CPU& cpu, bool negative, bool zero) {
     cpu.sr_known |= 15u;  // X's value AND definedness are preserved.
 }
 
+// Original MC68000 brief indexed effective address. Extension bits 10..8 are
+// reserved on this core; later-family scale/full-format encodings fail closed.
+inline bool indexed_address(CPU& cpu, unsigned base, std::uint16_t extension,
+                            std::uint32_t& address) {
+    if (base >= 8u || (extension & 0x0700u))
+        return stop(cpu, Stop::unsupported_instruction);
+    const unsigned index = (extension >> 12u) & 7u;
+    const bool address_index = (extension & 0x8000u) != 0u;
+    const bool long_index = (extension & 0x0800u) != 0u;
+    if (!cpu.a_known[base] || (address_index && !cpu.a_known[index]))
+        return stop(cpu, Stop::undefined_state);
+    std::uint32_t value = 0;
+    if (address_index) {
+        value = cpu.a[index];
+    } else {
+        const std::uint32_t mask = long_index ? 0xffffffffu : 0xffffu;
+        if ((cpu.d_known[index] & mask) != mask)
+            return stop(cpu, Stop::undefined_state);
+        value = cpu.d[index];
+    }
+    if (!long_index) {
+        value &= 0xffffu;
+        if (value & 0x8000u) value |= 0xffff0000u;
+    }
+    const std::uint32_t displacement =
+        (extension & 0x0080u) ? (extension | 0xffffff00u) : (extension & 0x00ffu);
+    address = cpu.a[base] + value + displacement;
+    return true;
+}
+
 // Motorola PRM ANDI/ORI/EORI: Dn byte/word writes preserve upper bits, X is
 // unchanged, NZ reflect the result and VC clear. Knownness is diagnostic
 // metadata, not physical CPU state: masked-away unknown bits need no guess.

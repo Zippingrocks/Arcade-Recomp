@@ -1708,6 +1708,24 @@
         "docs/M68000_NEG_SWAP.md"
       ],
       "note": "Added Motorola-manual-backed byte/word/long NEG and SWAP data-register operations with selected-bit preservation, exact XNZVC, strict knownness and fail-closed helpers. Three focused GCC/Clang UBSan tests cover every width/register, exhaustive byte inputs, wide boundaries, all prior flag values, SWAP half exchange, unknown state, exclusions and invalid arguments. Authenticated word-swapped NEG.L D5 at 0x601B3A and SWAP D0 at 0x601B74 now translate; the reset-vector graph grows 302/291 to 307/296 and advances both paths to explicit deeper stops at 0x601B42 and 0x601B7A while eleven unsupported sites remain. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no memory/device value was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_indexed_native.py",
+        "tests/test_m68k_clr_memory_native.py",
+        "tests/test_m68k_memory_load_native.py",
+        "tests/test_m68k_movea_native.py",
+        "docs/M68000_INDEXED_ADDRESS.md"
+      ],
+      "note": "Added original-MC68000 brief indexed effective addressing for CLR memory, MOVEA memory source, MOVE memory to Dn and MOVE Dn to memory. Three focused GCC/Clang UBSan tests cover every base/index register, data/address and word/long indexes, signed byte displacements, all widths/families, aliases, exact flags and transactions, unknown state, reserved later-core encodings and truncation. Four authenticated word-swapped indexed sites at 0x600344, 0x600394, 0x601B7A and 0x6023B4 now translate; the reset-vector graph grows 307/296 to 335/326 and unsupported sites fall eleven to nine while the translated frontier gains thirty instructions. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no memory/device value was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

@@ -94,6 +94,11 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         if mode == 0:
             return Instruction(pc, 2, "clr_d", (size, reg))
+        if mode == 6:
+            extension = word(2)
+            if not extension & 0x0700:
+                return Instruction(pc, 4, "clr_memory_indexed",
+                                   (size, reg, extension))
         if mode in (2, 3, 5) or (mode == 7 and reg in (0, 1)):
             displacement, length = 0, 2
             if mode == 5 or (mode, reg) == (7, 0):
@@ -128,6 +133,11 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         if mode == 5:
             return Instruction(pc, 4, "movea", (size, mode, reg, dest,
                                                 _signed(word(2), 16)))
+        if mode == 6:
+            extension = word(2)
+            if not extension & 0x0700:
+                return Instruction(pc, 4, "movea_indexed",
+                                   (size, reg, dest, extension))
         if mode == 7 and reg == 0:
             return Instruction(pc, 4, "movea", (size, mode, reg, dest,
                                                 _signed(word(2), 16)))
@@ -162,6 +172,11 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         if src_mode == 3 and dst_mode == 3:
             return Instruction(pc, 2, "move_memory_postincrement",
                                (size, src_reg, dst_reg))
+        if dst_mode == 0 and src_mode == 6:
+            extension = word(2)
+            if not extension & 0x0700:
+                return Instruction(pc, 4, "move_indexed_to_d",
+                                   (size, src_reg, dst_reg, extension))
         if dst_mode == 0 and (src_mode in (2, 3, 5) or
                               (src_mode == 7 and src_reg in (0, 1))):
             # Memory-source MOVE, without address-register updates or indexing.
@@ -198,6 +213,11 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
                                (size, src_mode, src_reg,
                                 source_displacement, dst_mode, dst_reg,
                                 destination_displacement))
+        if src_mode == 0 and dst_mode == 6:
+            extension = word(2)
+            if not extension & 0x0700:
+                return Instruction(pc, 4, "move_d_to_indexed",
+                                   (size, src_reg, dst_reg, extension))
         data_memory_destination = (dst_mode in (2, 5) or
                                    (dst_mode == 7 and dst_reg in (0, 1)))
         if ((src_mode == 0 and

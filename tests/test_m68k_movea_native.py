@@ -27,7 +27,7 @@ class M68kMoveAddressTests(unittest.TestCase):
         self.assertEqual(decode(move(4, 7, 4, 1, 2, 0x89ab, 0xcdef), 0).operands,
                          (4, 7, 4, 2, 0x89abcdef))
         for image in (move(1, 0, 0, 1, 0), move(4, 3, 0, 1, 0),
-                      move(4, 4, 0, 1, 0), move(4, 6, 0, 1, 0, 0),
+                      move(4, 4, 0, 1, 0),
                       move(4, 7, 2, 1, 0, 0), move(4, 7, 3, 1, 0, 0)):
             self.assertEqual(decode(image, 0).mnemonic, "unsupported")
 
