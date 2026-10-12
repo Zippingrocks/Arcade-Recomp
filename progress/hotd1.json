@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Implement the SCSP slot +0x00 KX write with its documented cross-slot KEY_ON execution semantics, not passive storage, then continue strict authenticated startup. Independently measure the setting-prohibited DSP span and recover physical reset-vector wiring.",
+      "next": "Implement the SCSP Timer A word at 0x100418 with documented TACTL/TIMA state and explicit clock semantics, then continue strict authenticated startup. Independently measure the setting-prohibited DSP span and recover physical reset-vector wiring.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1933,6 +1933,21 @@
         "docs/SCSP_SLOT_MIXER_CONTROL.md"
       ],
       "note": "Implemented the manual-defined passive slot fields at +0x0a, +0x0c, +0x0e and +0x12 with exact 15/10/16/16-bit masks, per-byte knownness and CLR transactions. Exhaustive GCC/Clang UBSan tests cover every field value, lane, slot and the original instruction shapes. All 257 authenticated startup classes advance from 283336..283339 to 283340..283343 instructions and stop at the active KX write to slot +0x00. KEY_ON execution, synthesis, timing and audio remain absent, so audio.scsp remains 0%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.scsp",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "runtime/scsp_slot_key.hpp",
+        "runtime/m68k_sound_bus.hpp",
+        "tests/test_scsp_slot_key_native.py",
+        "tools/experimental/hotdo_sound_signature_explorer.py",
+        "docs/SCSP_SLOT_KEY_CONTROL.md"
+      ],
+      "note": "Implemented Sega-manual KYONEX/KYONB semantics at slot +0x00: the write-only command simultaneously executes all 32 registered key states, propagating unknown registrations rather than assuming reset values. Exhaustive native tests and the original instruction form pass; the full suite is 752/752. All 257 authenticated startup classes perform 32 key writes/executions, prove every slot stopped, advance from 283340..283343 to 285113..285116 instructions and reach Timer A at 0x100418. Sample generation, envelope progression, timers, DSP execution, timing and audio remain absent, so audio.scsp stays 0%."
     }
   ]
 }

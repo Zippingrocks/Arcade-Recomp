@@ -34,7 +34,7 @@ HARNESS = r'''
 using namespace arcaderecomp_m68k_generated;
 using Key=std::tuple<unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
     unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
-    unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
+    unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
 static void byte(SoundROMBus& bus,unsigned a,unsigned v) {
     if(!bus.establish_sound_ram_byte_research(a,static_cast<std::uint8_t>(v)))throw std::runtime_error("premise");
 }
@@ -71,7 +71,9 @@ static Key run(const std::vector<std::uint8_t>& image,unsigned kind,unsigned sav
             static_cast<unsigned>(bus.slot_input_mixer_control().completed_discarded_reads()),
             static_cast<unsigned>(bus.slot_lfo_control().completed_discarded_reads()),
             static_cast<unsigned>(bus.slot_lfo_control().completed_writes()),
-            static_cast<unsigned>(bus.slot_envelope_release_control().completed_writes())};
+            static_cast<unsigned>(bus.slot_envelope_release_control().completed_writes()),
+            static_cast<unsigned>(bus.slot_loop_key_control().completed_writes()),
+            static_cast<unsigned>(bus.slot_loop_key_control().completed_executions())};
 }
 int main(int argc,char** argv) {
     if(argc!=2)return 2;
@@ -92,7 +94,8 @@ int main(int argc,char** argv) {
             std::get<18>(a)==std::get<18>(b)&&std::get<19>(a)==std::get<19>(b)&&
             std::get<20>(a)==std::get<20>(b)&&std::get<21>(a)==std::get<21>(b)&&
             std::get<22>(a)==std::get<22>(b)&&std::get<23>(a)==std::get<23>(b)&&
-            std::get<24>(a)==std::get<24>(b);
+            std::get<24>(a)==std::get<24>(b)&&std::get<25>(a)==std::get<25>(b)&&
+            std::get<26>(a)==std::get<26>(b);
     };
     if(!same_boundary(first,second)||std::get<6>(first)!=0u||std::get<6>(second)!=0u)return 5;
     unsigned marker_completed=0;
@@ -125,7 +128,9 @@ int main(int argc,char** argv) {
        <<",\"slot_input_mixer_discarded_reads\":"<<std::get<21>(first)
        <<",\"slot_lfo_discarded_reads\":"<<std::get<22>(first)
        <<",\"slot_lfo_writes\":"<<std::get<23>(first)
-       <<",\"slot_envelope_release_writes\":"<<std::get<24>(first)<<"}}\n";
+       <<",\"slot_envelope_release_writes\":"<<std::get<24>(first)
+       <<",\"slot_key_writes\":"<<std::get<25>(first)
+       <<",\"slot_key_executions\":"<<std::get<26>(first)<<"}}\n";
     return 0;
 }
 '''

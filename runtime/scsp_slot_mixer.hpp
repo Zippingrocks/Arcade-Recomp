@@ -1,4 +1,4 @@
-// Selected SCSP per-slot control words; no synthesis, key execution or timing.
+// Selected passive SCSP per-slot control words; no synthesis or timing.
 // Sega ST-077-R2-052594, individual slot register words +0x0a..0x16.
 #pragma once
 #include <array>
