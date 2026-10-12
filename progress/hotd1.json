@@ -973,6 +973,21 @@
         "docs/MODEL2C_SERIAL_CAPTURE_COMPARISON.md"
       ],
       "note": "External CPU-side serial capture v2 now requires an explicit complete lossless acquisition window and exact event counts; rejects legacy unknown-completeness captures, dropped accesses, wrong summary types and cut-off exports before replacing comparison reports. Synthetic parser/CLI regression tests only; producer claims do not authenticate cabinet RX/status or timing. tools.serial_compare 80%, authentic RX 5%, Model2C 20%, overall original HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "cpu.floating",
+      "percent_before": 40,
+      "percent_after": 40,
+      "evidence": [
+        "runtime/i960_fp_scale_exact.hpp",
+        "arcaderecomp/i960.py",
+        "arcaderecomp/i960_cpp.py",
+        "tests/test_i960_scaler_native.py",
+        "docs/I960_SCALER.md"
+      ],
+      "note": "Implemented Intel KB SCALER 677h decoding/AOT and exact finite-normal binary32 GPR scaling with signed int32 or integer literal counts, safe wide exponent arithmetic and alias preservation. Synthetic rational oracle covers 10668 input/count vectors, special-value and out-of-range refusal, reserved modes, controls and destination/IP preservation. FP-register/SCALERL, subnormal and special results, Intel FP fault/rounding delivery, original instruction-site and cabinet execution remain unverified. cpu.floating 40%, CPU 55%, Model2C 20%, original HOTD1 10% unchanged."
     }
   ]
 }

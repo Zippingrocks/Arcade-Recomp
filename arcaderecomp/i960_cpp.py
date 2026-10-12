@@ -132,6 +132,17 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!convert_integer_to_real_exact(cpu, {value}, "
                 f"{dst}u, {'true' if dest_fp else 'false'})) return false;")
 
+    if ins.form == "REG" and op == "scaler":
+        # Intel KB 677h: real src2 * 2^(signed integer src1).
+        # Exact normal binary32 GPR input/output only; src1 may be literal.
+        if word & (0x20 | 0x40 | 0x1000 | 0x2000):
+            return None
+        power = _operand(word & 31, bool(word & 0x800))
+        source = (word >> 14) & 31
+        dst = (word >> 19) & 31
+        return (f"if (!scale_real32_exact(cpu, {power}, cpu.r[{source}], "
+                f"{dst}u)) return false;")
+
     if ins.form == "REG" and op == "divr":
         # Intel 80960KB DIVR: src2 / src1; exact finite GPR real32 only.
         if word & (0x20 | 0x40 | 0x800 | 0x1000 | 0x2000):
@@ -590,6 +601,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_add_exact.hpp"
 #include "i960_fp_multiply_exact.hpp"
 #include "i960_fp_divide_exact.hpp"
+#include "i960_fp_scale_exact.hpp"
 
 namespace arcaderecomp_generated {
 static inline bool step(CPU& cpu, const Bus& bus) {
