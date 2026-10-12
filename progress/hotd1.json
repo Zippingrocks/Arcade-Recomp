@@ -934,6 +934,19 @@
         "docs/MODEL2C_INTERRUPT_REGISTER_RESEARCH.md"
       ],
       "note": "Added a deliberately separate synthetic lock-protected pending-table transaction model to validate all-or-nothing post/take drafts, idempotency, revision tracking and fail-closed commit denial under GCC/Clang UBSan concurrent tests (192 distinct vectors and 12 writers/consumers). Not connected to native StrictBus or original CPU; C++ mutex is not Intel LOCK bus timing, no hardware atomic RMW, actual IRQ entry, MODPC priority-lowering or HOTD1 board evidence. cpu.interrupts 15%, native CPU 55%, Model2C 20%, original HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.reset",
+      "percent_before": 50,
+      "percent_after": 50,
+      "evidence": [
+        "runtime/i960_frame_runtime.hpp",
+        "tests/test_i960_frame_prcb_invalidation_native.py",
+        "docs/I960_FRAMES.md"
+      ],
+      "note": "Corrected actual native i960KB frame_init reset boundary: a new root frame clears stale SAT, PRCB, interrupt/fault-table pointers, PRCB-loaded and pending IAC validity; validated opt-in IAC 0x93 installs newly captured PRCB after reset. Preserves cumulative reinitialize audit count and opt-in policy; invalid FP/IP checks do not partially reset. ROM-free GCC/Clang UBSan tests cover consecutive synthetic IACs and stale metadata refusal; no physical Model2C IRQ semantics or HOTD1 startup gain. cpu.reset remains 50%, CPU 55%, Model2C 20%, original HOTD1 10%."
     }
   ]
 }

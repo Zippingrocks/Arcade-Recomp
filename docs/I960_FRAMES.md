@@ -48,3 +48,24 @@ can still have read side effects before an invalid return is detected;
 full 80960KB fault delivery and exact restart behavior are **not**
 implemented or claimed. CPU-frame and overall HOTD1 fidelity estimates
 remain unchanged.
+
+## Root-frame PRCB ownership guard (2026-10-11)
+
+A successful `frame_init` now invalidates all earlier SAT, PRCB,
+interrupt-table, interrupt-stack and fault-table addresses, plus
+`prcb_loaded` and any pending IAC message validity. Previously only
+the program-priority definedness marker was cleared, leaving stale
+hardware-table pointers that could be misread as belonging to the newly
+initialized root frame. A **validated, opt-in** IAC `0x93` restores new
+PRCB metadata immediately after that reset. Failed frame initialization
+returns before changing existing metadata. The historical
+`reinitialize_count` stays cumulative and the caller's opt-in setting
+is preserved; neither is evidence of a currently valid PRCB.
+
+ROM-free GCC and Clang UndefinedBehaviorSanitizer tests cover clearing
+stale metadata, two successive synthetic IAC reinitializations with
+different PRCB addresses, a subsequent root-frame reset, and invalid
+FP/IP refusing without partial metadata changes. This is native
+diagnostic-state correctness, not original-cabinet timing or architected
+Intel interrupt acceptance. CPU reset remains estimated at 50% and
+original HOTD1 overall at 10%.

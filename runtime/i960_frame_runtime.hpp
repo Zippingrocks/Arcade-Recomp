@@ -161,8 +161,19 @@ static inline bool frame_init(CPU& cpu, std::uint32_t initial_fp,
     cpu.frame_depth = 0;
     cpu.stop_code = StopCode::none;
     cpu.interrupt_control_register = 0xff000000u;
-    // frame_init is also used for initial/test frames: do not confuse this
-    // with successful Intel PRCB reinitialization or an established priority.
+    // A new diagnostic/root frame must NOT inherit an earlier PRCB as if
+    // its interrupt/fault table addresses belonged to this CPU startup.
+    // frame_init is also invoked by validated IAC 0x93, which installs
+    // freshly captured PRCB addresses only after this reset succeeds.
+    cpu.sat_address = 0u;
+    cpu.prcb_address = 0u;
+    cpu.interrupt_table_address = 0u;
+    cpu.interrupt_stack_address = 0u;
+    cpu.fault_table_address = 0u;
+    cpu.prcb_loaded = false;
+    cpu.pending_iac_valid = false;
+    // Without a validated PRCB we cannot know the CPU's process priority,
+    // even if the previous host-side process_controls bits are still set.
     cpu.process_controls_priority_known = false;
     cpu.known_process_controls = 0u;
     cpu.integer_overflow_mask_defined = false;
