@@ -13,7 +13,8 @@ class DspCoefficients final {
     std::uint64_t discarded_reads_ = 0;
 public:
     static constexpr unsigned bytes = 0x80u;
-    static constexpr std::uint16_t field_mask = 0x1fffu;
+    // Table 4.5 places COEF[12:0] in bus bits 15:3; bits 2:0 must be zero.
+    static constexpr std::uint16_t field_mask = 0xfff8u;
 
     void invalidate() { *this = DspCoefficients{}; }
 

@@ -35,7 +35,7 @@ using namespace arcaderecomp_m68k_generated;
 using Key=std::tuple<unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
     unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
     unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
-    unsigned,unsigned,unsigned,unsigned>;
+    unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
 static void byte(SoundROMBus& bus,unsigned a,unsigned v) {
     if(!bus.establish_sound_ram_byte_research(a,static_cast<std::uint8_t>(v)))throw std::runtime_error("premise");
 }
@@ -78,7 +78,8 @@ static Key run(const std::vector<std::uint8_t>& image,unsigned kind,unsigned sav
             static_cast<unsigned>(bus.timers().completed_writes()),
             static_cast<unsigned>(bus.interrupt_control().completed_writes()),
             bus.interrupt_control().enable(0),bus.interrupt_control().enable_known_mask(0),
-            bus.interrupt_control().pending(0),bus.interrupt_control().pending_known_mask(0)};
+            bus.interrupt_control().pending(0),bus.interrupt_control().pending_known_mask(0),
+            cpu.d[0]&0xffu,cpu.d_known[0]&0xffu,cpu.a[1],cpu.a_known[1]?1u:0u};
 }
 int main(int argc,char** argv) {
     if(argc!=2)return 2;
@@ -103,7 +104,9 @@ int main(int argc,char** argv) {
             std::get<26>(a)==std::get<26>(b)&&std::get<27>(a)==std::get<27>(b)&&
             std::get<28>(a)==std::get<28>(b)&&std::get<29>(a)==std::get<29>(b)&&
             std::get<30>(a)==std::get<30>(b)&&std::get<31>(a)==std::get<31>(b)&&
-            std::get<32>(a)==std::get<32>(b);
+            std::get<32>(a)==std::get<32>(b)&&std::get<33>(a)==std::get<33>(b)&&
+            std::get<34>(a)==std::get<34>(b)&&std::get<35>(a)==std::get<35>(b)&&
+            std::get<36>(a)==std::get<36>(b);
     };
     auto diagnostic=[](const char* name,const Key& value){
         std::cerr<<name<<": stop="<<std::get<0>(value)<<" pc="<<std::get<1>(value)
@@ -151,7 +154,11 @@ int main(int argc,char** argv) {
        <<",\"sound_interrupt_enable\":"<<std::get<29>(first)
        <<",\"sound_interrupt_enable_known\":"<<std::get<30>(first)
        <<",\"sound_interrupt_pending\":"<<std::get<31>(first)
-       <<",\"sound_interrupt_pending_known\":"<<std::get<32>(first)<<"}}\n";
+       <<",\"sound_interrupt_pending_known\":"<<std::get<32>(first)
+       <<",\"boundary_d0_low\":"<<std::get<33>(first)
+       <<",\"boundary_d0_low_known\":"<<std::get<34>(first)
+       <<",\"boundary_a1\":"<<std::get<35>(first)
+       <<",\"boundary_a1_known\":"<<std::get<36>(first)<<"}}\n";
     return 0;
 }
 '''
