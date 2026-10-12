@@ -9,10 +9,10 @@
 
 namespace arcaderecomp_generated {
 
+template<bool destination_fp>
 static inline bool convert_integer_to_real_exact(CPU& cpu,
                                                  std::uint32_t integer_bits,
-                                                 unsigned destination,
-                                                 bool destination_fp) {
+                                                 unsigned destination) {
     if (destination >= (destination_fp ? 4u : 32u))
         return stop(cpu, StopCode::untranslated);
     // Signed 32-bit magnitude in unsigned arithmetic; INT_MIN is safe.
@@ -20,7 +20,7 @@ static inline bool convert_integer_to_real_exact(CPU& cpu,
     const std::uint32_t magnitude =
         negative ? (0u - integer_bits) : integer_bits;
     if (magnitude == 0u) {
-        if (destination_fp) {
+        if constexpr (destination_fp) {
             cpu.fp[destination] = {};
             cpu.fp_defined[destination] = true;
         } else {
@@ -31,7 +31,7 @@ static inline bool convert_integer_to_real_exact(CPU& cpu,
     unsigned msb = 31u;
     while (((magnitude >> msb) & 1u) == 0u)
         --msb;
-    if (destination_fp) {
+    if constexpr (destination_fp) {
         // Integer magnitude <= 2^31: every bit fits in the 64-bit
         // extended-real significand. All conversions here are exact.
         const std::uint64_t significand =

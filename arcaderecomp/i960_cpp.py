@@ -129,8 +129,8 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         if dest_fp and dst >= 4:
             return None
         value = _operand(word & 31, bool(word & 0x800))
-        return (f"if (!convert_integer_to_real_exact(cpu, {value}, "
-                f"{dst}u, {'true' if dest_fp else 'false'})) return false;")
+        return (f"if (!convert_integer_to_real_exact<{'true' if dest_fp else 'false'}>"
+                f"(cpu, {value}, {dst}u)) return false;")
 
     if ins.form == "REG" and op == "scaler":
         # Intel KB 677h: real src2 * 2^(signed integer src1).
@@ -254,9 +254,8 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
             return None
         if (src_fp and src >= 4) or (dst_fp and dst >= 4):
             return None
-        return (f"if (!log_binary_real_exact(cpu, {src}u, "
-                f"{'true' if src_fp else 'false'}, {dst}u, "
-                f"{'true' if dst_fp else 'false'})) return false;")
+        return (f"if (!log_binary_real_exact<{'true' if src_fp else 'false'}, "
+                f"{'true' if dst_fp else 'false'}>(cpu, {src}u, {dst}u)) return false;")
 
     if ins.form == "REG" and op == "movr":
         # Intel KB MOVR 6C9: real32 GPR / extended80 FP register move.

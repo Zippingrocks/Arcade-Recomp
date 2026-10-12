@@ -80,6 +80,8 @@ class CvtirExactNativeTests(unittest.TestCase):
         cpp, report = emit_cpp(struct.pack("<5I", *words), 0, 32)
         self.assertEqual(report.translated, 4)
         self.assertEqual(report.unsupported, (16,))
+        self.assertIn("convert_integer_to_real_exact<false>(cpu, cpu.r[16], 17u)", cpp)
+        self.assertIn("convert_integer_to_real_exact<true>(cpu, cpu.r[16], 1u)", cpp)
         values = ",\n".join("{"+",".join(str(x)+"u" for x in row)+"}"
                              for row in synthetic_rows())
         harness = (f"static const std::uint32_t cases[][6] = {{\n"
@@ -129,7 +131,23 @@ int main(){
            cpu.pending_integer_overflow.pending)return 9;
         ++successful;
     }
-    return (successful>1000u && declined>100u)?0:10;
+    if(successful<=1000u||declined<=100u)return 10;
+    // The format is a compile-time property of each translated instruction.
+    // Valid GPR r4 must never instantiate an fp[4] path; invalid boundaries
+    // stop before touching either register bank.
+    CPU gpr{};gpr.fp[0]={1u,2u,3u};gpr.fp_defined[0]=true;
+    if(!convert_integer_to_real_exact<false>(gpr,7u,4u)||
+       gpr.r[4]!=0x40e00000u||gpr.fp[0].low!=1u)return 11;
+    CPU fp{};fp.r[3]=0x12345678u;
+    if(!convert_integer_to_real_exact<true>(fp,7u,3u)||
+       !fp.fp_defined[3]||fp.r[3]!=0x12345678u)return 12;
+    CPU bad_gpr{};bad_gpr.r[0]=0x55u;
+    if(convert_integer_to_real_exact<false>(bad_gpr,7u,32u)||
+       bad_gpr.stop_code!=StopCode::untranslated||bad_gpr.r[0]!=0x55u)return 13;
+    CPU bad_fp{};bad_fp.fp[0]={1u,2u,3u};bad_fp.fp_defined[0]=true;
+    if(convert_integer_to_real_exact<true>(bad_fp,7u,4u)||
+       bad_fp.stop_code!=StopCode::untranslated||bad_fp.fp[0].low!=1u)return 14;
+    return 0;
 }
 """;
         compilers = [p for name in ("g++", "clang++")
