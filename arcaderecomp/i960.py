@@ -95,6 +95,7 @@ REGISTER = {
     0x78d: ("subr", "sss"),
     0x78f: ("addr", "sss"),
     0x79c: ("mulrl", "sss"),
+    0x79f: ("addrl", "sss"),
 }
 MEMORY = {
     0x80: "ldob", 0x82: "stob", 0x84: "bx", 0x85: "balx",
@@ -228,7 +229,7 @@ def decode(image: bytes, pc: int) -> Instruction:
         name, form = REGISTER[extended]
         floating = name in {
             "cvtir", "cvtzri", "cvtzril", "sqrtr", "logbnr", "movr", "movrl", "movre",
-            "cpysre", "cpyrsre", "scaler", "divr", "mulr", "mulrl", "subr", "addr",
+            "cpysre", "cpyrsre", "scaler", "divr", "mulr", "mulrl", "subr", "addr", "addrl",
         }
         # Intel KB Appendix B: bits 5/6 are reserved zero, NOT FP selectors.
         # For real source operands M1/M2=1 selects fp0..fp3 (indices 0..3).
@@ -256,7 +257,7 @@ def decode(image: bytes, pc: int) -> Instruction:
             if a is None or d is None or (integer_destination and word & 0x2000):
                 return _unknown(pc, word, "unsupported floating operand encoding")
             return Instruction(pc, word, 4, "REG", name, (a, d))
-        if name in ("cpysre", "cpyrsre", "scaler", "divr", "mulr", "mulrl", "subr", "addr"):
+        if name in ("cpysre", "cpyrsre", "scaler", "divr", "mulr", "mulrl", "subr", "addr", "addrl"):
             src1, src2, dst = word & 31, (word >> 14) & 31, (word >> 19) & 31
             a = ((str(src1) if word & 0x800 else reg(src1)) if name == "scaler"
                  else floating_operand(src1, bool(word & 0x800)))

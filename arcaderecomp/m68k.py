@@ -40,6 +40,8 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
     op = word()
     if op == 0x4e71:
         return Instruction(pc, 2, "nop")
+    if op == 0x4e75:
+        return Instruction(pc, 2, "rts")
     if op == 0x46fc:
         return Instruction(pc, 4, "move_to_sr", (word(2),))
     if op & 0xf100 == 0x7000:
@@ -132,12 +134,13 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         displacement = _signed(word(2), 16)
         return Instruction(pc, 4, "dbcc", ((op >> 8) & 15, op & 7),
                            (pc + 2 + displacement) & 0xffffffff)
-    if op & 0xf000 == 0x6000 and (op >> 8) & 15 != 1:  # BSR is not supported.
+    if op & 0xf000 == 0x6000:
         displacement, size = _signed(op & 255, 8), 2
         if not op & 255:
             displacement, size = _signed(word(2), 16), 4
         # 0xff is -1 on MC68000; it is NOT a 68020 long displacement marker.
-        return Instruction(pc, size, "bcc", ((op >> 8) & 15,),
+        cc = (op >> 8) & 15
+        return Instruction(pc, size, "bsr" if cc == 1 else "bcc", () if cc == 1 else (cc,),
                            (pc + 2 + displacement) & 0xffffffff)
     return Instruction(pc, 2, "unsupported")
 
@@ -161,10 +164,12 @@ def discover(image: bytes, entry: int, base: int = 0, limit: int = 4096):
             found[pc] = Instruction(pc, 0, "invalid_fetch")
             continue
         found[pc] = ins
-        if ins.mnemonic == "unsupported":
+        if ins.mnemonic in ("unsupported", "rts"):
             continue
         if ins.target is not None:
             pending.append(ins.target)
+        # BSR discovers the callee and the possible continuation. RTS uses the
+        # actual bus-supplied return address at run time, never guessed flow.
         if ins.mnemonic != "bcc" or ins.operands[0] != 0:
             pending.append(ins.next_pc)
     return tuple(found[k] for k in sorted(found)), bool(pending)

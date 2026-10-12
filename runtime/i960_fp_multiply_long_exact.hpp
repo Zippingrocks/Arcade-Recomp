@@ -2,7 +2,7 @@
 // Intel 270567-001, pp. 11-89/90, 12-12..14 and Appendix B. No host FP,
 // compiler-specific 128-bit type, inferred AC rounding, or exception delivery.
 #pragma once
-#include "i960_frame_runtime.hpp"
+#include "i960_fp_long_operand.hpp"
 #include <cstdint>
 
 namespace arcaderecomp_generated {
@@ -29,46 +29,6 @@ static inline LongRealProduct128 multiply_unsigned_64_wide(std::uint64_t a,
             hh + (lh >> 32u) + (hl >> 32u) + (middle >> 32u)};
 }
 
-struct LongRealMultiplyOperand {
-    std::uint64_t significand = 0u;
-    std::int32_t exponent = 0;
-    bool negative = false;
-    bool zero = false;
-};
-
-static inline bool read_long_real_multiply_operand(CPU& cpu, unsigned source,
-                                                   bool fp,
-                                                   LongRealMultiplyOperand& out) {
-    if (fp ? source >= 4u : source >= 32u || (source & 1u) != 0u)
-        return stop(cpu, StopCode::untranslated);
-    if (fp) {
-        const unsigned index = source & 3u;
-        if (!cpu.fp_defined[index])
-            return stop(cpu, StopCode::undefined_floating_point_register);
-        const ExtendedReal value = cpu.fp[index];
-        const unsigned exponent = value.high & 0x7fffu;
-        out.negative = (value.high & 0x8000u) != 0u;
-        out.significand = (static_cast<std::uint64_t>(value.middle) << 32u) | value.low;
-        out.zero = exponent == 0u && out.significand == 0u;
-        if (!out.zero && (exponent == 0u || exponent == 0x7fffu ||
-                         (value.middle & 0x80000000u) == 0u))
-            return stop(cpu, StopCode::unsupported_floating_format);
-        out.exponent = static_cast<std::int32_t>(exponent) - 16383;
-    } else {
-        const std::uint64_t bits = static_cast<std::uint64_t>(cpu.r[source]) |
-            (static_cast<std::uint64_t>(cpu.r[source + 1u]) << 32u);
-        const unsigned exponent = static_cast<unsigned>((bits >> 52u) & 0x7ffu);
-        const std::uint64_t fraction = bits & 0x000fffffffffffffull;
-        out.negative = (bits >> 63u) != 0u;
-        out.zero = exponent == 0u && fraction == 0u;
-        if ((!out.zero && exponent == 0u) || exponent == 0x7ffu)
-            return stop(cpu, StopCode::unsupported_floating_format);
-        out.exponent = static_cast<std::int32_t>(exponent) - 1023;
-        out.significand = out.zero ? 0u : ((std::uint64_t{1} << 52u) | fraction) << 11u;
-    }
-    return true;
-}
-
 static inline bool multiply_long_real_exact(CPU& cpu, unsigned first,
                                             bool first_fp, unsigned second,
                                             bool second_fp, unsigned destination,
@@ -76,11 +36,11 @@ static inline bool multiply_long_real_exact(CPU& cpu, unsigned first,
     if (destination_fp ? destination >= 4u :
         destination >= 32u || (destination & 1u) != 0u)
         return stop(cpu, StopCode::untranslated);
-    LongRealMultiplyOperand a{}, b{};
+    LongRealOperand a{}, b{};
     // Validate both sources even when the other is zero. Zero must not hide
     // an undefined FP register, infinity, NaN, or noncanonical operand.
-    if (!read_long_real_multiply_operand(cpu, first, first_fp, a) ||
-        !read_long_real_multiply_operand(cpu, second, second_fp, b))
+    if (!read_long_real_normal_operand(cpu, first, first_fp, a) ||
+        !read_long_real_normal_operand(cpu, second, second_fp, b))
         return false;
     const bool negative = a.negative != b.negative;
     std::uint64_t result = 0u;

@@ -18,8 +18,9 @@ The supported MC68000 subset is:
   interrupt mask 7; unsupported control changes stop before modifying state.
 - CLR byte/word/long to data registers; MOVEQ; MOVEA word/long from a data
   register; LEA absolute-long; NOP.
-- BRA and Bcc byte/word displacements; DBcc with a word counter. BSR is not
-  implemented. The MC68000 byte displacement `0xff` means -1, rather than the
+- BRA, Bcc and BSR byte/word displacements; DBcc with a word counter; RTS
+  with a bus-supplied return address. See [subroutine semantics and evidence](M68000_SUBROUTINES.md).
+  The MC68000 byte displacement `0xff` means -1, rather than the
   long-displacement extension used by later 680x0 processors.
 - CLR byte at `(d16,An)`, preserving the MC68000's documented **read before
   clear** bus access. The runtime performs a read, then writes zero, then
