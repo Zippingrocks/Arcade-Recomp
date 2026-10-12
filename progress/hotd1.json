@@ -1579,6 +1579,22 @@
         "docs/M68000_MOVE_DATA_TO_MEMORY.md"
       ],
       "note": "Added Motorola-manual-backed byte/word/long MOVE Dn to non-updating indirect, displacement, absolute-short and absolute-long memory with sized knownness, exact XNZVC, 24-bit addressing and high-word-first long writes. Three focused GCC/UBSan tests cover all widths and registers, extensions, wrap, unknown inputs, alignment, exclusions and partial write refusals; all 72 MC68000 tests and the 667-test full suite pass. Original 0x60040C MOVE.W D0,(A4) now translates; reset-vector graph grows 177/170 to 179/172 and advances that path to NEGX.B D6 at 0x600412 while seven explicit unsupported sites remain. Authenticated probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no device data was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_addi_native.py",
+        "tests/test_m68k_negx_native.py",
+        "docs/M68000_ADDI_NEGX.md"
+      ],
+      "note": "Added Motorola-manual-backed byte/word/long ADDI immediate and NEGX data-register arithmetic with upper-bit preservation and exact XNZVC; NEGX consumes X and preserves cumulative Z value and knownness for zero results. Six focused GCC/UBSan tests cover every width/register, exhaustive byte operands, wide boundaries, unknown state and invalid helpers; all 78 MC68000 tests and the 673-test full suite pass. Corrected raw-chip versus word-swapped board-region interpretation: original 0x600412 is ADDI.W immediate 0x20,D0, not NEGX. That ADDI now translates; reset-vector graph grows 179/172 to 183/176 and reaches register-count LSR.L D0,D1 at 0x600422 while seven unsupported sites remain. NEGX evidence is synthetic only. Authenticated probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no device data was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

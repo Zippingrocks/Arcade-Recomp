@@ -36,6 +36,10 @@ def _emit(ins):
         size, kind, reg, immediate = args
         return (f"return logic_immediate_d(cpu, {size}u, {kind}u, {reg}u, "
                 f"{_u(immediate)}, {next_pc});")
+    if op == "addi_d":
+        size, reg, immediate = args
+        return (f"return add_immediate_data(cpu, {size}u, {reg}u, "
+                f"{_u(immediate)}, {next_pc});")
     if op == "cmpi":
         size, immediate, mode, reg, displacement = args
         mask = _u((1 << (size * 8)) - 1)
@@ -123,6 +127,9 @@ def _emit(ins):
         mask = _u((1 << (size * 8)) - 1)
         return (f"cpu.d[{reg}] &= ~{mask}; cpu.d_known[{reg}] |= {mask}; "
                 f"logical_flags(cpu, false, true); {done}")
+    if op == "negx_d":
+        size, reg = args
+        return f"return negate_extend_data(cpu, {size}u, {reg}u, {next_pc});"
     if op == "movea":
         size, mode, source, dest, extra = args
         mask = "0xffffu" if size == 2 else "0xffffffffu"
