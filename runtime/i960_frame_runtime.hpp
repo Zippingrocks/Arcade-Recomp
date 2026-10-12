@@ -43,7 +43,9 @@ enum class StopCode : std::uint32_t {
     undefined_process_controls = 24,
     modpc_type_mismatch_unimplemented = 25,
     modpc_pending_interrupt_check_unimplemented = 26,
-    modpc_unsupported_fields = 27
+    modpc_unsupported_fields = 27,
+    undefined_arithmetic_controls = 28,
+    reserved_arithmetic_controls = 29
 };
 
 // A diagnostic handoff, not an architected in-memory fault record.
@@ -108,6 +110,12 @@ struct CPU {
     bool integer_overflow_mask_defined = false;
     bool integer_overflow_flag = false;
     bool integer_overflow_flag_defined = false;
+    // Remaining AC bits, including reserved-zero fields. The condition code
+    // and integer mask/flag above are the live sources for their own bits;
+    // kb_arithmetic_controls_snapshot composes the canonical complete word.
+    // No zero-initialized host storage establishes architected AC contents.
+    std::uint32_t arithmetic_controls_other = 0;
+    std::uint32_t arithmetic_controls_other_defined_mask = 0;
     PendingIntegerOverflow pending_integer_overflow{};
     bool prcb_loaded = false;
     std::uint32_t reinitialize_count = 0;
@@ -178,6 +186,8 @@ static inline bool frame_init(CPU& cpu, std::uint32_t initial_fp,
     cpu.known_process_controls = 0u;
     cpu.integer_overflow_mask_defined = false;
     cpu.integer_overflow_flag_defined = false;
+    cpu.arithmetic_controls_other = 0u;
+    cpu.arithmetic_controls_other_defined_mask = 0u;
     cpu.pending_integer_overflow = {};
     for (unsigned slot = 0; slot < 4; ++slot) {
         cpu.saved_valid[slot] = false;

@@ -343,17 +343,17 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Begin original sound CPU code/data audit; implement sound-side AOT and SCSP with timed command/audio validation.",
+      "next": "Extend the bounded 68000 AOT bootstrap and establish Model 2C sound reset-vector wiring; implement independently specified SCSP behavior beyond the refused 0x00100401 read, then validate timed commands/audio.",
       "tasks": [
         {
           "id": "audio.m68k",
           "title": "Motorola 68000 sound CPU recompilation",
-          "percent": 0
+          "percent": 5
         },
         {
           "id": "audio.rom",
           "title": "Sound-side ROM execution",
-          "percent": 0
+          "percent": 5
         },
         {
           "id": "audio.scsp",
@@ -1028,6 +1028,63 @@
         "tests/test_model2c_bus.py"
       ],
       "note": "Added exact fast paths for aligned plain ROM/RAM/data accesses and optional count-only completed-write tracking used by the strict native probe. Synthetic MSVC microbenchmarks measured about 1.9x ordinary read throughput, 1.25x traced RAM-write throughput, and 3x count-only write throughput; native semantic checks preserve width, alignment, fault, byte-order, and exact-count behavior. This changes host diagnostic speed, not Model 2C timing or hardware fidelity; model2c.map stays 50%, Model2C 20%, and original HOTD1 10%."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.faults",
+      "percent_before": 15,
+      "percent_after": 15,
+      "evidence": [
+        "runtime/i960_arithmetic_controls.hpp",
+        "runtime/i960_frame_runtime.hpp",
+        "arcaderecomp/i960_cpp.py",
+        "tests/test_i960_modac_native.py",
+        "docs/I960_ARITHMETIC_CONTROLS.md"
+      ],
+      "note": "Implemented Intel KB MODAC and complete AC snapshots composed from live condition-code/integer-overflow fields plus explicit other-bit knownness. Five synthetic GCC/UBSan tests cover 9360 mask/alias cases, integer/FP sequences, reserved/unknown refusal and reset/IAC invalidation; 94 surrounding CPU tests passed. MODAC still refuses undefined reset AC because general-register unknownness is absent. No fault dispatch, interrupt entry or cabinet proof is added; cpu.faults 15%, CPU 55%, Model2C 20%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "estimate",
+      "scope": "audio.m68k",
+      "percent_before": 0,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_bootstrap_native.py",
+        "docs/M68000_SOUND_BOOTSTRAP.md"
+      ],
+      "note": "First independent MC68000 native AOT subset: immediate SR initialization, MOVEQ, data-register CLR, MOVEA, absolute LEA, conditional branches/DBcc and byte CLR with documented read-before-write. ROM-free GCC/UBSan tests cover control flow, flags, aliases, partial definedness and explicit unsupported-state/device stops. Bounded CPU foundation justifies audio.m68k 0 to 5%; most instructions, exceptions/interrupts, timing, sound-board reset wiring and audible playback remain unimplemented. Parent audio remains 0%, overall HOTD1 10%."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "estimate",
+      "scope": "audio.rom",
+      "percent_before": 0,
+      "percent_after": 5,
+      "evidence": [
+        "runtime/m68k_sound_bus.hpp",
+        "tools/experimental/hotdo_sound_bootstrap_probe.py",
+        "tests/test_m68k_bootstrap_native.py",
+        "docs/M68000_SOUND_BOOTSTRAP.md"
+      ],
+      "note": "Private original chip epr-19720.31 matches SHA1 1edaed489a3518ddad85728e416319f940ea02bb and manifest size/CRC. Independently rerun native bootstrap with explicit ROM vector inputs completes 17 instructions then refuses the first SCSP read at 0x00100401, PC 0x00600148, with no device write. This is original-byte architecture-subset evidence, not physical reset or sound playback; generated C++/bytes stay private under ignored build/. audio.rom 0 to 5%; SCSP, audio parent and gameplay remain 0%, overall HOTD1 10%."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "hotd1",
+      "percent_before": 10,
+      "percent_after": 10,
+      "evidence": [
+        "tools/hotd1_strict_boot_probe.cpp",
+        "docs/I960_ARITHMETIC_CONTROLS.md",
+        "tools/experimental/hotdo_sound_bootstrap_probe.py"
+      ],
+      "note": "Reviewed CPU control-state and sound-bootstrap foundations separately from end-to-end completion. Authenticated original main-CPU regression still executes 1910 native instructions with documented TX, 318 mapped writes and two serial transmissions, then refuses the unobserved 0x01C0001A read at IP 0xA372C. No authentic serial replies, sound output, graphics or original-cabinet validation added. CPU 55%, Model2C 20%, audio 0%, overall original HOTD1 10%; Gates A/B/C all remain open."
     }
   ]
 }
