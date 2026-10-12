@@ -95,6 +95,13 @@ class SyntheticRomTests(unittest.TestCase):
                   "loads": [spec("sound.rom", raw, "0x0", 1, 1, True)]}
         self.assertEqual(reconstruct(region, {"sound.rom": raw}), b"\x02\x01\x04\x03")
 
+    def test_word_swap_rejects_odd_sized_input(self):
+        raw = b"\x01\x02\x03"
+        region = {"name": "sound", "size": "0x3",
+                  "loads": [spec("sound.rom", raw, "0x0", 1, 1, True)]}
+        with self.assertRaisesRegex(RomError, "even-sized"):
+            reconstruct(region, {"sound.rom": raw})
+
     def test_overlapping_roms_rejected(self):
         region = dict(self.region)
         region["copies"] = []

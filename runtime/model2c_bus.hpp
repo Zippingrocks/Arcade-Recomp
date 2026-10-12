@@ -227,6 +227,12 @@ public:
     void enable_geometry_access_trace(bool enabled = true) {
         geometry_trace_enabled_ = enabled;
     }
+    // Completed-write retention is diagnostic and can be expensive during a
+    // long native run. The exact count remains available when retention is
+    // disabled; serial and geometry evidence traces are controlled separately.
+    void enable_write_trace(bool enabled = true) {
+        write_trace_enabled_ = enabled;
+    }
     void set_geometry_access_trace_limit(std::size_t limit) {
         if (limit < geometry_trace_.size())
             throw std::invalid_argument(
@@ -300,6 +306,7 @@ public:
     }
 
     void write(std::uint32_t address, unsigned width, std::uint32_t value) {
+        if (write_plain_memory(address, width, value)) return;
         const auto reg = classify(address);
         if (is_geometry_region(reg)) {
             try { validate_access(address, width, true, reg); }
@@ -323,7 +330,7 @@ public:
                 throw;
             }
             record_serial_access(address, width, true, true, true, value);
-            writes_.push_back({address, value, width, reg});
+            record_write(address, value, width, reg);
             return;
         }
         validate_access(address, width, true, reg);
@@ -332,7 +339,7 @@ public:
             catch (const PartialModel2CTimers::Unverified& error) {
                 throw DeviceAccessFault(address, width, true, reg, error.what());
             }
-            writes_.push_back({address, value, width, reg});
+            record_write(address, value, width, reg);
             return;
         }
         if (reg == Region::irq_registers) {
@@ -343,7 +350,7 @@ public:
             else
                 throw DeviceAccessFault(address, width, true, reg,
                                         "unsupported IRQ register address");
-            writes_.push_back({address, value, width, reg});
+            record_write(address, value, width, reg);
             return;
         }
         if (reg != Region::work_ram && reg != Region::cpu_control)
@@ -354,10 +361,11 @@ public:
             array[base + i] = static_cast<std::uint8_t>(value >> (8u * i));
         if (reg == Region::cpu_control)
             ++pending_timing_writes_;
-        writes_.push_back({address, value, width, reg});
+        record_write(address, value, width, reg);
     }
 
     const std::vector<BusWrite>& writes() const { return writes_; }
+    std::uint64_t completed_write_count() const { return completed_write_count_; }
     std::size_t pending_timing_writes() const { return pending_timing_writes_; }
     const std::vector<std::uint8_t>& program() const { return program_; }
 
@@ -367,6 +375,8 @@ private:
     std::vector<std::uint8_t> control_;
     std::vector<std::uint8_t> game_data_;
     std::vector<BusWrite> writes_;
+    std::uint64_t completed_write_count_ = 0u;
+    bool write_trace_enabled_ = true;
     std::size_t pending_timing_writes_ = 0;
     bool serial_io_enabled_ = false;
     IO3155649 io_{};
@@ -436,6 +446,82 @@ private:
     PartialIRQRegisters irq_{};
     bool timers_enabled_ = false;
     PartialModel2CTimers timers_{};
+
+    void record_write(std::uint32_t address, std::uint32_t value,
+                      unsigned width, Region reg) {
+        if (completed_write_count_ == UINT64_MAX)
+            throw std::overflow_error("completed write counter exhausted");
+        ++completed_write_count_;
+        if (write_trace_enabled_)
+            writes_.push_back({address, value, width, reg});
+    }
+
+    static std::uint32_t load_little(const std::vector<std::uint8_t>& bytes,
+                                     std::size_t offset, unsigned width) {
+        std::uint32_t result = bytes[offset];
+        if (width >= 2u)
+            result |= std::uint32_t(bytes[offset + 1u]) << 8u;
+        if (width == 4u) {
+            result |= std::uint32_t(bytes[offset + 2u]) << 16u;
+            result |= std::uint32_t(bytes[offset + 3u]) << 24u;
+        }
+        return result;
+    }
+
+    static void store_little(std::vector<std::uint8_t>& bytes,
+                             std::size_t offset, unsigned width,
+                             std::uint32_t value) {
+        bytes[offset] = static_cast<std::uint8_t>(value);
+        if (width >= 2u)
+            bytes[offset + 1u] = static_cast<std::uint8_t>(value >> 8u);
+        if (width == 4u) {
+            bytes[offset + 2u] = static_cast<std::uint8_t>(value >> 16u);
+            bytes[offset + 3u] = static_cast<std::uint8_t>(value >> 24u);
+        }
+    }
+
+    static bool ordinary_width_and_alignment(std::uint32_t address,
+                                             unsigned width) {
+        return (width == 1u || width == 2u || width == 4u) &&
+               (width == 1u || (address & (width - 1u)) == 0u);
+    }
+
+    bool read_plain_memory(std::uint32_t address, unsigned width,
+                           std::uint32_t& value) const {
+        if (!ordinary_width_and_alignment(address, width)) return false;
+        if (address < kProgramSize && kProgramSize - address >= width) {
+            value = load_little(program_, address, width);
+            return true;
+        }
+        if (inside(address, kWorkStart, kWorkSize) &&
+            kWorkSize - (address - kWorkStart) >= width) {
+            value = load_little(work_, address - kWorkStart, width);
+            return true;
+        }
+        if (!game_data_.empty() && inside(address, kDataStart, kDataSize) &&
+            kDataSize - (address - kDataStart) >= width) {
+            value = load_little(game_data_, address - kDataStart, width);
+            return true;
+        }
+        if (!game_data_.empty() && inside(address, kExtraStart, kExtraSize) &&
+            kExtraSize - (address - kExtraStart) >= width) {
+            value = load_little(game_data_, 0x01000000u + address - kExtraStart,
+                                width);
+            return true;
+        }
+        return false;
+    }
+
+    bool write_plain_memory(std::uint32_t address, unsigned width,
+                            std::uint32_t value) {
+        if (!ordinary_width_and_alignment(address, width) ||
+            !inside(address, kWorkStart, kWorkSize) ||
+            kWorkSize - (address - kWorkStart) < width)
+            return false;
+        store_little(work_, address - kWorkStart, width, value);
+        record_write(address, value, width, Region::work_ram);
+        return true;
+    }
 
     static bool inside(std::uint32_t address, std::uint32_t start,
                        std::uint32_t length) {
@@ -558,6 +644,8 @@ private:
     }
 
     std::uint32_t read_value(std::uint32_t address, unsigned width) const {
+        std::uint32_t plain_value = 0u;
+        if (read_plain_memory(address, width, plain_value)) return plain_value;
         const auto reg = classify(address);
         if (is_geometry_region(reg)) {
             try { validate_access(address, width, false, reg); }

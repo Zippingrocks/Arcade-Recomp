@@ -46,7 +46,7 @@ void report(const arcaderecomp_generated::CPU& cpu,
               << " frame_depth=" << cpu.frame_depth
               << " spills=" << cpu.frame_spills
               << " reloads=" << cpu.frame_reloads
-              << " mapped_writes=" << board.writes().size()
+              << " mapped_writes=" << board.completed_write_count()
               << " CPU_control_writes=" << board.pending_timing_writes()
               << " documented_serial_tx=" << board.serial_device().transmissions().size()
               << "\n";
@@ -178,6 +178,9 @@ int main(int argc, char** argv) {
         board.enable_partial_serial_io(partial_serial || replay != nullptr);
         board.enable_serial_access_trace(partial_serial || replay != nullptr);
         board.enable_geometry_access_trace(geometry_trace);
+        // The report needs the exact count, not a retained copy of every RAM
+        // write. Avoid unbounded diagnostic allocation on long native runs.
+        board.enable_write_trace(false);
         auto bus = board.callbacks();
         arcaderecomp_generated::CPU cpu{};
         if (!arcaderecomp_generated::frame_init(cpu, initial_fp, initial_ip)) {
