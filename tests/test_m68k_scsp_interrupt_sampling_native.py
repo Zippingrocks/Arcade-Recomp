@@ -20,20 +20,47 @@ int main(){InterruptControl irq;unsigned level=99;
  return 0;}
 ''')
 
-    def test_execution_allows_proven_masked_or_absent_and_refuses_unknown_or_accepted(self):
+    def test_execution_allows_masked_and_enters_known_autovector(self):
         source,report=emit_cpp(words(0x4e71,0xffff),0)
         self.assertEqual(report.translated,1)
         native(source,r'''
 using namespace arcaderecomp_m68k_generated;
-struct IRQBus:Bus{bool known=true;unsigned level=0;bool interrupt_level(unsigned& v)override{v=level;return known;}};
+struct IRQBus:Bus{bool known=true;unsigned level=0,writes=0;
+ bool interrupt_level(unsigned& v)override{v=level;return known;}
+ void write16(std::uint32_t,std::uint16_t)override{++writes;}
+ std::uint16_t read16(std::uint32_t a)override{return a&2u?0x0100u:0u;}};
 int main(){IRQBus bus;
  for(unsigned mask=0;mask<8u;++mask)for(unsigned level=0;level<8u;++level){
-  CPU cpu;reset_from_vectors(cpu,0x2000u,0u);cpu.sr=static_cast<std::uint16_t>(0x2000u|(mask<<8u));bus.level=level;
-  const bool ok=step(cpu,bus);if(ok!=(level<=mask))return 1;
-  if(!ok&&(cpu.completed||cpu.pc||cpu.stop!=Stop::unsupported_control))return 2;
+  CPU cpu;reset_from_vectors(cpu,0x2000u,0u);cpu.sr=static_cast<std::uint16_t>(0x2000u|(mask<<8u));
+  cpu.sr_known=0xffffu;bus.level=level;bus.writes=0;
+  if(!step(cpu,bus))return 1;
+  if(level>mask){if(cpu.completed||cpu.pc!=0x100u||cpu.a[7]!=0x1ffau||bus.writes!=3u||
+      ((cpu.sr>>8u)&7u)!=level)return 2;}
+  else if(cpu.completed!=1u||cpu.pc!=2u||bus.writes)return 3;
  }
  CPU unknown;reset_from_vectors(unknown,0x2000u,0u);unknown.sr=0x2200u;bus.known=false;
- if(step(unknown,bus)||unknown.stop!=Stop::unsupported_control)return 3;
+ if(step(unknown,bus)||unknown.stop!=Stop::unsupported_control)return 4;
+ return 0;}
+''')
+
+    def test_autovector_bus_order_frame_and_strict_partial_failure(self):
+        source,_=emit_cpp(words(0x4e71,0xffff),0)
+        native(source,r'''
+using namespace arcaderecomp_m68k_generated;
+struct B:Bus{unsigned level=3,op=0,fail=99;std::uint32_t a[5]{};std::uint16_t v[5]{};
+ bool interrupt_level(unsigned& x)override{x=level;return true;}
+ void write16(std::uint32_t x,std::uint16_t y)override{if(op==fail)throw BusFault(x,true,2);a[op]=x;v[op++]=y;}
+ std::uint16_t read16(std::uint32_t x)override{if(op==fail)throw BusFault(x,false,2);a[op]=x;v[op++]=x==0x6cu?0x0060u:0x1234u;return v[op-1];}};
+int main(){B b;CPU c;reset_from_vectors(c,0x1000u,0x89abcdeeu);c.sr=0x2215u;c.sr_known=0xffffu;
+ if(!step(c,b)||c.completed||c.a[7]!=0xffau||c.pc!=0x00601234u||c.sr!=0x2315u)return 1;
+ const std::uint32_t ea[5]={0xffeu,0xffau,0xffcu,0x6cu,0x6eu};
+ const std::uint16_t ev[3]={0xcdeeu,0x2215u,0x89abu};
+ for(unsigned i=0;i<5u;++i)if(b.a[i]!=ea[i])return 2;
+ for(unsigned i=0;i<3u;++i)if(b.v[i]!=ev[i])return 3;
+ B f;f.fail=2;CPU d;reset_from_vectors(d,0x1000u,0x200u);d.sr=0x2100u;d.sr_known=0xffffu;
+ if(step(d,f)||d.stop!=Stop::bus_access||f.op!=2u||d.a[7]!=0x1000u||d.pc!=0x200u)return 4;
+ CPU u;reset_from_vectors(u,0x1000u,0u);u.sr=0x2000u;u.sr_known=0xfff0u;B ub;
+ if(step(u,ub)||u.stop!=Stop::undefined_state||ub.op)return 5;
  return 0;}
 ''')
 

@@ -543,8 +543,10 @@ def emit_cpp(image: bytes, entry: int, base: int = 0, limit: int = 4096,
     source = ['#include "m68k_runtime.hpp"', "namespace arcaderecomp_m68k_generated {",
               "using namespace arcaderecomp::m68k;",
               "inline bool step(CPU& cpu, Bus& bus) {",
-              "if (!execution_allowed(cpu, bus)) return false;",
-              "(void)bus; try { switch(cpu.pc) {"]
+              "try { bool exception_taken = false;",
+              "if (!execution_allowed(cpu, bus, exception_taken)) return false;",
+              "if (exception_taken) return true;",
+              "(void)bus; switch(cpu.pc) {"]
     for ins in instructions:
         source.append(f"case {_u(ins.pc)}: {{ {_emit(ins)} }}")
     source += ["default: return stop(cpu, Stop::untranslated_pc);", "}",

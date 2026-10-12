@@ -64,7 +64,41 @@ inline bool reset_from_vectors(CPU& cpu, std::uint32_t ssp, std::uint32_t pc) {
     return true;
 }
 
-inline bool execution_allowed(CPU& cpu, Bus& bus) {
+// MC68000 group-1 autovector entry. Motorola AN1012 gives the observable bus
+// order: stack PC low, stack the saved SR, stack PC high, then read the vector
+// high and low words. The final six-byte frame is SR/PCH/PCL at ascending
+// addresses. Accepted earlier cycles survive a later BusFault; CPU diagnostic
+// state commits only after the complete entry succeeds.
+inline bool interrupt_autovector(CPU& cpu, Bus& bus, unsigned level) {
+    if (level < 1u || level > 7u) return stop(cpu, Stop::unsupported_control);
+    if (!cpu.a_known[7] || cpu.sr_known != 0xffffu)
+        return stop(cpu, Stop::undefined_state);
+    const std::uint32_t old_sp = cpu.a[7];
+    const std::uint32_t frame = old_sp - 6u;
+    if (frame & 1u) {
+        cpu.access_address = frame & 0x00ffffffu;
+        cpu.access_width = 2u; cpu.access_write = true;
+        return stop(cpu, Stop::data_address);
+    }
+    const std::uint16_t saved_sr = cpu.sr;
+    bus.write16((old_sp - 2u) & 0x00ffffffu,
+                static_cast<std::uint16_t>(cpu.pc));
+    bus.write16(frame & 0x00ffffffu, saved_sr);
+    bus.write16((old_sp - 4u) & 0x00ffffffu,
+                static_cast<std::uint16_t>(cpu.pc >> 16u));
+    const std::uint32_t vector = (24u + level) * 4u;
+    const std::uint32_t high = bus.read16(vector);
+    const std::uint32_t low = bus.read16(vector + 2u);
+    cpu.a[7] = frame;
+    cpu.sr = static_cast<std::uint16_t>((saved_sr & ~0x8700u) |
+                                       0x2000u | (level << 8u));
+    cpu.sr_known = 0xffffu;
+    cpu.pc = (high << 16u) | low;
+    return true;
+}
+
+inline bool execution_allowed(CPU& cpu, Bus& bus, bool& exception_taken) {
+    exception_taken = false;
     if (cpu.stop != Stop::none) return false;
     if (cpu.pc & 1u) return stop(cpu, Stop::instruction_address);
     // No trace exception or stack-bank switch is modeled.
@@ -75,8 +109,10 @@ inline bool execution_allowed(CPU& cpu, Bus& bus) {
     unsigned external_level=0;
     if(!bus.interrupt_level(external_level)||external_level>7u)
         return stop(cpu, Stop::unsupported_control);
-    // Sampling is exact; exception entry remains a separate required unit.
-    if(external_level>mask)return stop(cpu, Stop::unsupported_control);
+    if(external_level>mask) {
+        if(!interrupt_autovector(cpu,bus,external_level))return false;
+        exception_taken=true;
+    }
     return true;
 }
 

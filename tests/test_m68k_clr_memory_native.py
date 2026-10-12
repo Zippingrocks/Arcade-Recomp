@@ -205,8 +205,14 @@ struct Memory:Bus {
         if(address!=expected||write!=(offset>=2))throw std::runtime_error("wrong loop access");
         ++calls;
     }
-    std::uint16_t read16(std::uint32_t a)override{check(a,false);return memory[(a-0x1000u)/2];}
-    void write16(std::uint32_t a,std::uint16_t v)override{check(a,true);memory[(a-0x1000u)/2]=v;}
+    std::uint16_t read16(std::uint32_t a)override{
+        if(a<0x1000u||a>0x100au||(a&1u))throw BusFault{a,false,2};
+        check(a,false);return memory[(a-0x1000u)/2];
+    }
+    void write16(std::uint32_t a,std::uint16_t v)override{
+        if(a<0x1000u||a>0x100au||(a&1u))throw BusFault{a,true,2};
+        check(a,true);memory[(a-0x1000u)/2]=v;
+    }
 };
 int main() {
     CPU cpu;reset_from_vectors(cpu,0x2000,0);Memory bus;
