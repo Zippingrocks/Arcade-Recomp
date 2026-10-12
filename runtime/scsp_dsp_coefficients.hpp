@@ -1,5 +1,5 @@
-// SCSP DSP coefficient register file only; no DSP execution or audio timing.
-// Sega ST-077-R2-052594: 64 R/W COEF[12:0] words at 0x100700..0x10077f.
+// SCSP DSP register files only; no DSP execution or audio timing.
+// Sega ST-077-R2-052594: COEF, MADRS and MPRO bus-visible storage.
 #pragma once
 #include <array>
 #include <cstdint>
@@ -94,6 +94,56 @@ public:
     }
     std::uint16_t value(unsigned i)const{return i<32u?value_[i]:0u;}
     std::uint16_t known_mask(unsigned i)const{return i<32u?known_[i]:0u;}
+    std::uint64_t completed_writes()const{return writes_;}
+    std::uint64_t completed_discarded_reads()const{return discarded_reads_;}
+};
+
+// 128 R/W 64-bit DSP microinstructions at 0x100800..0x100bff. The MC68000
+// bus observes MPRO as 512 big-endian 16-bit words; instruction decoding and
+// DSP execution are deliberately separate concerns.
+class DspMicroprogram final {
+    std::array<std::uint16_t,512> value_{};
+    std::array<std::uint16_t,512> known_{};
+    std::uint64_t writes_ = 0;
+    std::uint64_t discarded_reads_ = 0;
+public:
+    static constexpr unsigned bytes = 0x400u;
+    static constexpr unsigned words = 512u;
+
+    void invalidate() { *this = DspMicroprogram{}; }
+    bool read8(unsigned offset,std::uint8_t& result) const {
+        if(offset>=bytes)return false;
+        const unsigned i=offset>>1u,s=(offset&1u)?0u:8u;
+        if(((known_[i]>>s)&0xffu)!=0xffu)return false;
+        result=static_cast<std::uint8_t>(value_[i]>>s);
+        return true;
+    }
+    bool read16(unsigned offset,std::uint16_t& result) const {
+        if(offset>=bytes||(offset&1u)||known_[offset>>1u]!=0xffffu)return false;
+        result=value_[offset>>1u];
+        return true;
+    }
+    bool read8_discard(unsigned offset){
+        if(offset>=bytes)return false;
+        ++discarded_reads_;return true;
+    }
+    bool read16_discard(unsigned offset){
+        if(offset>=bytes||(offset&1u))return false;
+        ++discarded_reads_;return true;
+    }
+    bool write8(unsigned offset,std::uint8_t value){
+        if(offset>=bytes)return false;
+        const unsigned i=offset>>1u,s=(offset&1u)?0u:8u;
+        const auto mask=static_cast<std::uint16_t>(0xffu<<s);
+        value_[i]=static_cast<std::uint16_t>((value_[i]&~mask)|(std::uint16_t(value)<<s));
+        known_[i]|=mask;++writes_;return true;
+    }
+    bool write16(unsigned offset,std::uint16_t value){
+        if(offset>=bytes||(offset&1u))return false;
+        value_[offset>>1u]=value;known_[offset>>1u]=0xffffu;++writes_;return true;
+    }
+    std::uint16_t value(unsigned i)const{return i<words?value_[i]:0u;}
+    std::uint16_t known_mask(unsigned i)const{return i<words?known_[i]:0u;}
     std::uint64_t completed_writes()const{return writes_;}
     std::uint64_t completed_discarded_reads()const{return discarded_reads_;}
 };

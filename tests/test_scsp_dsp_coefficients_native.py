@@ -68,7 +68,7 @@ int main(){SoundROMBus bus(std::vector<std::uint8_t>(0x80000u,0));bus.enable_dsp
     bus.dsp_memory_addresses().completed_discarded_reads()!=32u)return 2;
  bus.write8(0x100780u,0x12u);bus.write8(0x100781u,0x34u);
  if(bus.read16(0x100780u)!=0x1234u)return 3;
- for(unsigned a:{0x1007c0u,0x1007feu,0x100800u}){
+ for(unsigned a:{0x1007c0u,0x1007deu,0x1007feu}){
   try{bus.read16_discard(a);return 4;}catch(const BusFault&){}
  }
  return 0;}
