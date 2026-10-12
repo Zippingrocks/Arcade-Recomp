@@ -83,7 +83,7 @@ class M68kClrMemoryTests(unittest.TestCase):
                     for end in range(2, len(data)):
                         with self.assertRaises(ValueError):
                             decode(data[:end], 0)
-            for mode, reg in ((1, 0), (4, 0), (6, 0), (7, 2), (7, 3), (7, 4), (7, 5), (7, 7)):
+            for mode, reg in ((1, 0), (4, 0), (7, 2), (7, 3), (7, 4), (7, 5), (7, 7)):
                 self.assertEqual(decode(clr(size, mode, reg, 0, 0), 0).mnemonic, "unsupported")
         for mode in range(8):
             self.assertEqual(decode(words(0x42c0 | mode << 3, 0, 0), 0).mnemonic, "unsupported")

@@ -93,6 +93,15 @@ def _emit(ins):
                 f"if (!read_operand(cpu, bus, {address}, {size}u, value)) return false; " + update +
                 f"cpu.d[{dest}] = (cpu.d[{dest}] & ~{mask}) | value; cpu.d_known[{dest}] |= {mask}; "
                 f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
+    if op == "move_indexed_to_d":
+        size, base, dest, extension = args
+        mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
+        return (f"std::uint32_t address = 0; if (!indexed_address(cpu, {base}u, "
+                f"{extension}u, address)) return false; std::uint32_t value = 0; "
+                f"if (!read_operand(cpu, bus, address, {size}u, value)) return false; "
+                f"cpu.d[{dest}] = (cpu.d[{dest}] & ~{mask}) | value; "
+                f"cpu.d_known[{dest}] |= {mask}; "
+                f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
     if op == "move_memory_to_memory":
         (size, source_mode, source, source_displacement, destination_mode,
          destination, destination_displacement) = args
@@ -161,6 +170,16 @@ def _emit(ins):
             statements.append(f"if (!write_move(cpu, bus, {address}, {size}u, value)) return false;")
         statements += [f"logical_flags(cpu, (value & {sign}) != 0, value == 0);", done]
         return " ".join(statements)
+    if op == "move_d_to_indexed":
+        size, source, base, extension = args
+        mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
+        return (f"if ((cpu.d_known[{source}] & {mask}) != {mask}) "
+                f"return stop(cpu, Stop::undefined_state); "
+                f"std::uint32_t address = 0; if (!indexed_address(cpu, {base}u, "
+                f"{extension}u, address)) return false; "
+                f"const std::uint32_t value = cpu.d[{source}] & {mask}; "
+                f"if (!write_move(cpu, bus, address, {size}u, value)) return false; "
+                f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
     if op == "shift_immediate":
         size, reg, count, left, kind = args
         return (f"return shift_immediate(cpu, {size}u, {reg}u, {count}u, "
@@ -225,6 +244,14 @@ def _emit(ins):
         statements.append(f"cpu.a[{dest}] = {value}; cpu.a_known[{dest}] = true;")
         statements.append(done)
         return " ".join(statements)
+    if op == "movea_indexed":
+        size, base, dest, extension = args
+        value = ("((value & 0x8000u) ? (value | 0xffff0000u) : "
+                 "(value & 0xffffu))" if size == 2 else "value")
+        return (f"std::uint32_t address = 0; if (!indexed_address(cpu, {base}u, "
+                f"{extension}u, address)) return false; std::uint32_t value = 0; "
+                f"if (!read_operand(cpu, bus, address, {size}u, value)) return false; "
+                f"cpu.a[{dest}] = {value}; cpu.a_known[{dest}] = true; {done}")
     if op == "lea_absolute":
         dest, address = args
         return f"cpu.a[{dest}] = {_u(address)}; cpu.a_known[{dest}] = true; {done}"
@@ -303,6 +330,12 @@ def _emit(ins):
             statements.append(f"cpu.a[{reg}] += {increment}u;")
         statements += ["logical_flags(cpu, false, true);", done]
         return " ".join(statements)
+    if op == "clr_memory_indexed":
+        size, base, extension = args
+        return (f"std::uint32_t address = 0; if (!indexed_address(cpu, {base}u, "
+                f"{extension}u, address)) return false; "
+                f"if (!clear_memory(cpu, bus, address, {size}u)) return false; "
+                f"logical_flags(cpu, false, true); {done}")
     if op == "bcc":
         return (f"bool taken = false; if (!condition(cpu, {args[0]}u, taken)) return false; "
                 f"return finish(cpu, taken ? {_u(ins.target)} : {next_pc});")
