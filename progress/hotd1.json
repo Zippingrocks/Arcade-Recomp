@@ -1403,6 +1403,22 @@
         "docs/M68000_SUBROUTINES.md"
       ],
       "note": "Added native BSR short/word and RTS with actual bus-supplied returns, 32-bit A7 and 24-bit word cycles, preserved CCR knownness, explicit unknown/alignment/refusal stops and observable partial bus effects. Motorola primary patent diagrams visually verify high-first stack transfers. Six new GCC/UBSan tests and strict Clang19 syntax checks pass; independent review clean. Authenticated original BSR 0x6001BE passes 3072 isolated synthetic-stack checks and reaches next unsupported 0x60035E after four instructions; strict stack write still refused. Static sound graph 48/47 to 88/77; continuous probes unchanged at 17 strict or 18 optional SCSP-control instructions. No sound RAM, board-control acceptance or audio invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.aot",
+      "percent_before": 80,
+      "percent_after": 80,
+      "evidence": [
+        "arcaderecomp/i960_cpp.py",
+        "runtime/i960_fp_convert.hpp",
+        "runtime/i960_fp_logb.hpp",
+        "tests/test_i960_cvtir_exact_native.py",
+        "tests/test_i960_logbnr_native.py",
+        "docs/I960_ADDRL.md"
+      ],
+      "note": "Specialized fixed CVTIR and LOGBNR register-bank formats at C++ compile time with if constexpr, eliminating unreachable fp[4] code from GPR-destination translations while retaining explicit bounds and exact numeric behavior. Five focused and all 201 i960 tests pass GCC/UBSan; full private 3311/3311 translation passes Windows Clang19 strict O2 syntax and GCC11.4 O2 -Wall -Wextra -Werror, resolving the prior warning and optimizer ICE without suppression or reduced optimization. Fresh O2 probe remains 1910 instructions then refuses unobserved serial status 0x01C0001A. This is a build-correctness repair, not hardware progress; cpu.aot 80%, CPU 55%, overall HOTD1 10% unchanged."
     }
   ]
 }

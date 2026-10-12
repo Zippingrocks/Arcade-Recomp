@@ -132,6 +132,9 @@ int main() {
         report = build_test(words, harness)
         self.assertEqual(report.translated, 2)
         self.assertEqual(report.unsupported, (8,))
+        source, _ = emit_cpp(struct.pack("<3I", *words), 0, 16)
+        self.assertIn("log_binary_real_exact<false, false>", source)
+        self.assertIn("log_binary_real_exact<false, true>", source)
 
     def test_native_extended_source_alias_and_fail_closed(self):
         words = [logbnr(0, 1, src_fp=True, dst_fp=True),

@@ -120,5 +120,26 @@ and no source workaround was added. `-O1` is only a private diagnostic build,
 not proof that the full original program builds successfully at `-O2`.
 The optimizer failure remains a build limitation to investigate separately.
 
+### Optimized-build follow-up (2026-10-11)
+
+The CVTIR and LOGBNR emitters now encode source/destination register-bank
+selection as C++ template arguments. Their helpers use `if constexpr`, so a
+GPR-destination instruction never instantiates FP-array access and vice versa.
+This matches the fixed AOT opcode property and removes the unreachable
+`fp[4]` path that GCC 11 diagnosed while optimizing the complete generated
+program. Bounds remain checked inside each specialization; invalid GPR 32 and
+FP 4 destinations stop before either bank changes. Numeric conversion,
+knownness and unsupported-rounding behavior are unchanged.
+
+After regenerating from the four authenticated original main chips, the full
+3,311/3,311 private translation passes Windows Clang 19 strict `-O2` syntax
+checking and GCC 11.4 `-O2 -Wall -Wextra -Werror` compilation. The fresh
+optimized probe again completes exactly 1,910 instructions, 318 mapped writes,
+14 CPU-control writes and two serial transmissions before refusing the
+unobserved `0x01C0001A` status read. The earlier warning and GCC internal
+compiler error are gone without suppressing diagnostics or lowering
+optimization. This restores an optimized diagnostic build; it does not
+advance past unknown hardware or establish cabinet execution.
+
 Subjective estimates remain **floating 40% → 40%, CPU 55% → 55%, overall
 original HOTD1 10% → 10%**. Gates A/B/C remain open.

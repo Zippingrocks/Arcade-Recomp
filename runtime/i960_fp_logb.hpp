@@ -9,15 +9,16 @@
 #include <cstdint>
 
 namespace arcaderecomp_generated {
+template<bool source_fp, bool dest_fp>
 static inline bool log_binary_real_exact(CPU& cpu,
-                                         unsigned source, bool source_fp,
-                                         unsigned destination, bool dest_fp) {
+                                         unsigned source,
+                                         unsigned destination) {
     if (source >= (source_fp ? 4u : 32u) ||
         destination >= (dest_fp ? 4u : 32u))
         return stop(cpu, StopCode::untranslated);
 
     std::int32_t exponent = 0;
-    if (source_fp) {
+    if constexpr (source_fp) {
         if (!cpu.fp_defined[source])
             return stop(cpu, StopCode::undefined_floating_point_register);
         const ExtendedReal value = cpu.fp[source];
@@ -40,7 +41,7 @@ static inline bool log_binary_real_exact(CPU& cpu,
     // The result is always an EXACT integer in [-16382,+16383].
     // Both IEEE binary32 and 80-bit extended can represent that value.
     // Helper captures the signed integer bits and preserves AC.cc.
-    return convert_integer_to_real_exact(
-        cpu, static_cast<std::uint32_t>(exponent), destination, dest_fp);
+    return convert_integer_to_real_exact<dest_fp>(
+        cpu, static_cast<std::uint32_t>(exponent), destination);
 }
 } // namespace arcaderecomp_generated
