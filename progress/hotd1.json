@@ -1564,6 +1564,21 @@
         "docs/M68000_MOVE_ADDRESS_TO_MEMORY.md"
       ],
       "note": "Added Motorola-manual-backed word/long MOVE An to non-updating indirect, displacement, absolute-short and absolute-long memory with exact sized data, XNZVC, 24-bit addressing and high-word-first long writes. Three focused GCC/UBSan tests cover every source and base register, aliases, extensions, wrap, unknown inputs, alignment and partial write refusals; all 69 MC68000 tests and the 664-test full suite pass. Original 0x6003F4 MOVE.L A4,$0EE4.W now translates; reset-vector graph grows 172/165 to 177/170 and advances that path to MOVE.W D0,(A4) at 0x60040C while seven explicit unsupported sites remain. Authenticated probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no device data was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "tests/test_m68k_move_data_to_memory_native.py",
+        "tests/test_m68k_moves_shifts_native.py",
+        "docs/M68000_MOVE_DATA_TO_MEMORY.md"
+      ],
+      "note": "Added Motorola-manual-backed byte/word/long MOVE Dn to non-updating indirect, displacement, absolute-short and absolute-long memory with sized knownness, exact XNZVC, 24-bit addressing and high-word-first long writes. Three focused GCC/UBSan tests cover all widths and registers, extensions, wrap, unknown inputs, alignment, exclusions and partial write refusals; all 72 MC68000 tests and the 667-test full suite pass. Original 0x60040C MOVE.W D0,(A4) now translates; reset-vector graph grows 177/170 to 179/172 and advances that path to NEGX.B D6 at 0x600412 while seven explicit unsupported sites remain. Authenticated probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no device data was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

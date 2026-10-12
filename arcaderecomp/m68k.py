@@ -134,9 +134,14 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
                 displacement, length = word(2) << 16 | word(4), 6
             return Instruction(pc, length, "move_memory_to_d",
                                (size, src_mode, src_reg, displacement, dst_reg))
-        if ((src_mode == 0 or (src_mode, src_reg) == (7, 4)) and
-                (dst_mode == 0 or (size != 4 and
-                 (dst_mode == 5 or (dst_mode == 7 and dst_reg in (0, 1)))))):
+        data_memory_destination = (dst_mode in (2, 5) or
+                                   (dst_mode == 7 and dst_reg in (0, 1)))
+        if ((src_mode == 0 and
+             (dst_mode == 0 or data_memory_destination)) or
+                ((src_mode, src_reg) == (7, 4) and
+                 (dst_mode == 0 or (size != 4 and
+                  (dst_mode == 5 or
+                   (dst_mode == 7 and dst_reg in (0, 1))))))):
             length = 2
             if src_mode == 0:
                 source_kind, source = 0, src_reg
