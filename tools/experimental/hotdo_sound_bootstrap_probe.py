@@ -30,8 +30,9 @@ HARNESS = r'''
 #include <string>
 #include <vector>
 int main(int argc, char** argv) {
-    if (argc != 4 || (std::string(argv[2]) != "0" && std::string(argv[2]) != "1") ||
-            (std::string(argv[3]) != "0" && std::string(argv[3]) != "1")) return 2;
+    if (argc != 5 || (std::string(argv[2]) != "0" && std::string(argv[2]) != "1") ||
+            (std::string(argv[3]) != "0" && std::string(argv[3]) != "1") ||
+            (std::string(argv[4]) != "0" && std::string(argv[4]) != "1")) return 2;
     std::ifstream file(argv[1], std::ios::binary);
     if (!file) return 3;
     std::vector<std::uint8_t> image((std::istreambuf_iterator<char>(file)), {});
@@ -46,6 +47,7 @@ int main(int argc, char** argv) {
     SoundROMBus bus(std::move(image));
     bus.enable_common_control_research(std::string(argv[2]) == "1");
     bus.enable_hotd_sound_control_research(std::string(argv[3]) == "1");
+    bus.enable_sound_ram_research(std::string(argv[4]) == "1");
     while (cpu.completed < 100000u && step(cpu, bus)) {}
     std::cout << "{\"completed_instructions\":" << cpu.completed
       << ",\"pc\":" << cpu.pc << ",\"sr\":" << cpu.sr
@@ -64,6 +66,7 @@ int main(int argc, char** argv) {
       << ",\"sound_control_writes\":" << bus.hotd_sound_control().completed_writes()
       << ",\"sound_control_last_data\":" << bus.hotd_sound_control().last_transaction_data()
       << ",\"sound_control_last_known_mask\":" << bus.hotd_sound_control().last_transaction_known_mask()
+      << ",\"sound_ram_known_bytes\":" << bus.sound_ram().known_bytes()
       << "}\n";
     return cpu.stop == Stop::none ? 6 : 0;
 }
@@ -79,6 +82,8 @@ def main(argv=None):
                         help="Opt in to documented SCSP common-control transactions; not sound or reset timing")
     parser.add_argument("--hotd-sound-control", action="store_true",
                         help="Accept the bounded original-HOTD Model 2 sound-control write contract")
+    parser.add_argument("--sound-ram", action="store_true",
+                        help="Enable 512 KiB sound RAM with unknown initial byte values")
     args = parser.parse_args(argv)
     if not args.compiler:
         parser.error("A C++17 g++/clang++ compiler is required")
@@ -109,12 +114,14 @@ def main(argv=None):
                     "-fsanitize=undefined", "-fno-sanitize-recover=all", "-I", str(ROOT / "runtime"),
                     str(cpp), "-o", str(binary)], check=True, timeout=60)
     result = subprocess.run([str(binary), str(image_path), str(int(args.scsp_common_controls)),
-                             str(int(args.hotd_sound_control))], check=True, capture_output=True,
+                             str(int(args.hotd_sound_control)), str(int(args.sound_ram))],
+                            check=True, capture_output=True,
                             text=True, timeout=30)
     print(json.dumps({"schema": "hotdo-sound-aot-bootstrap-v1", "chip_sha1": sha1,
                       "proof": "original-byte architecture-subset; explicit vector input; not cabinet reset",
                       "scsp_common_control_research": args.scsp_common_controls,
                       "hotd_sound_control_research": args.hotd_sound_control,
+                      "sound_ram_research": args.sound_ram,
                       "translation": asdict(report), "execution": json.loads(result.stdout)}, indent=2))
 
 

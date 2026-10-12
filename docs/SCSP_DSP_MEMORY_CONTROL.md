@@ -47,7 +47,9 @@ next refusal: word read at 0x00000c08, PC 0x00600174
 The prior boundary was 32,795 instructions at the `0x100402` write. The two
 newly completed instructions are that register write and a following `CLR.L
 D4`. The next dependency is ordinary sound RAM, not another invented device
-reply. Default strict execution still stops at the earlier `0x100401` SCSP
+reply. That aperture now has a [strict knownness model](M68000_SOUND_RAM.md),
+which refuses the same `0x0c08` read because authentic reset contents are
+unknown. Default strict execution still stops at the earlier `0x100401` SCSP
 read after 17 instructions.
 
 This work does not establish sound-board reset-vector wiring, SCSP reset
