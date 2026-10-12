@@ -960,6 +960,19 @@
         "docs/I960_FRAMES.md"
       ],
       "note": "Enforced caller-owned IAC 0x93 research opt-in inside the native helper as well as SYNMOVQ. Direct denied calls stop before bus access or reset mutation and preserve the request for explicit opt-in retry; synthetic native UBSan regression covers absent and throwing readers plus retry. No cabinet reset/timing proof or original boot gain; reset 50%, CPU 55%, Model2C 20%, original HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "tools.serial_compare",
+      "percent_before": 80,
+      "percent_after": 80,
+      "evidence": [
+        "arcaderecomp/serial_access_compare.py",
+        "tests/test_serial_access_compare.py",
+        "docs/MODEL2C_SERIAL_CAPTURE_COMPARISON.md"
+      ],
+      "note": "External CPU-side serial capture v2 now requires an explicit complete lossless acquisition window and exact event counts; rejects legacy unknown-completeness captures, dropped accesses, wrong summary types and cut-off exports before replacing comparison reports. Synthetic parser/CLI regression tests only; producer claims do not authenticate cabinet RX/status or timing. tools.serial_compare 80%, authentic RX 5%, Model2C 20%, overall original HOTD1 10% unchanged."
     }
   ]
 }

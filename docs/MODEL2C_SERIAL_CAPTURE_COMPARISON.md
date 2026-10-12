@@ -18,9 +18,10 @@ comparator never supplies a device reply to translated game code.
 The following is an INVENTED SYNTHETIC EXAMPLE, NOT measured hardware data:
 
     {
-      "schema": "model2c-cpu-serial-capture-v1",
+      "schema": "model2c-cpu-serial-capture-v2",
       "provenance": "synthetic",
       "source_note": "Demo only. Not observed on an arcade cabinet.",
+      "capture_summary": {"total": 3, "retained": 3, "dropped": 0, "complete": true},
       "events": [
         {"ordinal": 1, "direction": "write", "address": "0x01c00014", "width": 1, "completed": true, "value": "0xff"},
         {"ordinal": 2, "direction": "write", "address": "0x01c00012", "width": 1, "completed": true, "value": "0x01"},
@@ -40,6 +41,36 @@ RS-422 frames or reconstructed expected operations. These are different
 measurement layers. Use the existing serial_wire parser for serial-wire
 samples; it does not magically recover the CPU status-register read stream.
 Transaction ordinals do not imply elapsed cycles, UART baud or device timing.
+
+## Acquisition completeness (v2)
+
+External captures must now contain an exact `capture_summary` object:
+
+| Field | Required meaning |
+| --- | --- |
+| `total` | Integer count of all serial CPU accesses in the declared acquisition window |
+| `retained` | Integer count of access rows retained, equal to the length of `events` |
+| `dropped` | Integer count of accesses lost by acquisition/export, required to be zero |
+| `complete` | Boolean declaring the selected window ended and exported completely, required to be true |
+
+The counters must be nonnegative integers, not booleans or numeric strings,
+and `total` must equal `retained + dropped`. Missing fields, incomplete
+windows, loss, and counter/row mismatches are refused before comparison or
+report replacement. Contiguous ordinals alone cannot detect a cut-off export.
+These declarations are producer claims; a forged summary still cannot prove
+cabinet provenance or physical timing.
+
+Record the window boundaries and acquisition method in `source_note`.
+Preserve repeated polling reads, failed transactions, and all serial CPU
+accesses within that window. Do not filter to only ready statuses or expected
+command replies. A complete selected window does not establish a complete
+boot or playthrough. Missing CPU-side status observations cannot be recovered
+from RS-422 wire bytes by guessing when the CPU read them.
+
+Legacy `model2c-cpu-serial-capture-v1` inputs are intentionally refused.
+Regenerate the export from acquisition records with documented completeness
+and loss counters, or recapture if those records are unavailable. Do not
+merely append a zero-loss summary to an old file with unknown completeness.
 
 ## Reproduction
 

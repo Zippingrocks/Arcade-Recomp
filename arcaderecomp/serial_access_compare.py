@@ -19,7 +19,7 @@ import re
 import sys
 import tempfile
 
-SCHEMA = "model2c-cpu-serial-capture-v1"
+SCHEMA = "model2c-cpu-serial-capture-v2"
 SUMMARY_RE = re.compile(
     r"^serial_trace_summary total=([0-9]+) retained=([0-9]+)"
     r" dropped=([0-9]+) truncated=(yes|no) limit=([0-9]+)$"
@@ -160,7 +160,7 @@ def parse_capture(text: str) -> tuple[str, list[Access]]:
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise TraceError("invalid capture JSON") from exc
     if not isinstance(root, dict) or set(root) != {
-            "schema", "provenance", "source_note", "events"}:
+            "schema", "provenance", "source_note", "capture_summary", "events"}:
         raise TraceError("capture must use the exact schema fields")
     if root["schema"] != SCHEMA:
         raise TraceError("unsupported observation schema")
@@ -173,6 +173,22 @@ def parse_capture(text: str) -> tuple[str, list[Access]]:
     items = root["events"]
     if not isinstance(items, list) or not (1 <= len(items) <= MAX_EVENTS):
         raise TraceError("invalid event list length")
+    # Contiguous ordinals alone cannot establish that an acquisition window
+    # ended cleanly. Require the producer to declare its complete retained
+    # window and zero loss; these claims still do NOT authenticate hardware.
+    summary = root["capture_summary"]
+    if not isinstance(summary, dict) or set(summary) != {
+            "total", "retained", "dropped", "complete"}:
+        raise TraceError("external capture completeness summary required")
+    if any(type(summary[k]) is not int or summary[k] < 0
+           for k in ("total", "retained", "dropped")) or \
+            type(summary["complete"]) is not bool:
+        raise TraceError("invalid external capture summary types")
+    if (summary["retained"] != len(items) or
+            summary["total"] != summary["retained"] + summary["dropped"]):
+        raise TraceError("external capture summary disagrees with events")
+    if not summary["complete"] or summary["dropped"] != 0:
+        raise TraceError("incomplete or dropped external capture is not comparable")
     events = []
     for row in items:
         if not isinstance(row, dict) or set(row) != {

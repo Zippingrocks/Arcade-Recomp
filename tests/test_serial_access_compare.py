@@ -29,6 +29,8 @@ def capture(read_complete=False, read_value=None, provenance="synthetic"):
         "schema": SCHEMA,
         "provenance": provenance,
         "source_note": "Explicit synthetic CPU bus access fixture",
+        "capture_summary": {"total": 3, "retained": 3, "dropped": 0,
+                            "complete": True},
         "events": [
             {"ordinal": 1, "direction": "write", "address": "0x01c00014",
              "width": 1, "completed": True, "value": "0xff"},
@@ -104,6 +106,7 @@ class SerialAccessComparisonTests(unittest.TestCase):
                          "transaction_identity_mismatch")
         bad = capture()
         bad["events"].pop()
+        bad["capture_summary"].update(total=2, retained=2)
         result = compare(parse_native(NATIVE), self.parsed(bad), "synthetic")
         self.assertEqual(result["verdict"], "diverged")
         self.assertEqual(result["differences"][0]["reason"],
@@ -173,6 +176,55 @@ class SerialAccessComparisonTests(unittest.TestCase):
             parse_capture('{"schema":"x","schema":"y"}')
         with self.assertRaises(TraceError):
             parse_native("executed=10\n")
+
+    def test_external_capture_requires_complete_lossless_declared_window(self):
+        for mutation in (
+            {"total": 4}, {"retained": 2}, {"total": 4, "dropped": 1},
+            {"complete": False}, {"complete": 1}, {"total": True},
+            {"retained": 3.0}, {"dropped": -1}, {"dropped": "0"},
+            {"extra": "ignored?"},
+        ):
+            obj = capture(True, "0x00", "external_capture_unverified")
+            obj["capture_summary"].update(mutation)
+            with self.subTest(mutation=mutation):
+                with self.assertRaises(TraceError):
+                    self.parsed(obj)
+        for summary in (None, [], {}, "complete"):
+            obj = capture()
+            obj["capture_summary"] = summary
+            with self.assertRaises(TraceError):
+                self.parsed(obj)
+        obj = capture()
+        del obj["capture_summary"]
+        with self.assertRaises(TraceError):
+            self.parsed(obj)
+        obj["schema"] = "model2c-cpu-serial-capture-v1"
+        with self.assertRaises(TraceError):
+            self.parsed(obj)
+
+    def test_cut_off_external_window_cannot_report_a_match_or_replace_report(self):
+        # Both lists are otherwise equal, complete CPU transactions. A
+        # producer's loss/incompletion declaration must refuse comparison.
+        source = NATIVE.replace("completed=no value=UNOBSERVED",
+                                "completed=yes value=0x0")
+        with tempfile.TemporaryDirectory(prefix="arcade-external-loss-") as d:
+            root = Path(d)
+            native, observed, output = (root / "native.log",
+                                        root / "capture.json", root / "result.json")
+            native.write_text(source)
+            output.write_text("previous valid report\n")
+            for summary in (
+                {"total": 4, "retained": 3, "dropped": 1, "complete": True},
+                {"total": 3, "retained": 3, "dropped": 0, "complete": False},
+                {"total": 4, "retained": 4, "dropped": 0, "complete": True},
+            ):
+                obj = capture(True, "0x00", "external_capture_unverified")
+                obj["capture_summary"] = summary
+                observed.write_text(json.dumps(obj))
+                self.assertEqual(main(["--native-log", str(native),
+                    "--observed-json", str(observed), "--output", str(output)]), 2)
+                self.assertEqual(output.read_text(), "previous valid report\n")
+                self.assertEqual(json.loads(observed.read_text()), obj)
 
     def test_cli_reports_metadata_only_and_distinct_exit_codes(self):
         with tempfile.TemporaryDirectory(prefix="arcade-serial-compare-") as tmp:
