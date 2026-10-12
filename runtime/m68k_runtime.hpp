@@ -306,6 +306,34 @@ inline bool add_quick_data(CPU& cpu, unsigned bytes, unsigned reg,
     return finish(cpu, next);
 }
 
+// Motorola SUB Dn,Dn: the sized destination minus source sets all five
+// arithmetic condition codes. C and X both represent unsigned borrow.
+inline bool subtract_data(CPU& cpu, unsigned bytes, unsigned source,
+                          unsigned destination, std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) ||
+        source >= 8u || destination >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const unsigned bits = bytes * 8u;
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu : (1u << bits) - 1u;
+    if ((cpu.d_known[source] & mask) != mask ||
+        (cpu.d_known[destination] & mask) != mask)
+        return stop(cpu, Stop::undefined_state);
+    const std::uint32_t source_value = cpu.d[source] & mask;
+    const std::uint32_t destination_value = cpu.d[destination] & mask;
+    const std::uint32_t result = (destination_value - source_value) & mask;
+    const std::uint32_t sign = 1u << (bits - 1u);
+    const bool borrow = destination_value < source_value;
+    const bool overflow = ((destination_value ^ source_value) &
+                           (destination_value ^ result) & sign) != 0;
+    cpu.d[destination] = (cpu.d[destination] & ~mask) | result;
+    cpu.d_known[destination] |= mask;
+    cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~31u) |
+        (borrow ? 17u : 0u) | (result & sign ? 8u : 0u) |
+        (result == 0u ? 4u : 0u) | (overflow ? 2u : 0u));
+    cpu.sr_known |= 31u;
+    return finish(cpu, next);
+}
+
 inline bool move_sr(CPU& cpu, std::uint16_t value, std::uint32_t next) {
     if (!(cpu.sr_known & 0x2000u)) return stop(cpu, Stop::undefined_state);
     if (!(cpu.sr & 0x2000u)) return stop(cpu, Stop::privilege);

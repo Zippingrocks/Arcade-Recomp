@@ -152,6 +152,10 @@ def _emit(ins):
         return (f"if ((cpu.d_known[{source}] & {mask}) != {mask} || "
                 f"!cpu.a_known[{dest}]) return stop(cpu, Stop::undefined_state); "
                 f"cpu.a[{dest}] += {value}; {done}")
+    if op == "sub_d":
+        size, source, dest = args
+        return (f"return subtract_data(cpu, {size}u, {source}u, {dest}u, "
+                f"{next_pc});")
     if op == "addq_d":
         size, dest, immediate = args
         return (f"return add_quick_data(cpu, {size}u, {dest}u, {immediate}u, "
