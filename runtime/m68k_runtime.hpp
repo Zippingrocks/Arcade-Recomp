@@ -281,6 +281,31 @@ inline bool shift_immediate(CPU& cpu, unsigned bytes, unsigned reg, unsigned cou
     return finish(cpu, next);
 }
 
+// Motorola ADDQ to Dn: byte/word updates retain the upper register bits, while
+// all five arithmetic condition codes describe the sized addition. Unknown
+// input bits stop rather than guessing carry or overflow.
+inline bool add_quick_data(CPU& cpu, unsigned bytes, unsigned reg,
+                           unsigned immediate, std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) || reg >= 8u ||
+        immediate < 1u || immediate > 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu :
+        (1u << (bytes * 8u)) - 1u;
+    if ((cpu.d_known[reg] & mask) != mask)
+        return stop(cpu, Stop::undefined_state);
+    const std::uint32_t sign = 1u << (bytes * 8u - 1u);
+    const std::uint32_t value = cpu.d[reg] & mask;
+    const std::uint32_t result = (value + immediate) & mask;
+    const bool carry = static_cast<std::uint64_t>(value) + immediate > mask;
+    const bool overflow = ((~(value ^ immediate) & (value ^ result) & sign) != 0u);
+    cpu.d[reg] = (cpu.d[reg] & ~mask) | result;
+    cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~31u) |
+        (carry ? 17u : 0u) | ((result & sign) ? 8u : 0u) |
+        (result == 0u ? 4u : 0u) | (overflow ? 2u : 0u));
+    cpu.sr_known |= 31u;
+    return finish(cpu, next);
+}
+
 inline bool move_sr(CPU& cpu, std::uint16_t value, std::uint32_t next) {
     if (!(cpu.sr_known & 0x2000u)) return stop(cpu, Stop::undefined_state);
     if (!(cpu.sr & 0x2000u)) return stop(cpu, Stop::privilege);

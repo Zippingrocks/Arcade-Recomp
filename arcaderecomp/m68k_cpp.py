@@ -125,6 +125,10 @@ def _emit(ins):
     if op == "lea_absolute":
         dest, address = args
         return f"cpu.a[{dest}] = {_u(address)}; cpu.a_known[{dest}] = true; {done}"
+    if op == "addq_d":
+        size, dest, immediate = args
+        return (f"return add_quick_data(cpu, {size}u, {dest}u, {immediate}u, "
+                f"{next_pc});")
     if op == "clr_memory":
         size, mode, reg, displacement = args
         statements = []
