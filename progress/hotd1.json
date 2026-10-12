@@ -2057,6 +2057,17 @@
         "https://github.com/mamedev/mame/blob/master/src/mame/sega/model2.cpp#L2292-L2305"
       ],
       "note": "Implemented the public Model 2 sound CPU's immutable direct and banked 8 MiB sample-ROM map and an optional private explorer input that accepts only both exact manifest chips by size/SHA-1, applies declared word swapping, and reports authentication. The 770-test full suite passes in 212.541s and two additional ROM-free chip-identity/lane tests pass. Without the absent MPR-19721.32/MPR-19722.34 evidence, authenticated startup still fails closed on the known 0xa9d9f4 word read; no sample bytes or playback are invented, so audio.rom remains 10%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "model2c.authentic_rx",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "docs/SEGA_IO3155649.md"
+      ],
+      "note": "Recorded a new public first-hand 315-5649 Model 2B logic-analyzer/live-FTDI report: idle-high 8-N-1 LSB-first at 2.000 Mbaud, both TX registers serialize, bits 2/3 gate the two-buffer receive handshake, and bit 6 is not a reliable environment discriminator. This narrows chip-level transport behavior but is not a Model 2C HOTD 837-12079 startup capture and supplies neither reply bytes nor timing for TX2=FF/TX1=01; no runtime response was invented. Authentic RX remains 5%, Model2C 20%, overall HOTD1 10%."
     }
   ]
 }
