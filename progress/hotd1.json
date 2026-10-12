@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Implement bounded 512 KiB sound RAM now exposed by the read at 0x00000c08 while establishing physical reset-vector wiring; then extend SCSP DSP/audio, 68000, interrupts and timing without guessed device replies.",
+      "next": "Establish the physical reset history of sound-RAM bytes 0x0c04..0x0c0f, or prove every ErrorSet signature branch converges safely, while recovering reset-vector wiring; never choose convenient zero-filled RAM.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1834,6 +1834,19 @@
         "docs/SCSP_DSP_MEMORY_CONTROL.md"
       ],
       "note": "Implemented the manual-defined write-only SCSP DSP ring-buffer word at 0x100402 with exhaustive reserved-bit/lane tests. Authenticated original-byte execution accepts value 0x0138 and advances from 32795 to 32797 instructions before a strict sound-RAM read at 0x0c08. No reset timing, DSP execution, synthesis, audio or PCB trace is established, so the estimate remains unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.rom",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "runtime/m68k_sound_ram.hpp",
+        "tests/test_m68k_sound_ram_native.py",
+        "docs/M68000_SOUND_RAM.md"
+      ],
+      "note": "Added the documented 512 KiB sound-RAM aperture with per-byte knownness, exact big-endian lanes and CLR discarded-read behavior. Synthetic native tests pass; the authenticated original-byte probe remains at 32797 instructions because bytes 0x0c08 onward have no observed reset value. No zero fill, startup branch, reset wiring or hardware state was invented, so the estimate remains unchanged."
     }
   ]
 }

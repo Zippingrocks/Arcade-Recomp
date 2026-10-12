@@ -66,9 +66,9 @@ write-only readback, refused/read-discard distinctions, strict defaults,
 unknown-device refusal and word alignment/endian boundaries. They run with
 GCC and Clang when available, with undefined-behavior checks.
 
-Next requirements: implement bounded sound RAM while establishing physical
-reset-vector wiring and sequencing; then SCSP DSP/audio timing and more sound
-CPU instructions. These small register models alone do not justify increasing
+Next requirements: establish the reset history of the now-bounded sound RAM
+signature bytes and physical reset-vector sequencing; then SCSP DSP/audio
+timing and more sound CPU instructions. These small models alone do not justify increasing
 the SCSP or overall audio estimate above 0%, or original HOTD1 above 10%.
 
 The [sound-control reference audit](SOUND_CONTROL_REFERENCE_AUDIT.md) now
