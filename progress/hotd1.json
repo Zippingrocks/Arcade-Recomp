@@ -1535,6 +1535,21 @@
         "docs/M68000_SUB_DATA.md"
       ],
       "note": "Added Motorola-manual-backed byte/word/long SUB Dn,Dn with width-limited results, upper-register preservation and exact XNZVC including unsigned borrow and signed overflow. Three focused GCC/UBSan tests cover every encoding, boundary matrices, all 65,536 byte operand pairs, aliasing, unknown operands and invalid helper arguments; all 63 MC68000 tests and the 658-test full suite pass. Original 0x6003D4 SUB.W D7,D6 now translates; reset-vector graph grows 161/153 to 164/156 and advances that path to SUBQ.W at 0x6003DA while leaving eight explicit unsupported sites. Authenticated probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no RAM or device data was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_subq_native.py",
+        "docs/M68000_SUBQ.md"
+      ],
+      "note": "Added Motorola-manual-backed byte/word/long SUBQ #1..8,Dn with zero encoding eight, width-limited results, upper-register preservation and exact XNZVC. Three focused GCC/UBSan tests cover all 192 encodings, every byte input, wide boundaries, unknown operands and invalid helper arguments; all 66 MC68000 tests and the 661-test full suite pass. Original 0x6003DA SUBQ.W #1,D7 now translates; reset-vector graph grows 164/156 to 172/165, removes that unsupported branch end and leaves seven explicit unsupported sites. Authenticated probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no RAM or device data was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

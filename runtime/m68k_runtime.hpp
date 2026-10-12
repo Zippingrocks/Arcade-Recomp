@@ -334,6 +334,30 @@ inline bool subtract_data(CPU& cpu, unsigned bytes, unsigned source,
     return finish(cpu, next);
 }
 
+inline bool subtract_quick_data(CPU& cpu, unsigned bytes, unsigned destination,
+                                unsigned immediate, std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) || destination >= 8u ||
+        immediate < 1u || immediate > 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const unsigned bits = bytes * 8u;
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu : (1u << bits) - 1u;
+    if ((cpu.d_known[destination] & mask) != mask)
+        return stop(cpu, Stop::undefined_state);
+    const std::uint32_t destination_value = cpu.d[destination] & mask;
+    const std::uint32_t result = (destination_value - immediate) & mask;
+    const std::uint32_t sign = 1u << (bits - 1u);
+    const bool borrow = destination_value < immediate;
+    const bool overflow = ((destination_value ^ immediate) &
+                           (destination_value ^ result) & sign) != 0;
+    cpu.d[destination] = (cpu.d[destination] & ~mask) | result;
+    cpu.d_known[destination] |= mask;
+    cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~31u) |
+        (borrow ? 17u : 0u) | (result & sign ? 8u : 0u) |
+        (result == 0u ? 4u : 0u) | (overflow ? 2u : 0u));
+    cpu.sr_known |= 31u;
+    return finish(cpu, next);
+}
+
 inline bool move_sr(CPU& cpu, std::uint16_t value, std::uint32_t next) {
     if (!(cpu.sr_known & 0x2000u)) return stop(cpu, Stop::undefined_state);
     if (!(cpu.sr & 0x2000u)) return stop(cpu, Stop::privilege);
