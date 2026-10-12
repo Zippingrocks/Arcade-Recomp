@@ -30,10 +30,11 @@ HARNESS = r'''
 #include <string>
 #include <vector>
 int main(int argc, char** argv) {
-    if (argc != 6 || (std::string(argv[2]) != "0" && std::string(argv[2]) != "1") ||
+    if (argc != 7 || (std::string(argv[2]) != "0" && std::string(argv[2]) != "1") ||
             (std::string(argv[3]) != "0" && std::string(argv[3]) != "1") ||
             (std::string(argv[4]) != "0" && std::string(argv[4]) != "1") ||
-            (std::string(argv[5]) != "0" && std::string(argv[5]) != "1")) return 2;
+            (std::string(argv[5]) != "0" && std::string(argv[5]) != "1") ||
+            (std::string(argv[6]) != "0" && std::string(argv[6]) != "1")) return 2;
     std::ifstream file(argv[1], std::ios::binary);
     if (!file) return 3;
     std::vector<std::uint8_t> image((std::istreambuf_iterator<char>(file)), {});
@@ -50,6 +51,7 @@ int main(int argc, char** argv) {
     bus.enable_hotd_sound_control_research(std::string(argv[3]) == "1");
     bus.enable_sound_ram_research(std::string(argv[4]) == "1");
     bus.enable_slot_mixer_research(std::string(argv[5]) == "1");
+    bus.enable_dsp_registers_research(std::string(argv[6]) == "1");
     while (cpu.completed < 100000u && step(cpu, bus)) {}
     std::cout << "{\"completed_instructions\":" << cpu.completed
       << ",\"pc\":" << cpu.pc << ",\"sr\":" << cpu.sr
@@ -90,6 +92,8 @@ def main(argv=None):
                         help="Enable 512 KiB sound RAM with unknown initial byte values")
     parser.add_argument("--scsp-slot-mixers", action="store_true",
                         help="Enable documented per-slot mixer word transactions")
+    parser.add_argument("--scsp-dsp-registers", action="store_true",
+                        help="Enable documented DSP COEF and MADRS register files")
     args = parser.parse_args(argv)
     if not args.compiler:
         parser.error("A C++17 g++/clang++ compiler is required")
@@ -121,7 +125,7 @@ def main(argv=None):
                     str(cpp), "-o", str(binary)], check=True, timeout=60)
     result = subprocess.run([str(binary), str(image_path), str(int(args.scsp_common_controls)),
                              str(int(args.hotd_sound_control)), str(int(args.sound_ram)),
-                             str(int(args.scsp_slot_mixers))],
+                             str(int(args.scsp_slot_mixers)), str(int(args.scsp_dsp_registers))],
                             check=True, capture_output=True,
                             text=True, timeout=30)
     print(json.dumps({"schema": "hotdo-sound-aot-bootstrap-v1", "chip_sha1": sha1,
@@ -130,6 +134,7 @@ def main(argv=None):
                       "hotd_sound_control_research": args.hotd_sound_control,
                       "sound_ram_research": args.sound_ram,
                       "scsp_slot_mixers_research": args.scsp_slot_mixers,
+                      "scsp_dsp_registers_research": args.scsp_dsp_registers,
                       "translation": asdict(report), "execution": json.loads(result.stdout)}, indent=2))
 
 

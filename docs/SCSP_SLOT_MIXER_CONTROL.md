@@ -40,8 +40,9 @@ completed instructions: 262398 / 262400 / 262401 by signature route
 ```
 
 All paths record 18 slot-mixer discarded reads and 18 writes. The manual maps
-`0x100700..0x10077f` to 64 DSP coefficient words (COEF[12:0]); the next work is
-a strict DSP register-RAM model beginning with the observed longword clear.
+`0x100700..0x10077f` to 64 DSP coefficient words (COEF[12:0]). The follow-up
+[DSP register model](SCSP_DSP_REGISTER_RAM.md) now clears all COEF and MADRS
+words and stops strictly at the manual's unassigned `0x1007c0` gap.
 
 No percentage changes: audio and SCSP remain 0%, sound-ROM execution remains
 10%, overall HOTD1 remains about 10%, and Gates A/B/C remain open.

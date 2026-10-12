@@ -32,7 +32,8 @@ HARNESS = r'''
 #include <tuple>
 #include <vector>
 using namespace arcaderecomp_m68k_generated;
-using Key=std::tuple<unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
+using Key=std::tuple<unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
+    unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
 static void byte(SoundROMBus& bus,unsigned a,unsigned v) {
     if(!bus.establish_sound_ram_byte_research(a,static_cast<std::uint8_t>(v)))throw std::runtime_error("premise");
 }
@@ -46,6 +47,7 @@ static Key run(const std::vector<std::uint8_t>& image,unsigned kind,unsigned sav
     SoundROMBus bus(image);bus.enable_common_control_research(true);
     bus.enable_hotd_sound_control_research(true);bus.enable_sound_ram_research(true);
     bus.enable_slot_mixer_research(true);
+    bus.enable_dsp_registers_research(true);
     if(kind==0)word(bus,0xc08u,0u);
     else {word(bus,0xc08u,0x4572726fu);word(bus,0xc0cu,kind==1?0u:0x72536574u);if(kind==2)byte(bus,0xc04u,saved);}
     while(cpu.completed<500000u&&step(cpu,bus)){}
@@ -53,7 +55,11 @@ static Key run(const std::vector<std::uint8_t>& image,unsigned kind,unsigned sav
     return {static_cast<unsigned>(cpu.stop),cpu.pc,cpu.access_address,cpu.access_width,
             cpu.access_write?1u:0u,cpu.completed,known?stored:0x100u,bus.sound_ram().known_bytes(),
             static_cast<unsigned>(bus.slot_mixer_control().completed_discarded_reads()),
-            static_cast<unsigned>(bus.slot_mixer_control().completed_writes())};
+            static_cast<unsigned>(bus.slot_mixer_control().completed_writes()),
+            static_cast<unsigned>(bus.dsp_coefficients().completed_discarded_reads()),
+            static_cast<unsigned>(bus.dsp_coefficients().completed_writes()),
+            static_cast<unsigned>(bus.dsp_memory_addresses().completed_discarded_reads()),
+            static_cast<unsigned>(bus.dsp_memory_addresses().completed_writes())};
 }
 int main(int argc,char** argv) {
     if(argc!=2)return 2;
@@ -66,7 +72,9 @@ int main(int argc,char** argv) {
         return std::get<0>(a)==std::get<0>(b)&&std::get<1>(a)==std::get<1>(b)&&
             std::get<2>(a)==std::get<2>(b)&&std::get<3>(a)==std::get<3>(b)&&
             std::get<4>(a)==std::get<4>(b)&&std::get<7>(a)==std::get<7>(b)&&
-            std::get<8>(a)==std::get<8>(b)&&std::get<9>(a)==std::get<9>(b);
+            std::get<8>(a)==std::get<8>(b)&&std::get<9>(a)==std::get<9>(b)&&
+            std::get<10>(a)==std::get<10>(b)&&std::get<11>(a)==std::get<11>(b)&&
+            std::get<12>(a)==std::get<12>(b)&&std::get<13>(a)==std::get<13>(b);
     };
     if(!same_boundary(first,second)||std::get<6>(first)!=0u||std::get<6>(second)!=0u)return 5;
     unsigned marker_completed=0;
@@ -84,7 +92,11 @@ int main(int argc,char** argv) {
        <<",\"width\":"<<std::get<3>(first)<<",\"write\":"<<(std::get<4>(first)?"true":"false")
        <<",\"known_ram_bytes\":"<<std::get<7>(first)
        <<",\"slot_mixer_discarded_reads\":"<<std::get<8>(first)
-       <<",\"slot_mixer_writes\":"<<std::get<9>(first)<<"}}\n";
+       <<",\"slot_mixer_writes\":"<<std::get<9>(first)
+       <<",\"dsp_coefficient_discarded_reads\":"<<std::get<10>(first)
+       <<",\"dsp_coefficient_writes\":"<<std::get<11>(first)
+       <<",\"dsp_address_discarded_reads\":"<<std::get<12>(first)
+       <<",\"dsp_address_writes\":"<<std::get<13>(first)<<"}}\n";
     return 0;
 }
 '''
