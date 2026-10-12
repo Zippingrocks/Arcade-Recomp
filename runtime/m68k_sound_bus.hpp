@@ -13,6 +13,7 @@ class SoundROMBus final : public Bus {
     bool common_control_enabled_ = false;
     bool hotd_sound_control_enabled_ = false;
     arcaderecomp::scsp::CommonControl common_control_;
+    arcaderecomp::scsp::DspMemoryControl dsp_memory_control_;
     arcaderecomp::model2::HotdSoundControl hotd_sound_control_;
 public:
     explicit SoundROMBus(std::vector<std::uint8_t> rom) : rom_(std::move(rom)) {
@@ -44,6 +45,8 @@ public:
         address &= 0xffffffu;
         if (common_control_enabled_ && address >= 0x100400u && address <= 0x100401u &&
                 common_control_.write8(address - 0x100400u, value)) return;
+        if (common_control_enabled_ && address >= 0x100402u && address <= 0x100403u &&
+                dsp_memory_control_.write8(address - 0x100402u, value)) return;
         if (hotd_sound_control_enabled_ && address == 0x400001u &&
                 hotd_sound_control_.write8(1u, value)) return;
         throw BusFault(address, true);
@@ -51,6 +54,8 @@ public:
     void write16(std::uint32_t address, std::uint16_t value) override {
         address &= 0xffffffu;
         if (common_control_enabled_ && address == 0x100400u && common_control_.write16(value)) return;
+        if (common_control_enabled_ && address == 0x100402u &&
+                dsp_memory_control_.write16(value)) return;
         if (hotd_sound_control_enabled_ && address == 0x400000u &&
                 hotd_sound_control_.write16(value)) return;
         throw BusFault(address, true, 2u);
@@ -62,6 +67,9 @@ public:
         hotd_sound_control_enabled_ = enabled;
     }
     const arcaderecomp::scsp::CommonControl& common_control() const { return common_control_; }
+    const arcaderecomp::scsp::DspMemoryControl& dsp_memory_control() const {
+        return dsp_memory_control_;
+    }
     const arcaderecomp::model2::HotdSoundControl& hotd_sound_control() const {
         return hotd_sound_control_;
     }
