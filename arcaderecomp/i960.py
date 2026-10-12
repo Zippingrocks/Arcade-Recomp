@@ -78,6 +78,7 @@ REGISTER = {
     0x655: ("modpc", "sss"),
     0x66d: ("flushreg", ""),
     0x674: ("cvtir", "sd"),
+    0x677: ("scaler", "sss"),
     0x68a: ("logbnr", "sd"),
     0x6c2: ("cvtzri", "sd"),
     0x6d9: ("movrl", "sd"),
