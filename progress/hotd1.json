@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Establish Model 2C sound reset-vector wiring and the unknown 0x00400001 board-control write exposed by the optional SCSP common-control probe; extend 68000 instructions, SCSP, RAM, interrupts and timed commands/audio without guessed device replies.",
+      "next": "Implement the documented SCSP word at 0x00100402 now exposed by the bounded original-HOTD sound-control probe; establish physical sound reset and remaining control-bit/strobe behavior, then extend 68000, RAM, interrupts and timed audio without guessed device replies.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1808,6 +1808,19 @@
         "docs/M68000_ADD_MULU_FRONTIER.md"
       ],
       "note": "Added Motorola-manual-backed register ADD, Dn-to-memory ADD/SUB for non-updating and original brief-indexed destinations, immediate-source MULU.W, immediate BCLR Dn and indexed-memory BSET. GCC/Clang UBSan matrices cover every width/register, aliases, index forms, arithmetic and multiply boundaries, bit modulo behavior, exact flags, partial knownness, transaction order, exclusions, truncation and refused writes; all 124 MC68000 tests pass. Authenticated translation advances from 708/700 to 744/741, gaining 36 discovered and 41 translated instructions while unsupported sites fall eight to exactly three run-time indirect JMPs at 0x600296, 0x60070E and 0x601C42. No static target or false fallthrough was invented. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; static coverage is not RAM, reset, device or playback fidelity. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.rom",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "runtime/model2_sound_control.hpp",
+        "tests/test_model2_sound_control_native.py",
+        "docs/MODEL2_SOUND_CONTROL.md"
+      ],
+      "note": "Implemented an opt-in original-HOTD Model 2 sound-control write contract from the exact 8 MiB manifest and cited public reference map; synthetic native tests pass and an authenticated original-byte probe advances from 18 to 32795 instructions before SCSP 0x100402. No PCB trace, reset sequence, SCSP synthesis, bank switching or audio is established, so the estimate remains unchanged."
     }
   ]
 }

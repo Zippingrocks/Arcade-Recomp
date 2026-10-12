@@ -1,16 +1,19 @@
 #pragma once
 #include "m68k_runtime.hpp"
+#include "model2_sound_control.hpp"
 #include "scsp_common_control.hpp"
 #include <utility>
 #include <vector>
 
 namespace arcaderecomp::m68k {
-// Published sound-program ROM aperture and opt-in common-control research.
-// SCSP synthesis, RAM, sample banking and cabinet reset wiring are unsupported.
+// Published sound-program ROM aperture and opt-in control research.
+// SCSP synthesis, RAM and cabinet reset wiring are unsupported.
 class SoundROMBus final : public Bus {
     std::vector<std::uint8_t> rom_;
     bool common_control_enabled_ = false;
+    bool hotd_sound_control_enabled_ = false;
     arcaderecomp::scsp::CommonControl common_control_;
+    arcaderecomp::model2::HotdSoundControl hotd_sound_control_;
 public:
     explicit SoundROMBus(std::vector<std::uint8_t> rom) : rom_(std::move(rom)) {
         if (rom_.size() != 0x80000u) throw std::invalid_argument("sound ROM must be 512 KiB");
@@ -41,17 +44,27 @@ public:
         address &= 0xffffffu;
         if (common_control_enabled_ && address >= 0x100400u && address <= 0x100401u &&
                 common_control_.write8(address - 0x100400u, value)) return;
+        if (hotd_sound_control_enabled_ && address == 0x400001u &&
+                hotd_sound_control_.write8(1u, value)) return;
         throw BusFault(address, true);
     }
     void write16(std::uint32_t address, std::uint16_t value) override {
         address &= 0xffffffu;
         if (common_control_enabled_ && address == 0x100400u && common_control_.write16(value)) return;
+        if (hotd_sound_control_enabled_ && address == 0x400000u &&
+                hotd_sound_control_.write16(value)) return;
         throw BusFault(address, true, 2u);
     }
     // Caller opts into bounded architectural register semantics, NOT evidence
     // of physical reset completion or a working/timed SCSP audio device.
     void enable_common_control_research(bool enabled) { common_control_enabled_ = enabled; }
+    void enable_hotd_sound_control_research(bool enabled) {
+        hotd_sound_control_enabled_ = enabled;
+    }
     const arcaderecomp::scsp::CommonControl& common_control() const { return common_control_; }
+    const arcaderecomp::model2::HotdSoundControl& hotd_sound_control() const {
+        return hotd_sound_control_;
+    }
     bool establish_scsp_version(unsigned version) { return common_control_.establish_version(version); }
 };
 }

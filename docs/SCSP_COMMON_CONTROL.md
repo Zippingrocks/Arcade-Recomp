@@ -41,11 +41,13 @@ python tools/experimental/hotdo_sound_bootstrap_probe.py --chip /private/epr-197
 
 The original `epr-19720.31` SHA-1 remains
 `1edaed489a3518ddad85728e416319f940ea02bb`. Native execution with explicit vector
-inputs now completes 18 instructions, including one discarded SCSP control
-read and one volume write. It stops at PC `0x0060014c`, attempting a byte write
-to **`0x00400001`**. That board control is still unimplemented; its value zero
-does not justify treating it as a no-op. Ordinary consuming reads of the
-unknown chip version remain refused even after the successful CLR.
+inputs completes 18 instructions, including one discarded SCSP control read
+and one volume write, before attempting a byte write to `0x00400001`. The
+separate [bounded original-HOTD sound-control contract](MODEL2_SOUND_CONTROL.md)
+can now explicitly accept that proven low-lane transaction. With both models
+enabled, the probe completes 32,795 instructions and refuses the next unknown
+SCSP word at `0x00100402`. Ordinary consuming reads of the unknown chip version
+remain refused even after the successful CLR.
 
 Without the flag, the existing 17-instruction boundary at the SCSP read
 `0x00100401` remains unchanged. Both modes are architecture-subset research
@@ -59,9 +61,10 @@ write-only readback, refused/read-discard distinctions, strict defaults,
 unknown-device refusal and word alignment/endian boundaries. They run with
 GCC and Clang when available, with undefined-behavior checks.
 
-Next requirements: establish the actual sound-board control at `0x00400001`,
-reset wiring and sequencing; implement SCSP audio/timing and more sound CPU
-instructions. This small register model alone does not justify increasing
+Next requirements: establish the remaining sound-board bit/strobe behavior,
+reset wiring and sequencing; implement the `0x00100402` SCSP word from primary
+documentation, then SCSP audio/timing and more sound CPU instructions. These
+small register models alone do not justify increasing
 the SCSP or overall audio estimate above 0%, or original HOTD1 above 10%.
 
 The [sound-control reference audit](SOUND_CONTROL_REFERENCE_AUDIT.md) now

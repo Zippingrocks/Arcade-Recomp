@@ -1,8 +1,10 @@
 # Original sound-control reference candidates
 
-Date: 2026-10-11. This is static original-byte research, not a recovered
-register implementation or an execution trace. The sound probe still
-refuses the unknown byte write at `0x00400001`, PC `0x0060014c`.
+Date: 2026-10-11, with bounded runtime follow-up on 2026-10-12. The scan is
+static original-byte research, not an execution trace. The separate
+[bounded original-HOTD runtime contract](MODEL2_SOUND_CONTROL.md) now accepts
+the proven low-byte transaction under an explicit opt-in; its public-reference
+evidence and remaining hardware uncertainty are documented there.
 
 ## Reproducible audit
 
@@ -64,19 +66,26 @@ device references. No supported absolute LEA candidate names this aperture.
 These negative results apply only to the declared patterns, not indirect
 references or missing decoder forms.
 
-## What remains unknown
+## Runtime follow-up and what remains unknown
 
 The published [MAME Model 2 map and sound-control comments](https://github.com/mamedev/mame/blob/master/src/mame/sega/model2.cpp)
-associate this aperture with a board sound-control register but leave low
-bits unresolved. That is third-party map evidence, not proof of original
-hardware effects. No implementation was copied, and a zero-valued write
-does not justify silently accepting it.
+associate this aperture with a word write handler, state that supported games
+do not exceed 8 MiB of samples, and only change sample banks above that size.
+The original HOTD manifest is exactly 8 MiB. The bounded runtime therefore
+accepts explicitly enabled low-lane writes without changing a bank, while
+still refusing reads and the unestablished high-byte transaction. No MAME
+implementation code was copied. This remains third-party reference evidence,
+not proof of unobserved PCB signals or the unresolved low control bits.
 
-Next: establish instruction boundaries and source-register data flow around
+The authenticated original-byte probe advances from 18 to 32,795 completed
+instructions and next refuses an SCSP word write at `0x00100402`. Strict mode
+still stops at the earlier SCSP read after 17 instructions.
+
+Next: preserve instruction boundaries and source-register data flow around
 the five additional candidates; find the matching Model 2C schematic or
-independent decoder/latch observations, including byte strobes, reset state
-and sample-ROM selects. The actual board control, sound reset wiring,
-SCSP timing/audio and authentic main-CPU serial startup remain unresolved.
+independent decoder/latch observations for byte strobes and low-bit effects.
+Sound reset wiring, broader SCSP registers/timing/audio and authentic main-CPU
+serial startup remain unresolved.
 
 A separate first-hand [HOTD Model 2C-CRX repair report](https://forums.arcade-museum.com/threads/no-audio-sega-model-2c-crx-house-of-the-dead.543130/)
 by Flocke28 (2024-10-14, posts 1–3) reports restored audio after moving JP1
@@ -86,7 +95,7 @@ record PCB revision and jumper positions. The JP1 nets and their possible
 relationship to the control latch remain unverified; no runtime behavior
 is inferred from this report.
 
-Tests cover syntactic data false positives, unknown register values, 24-bit
+Audit tests cover syntactic data false positives, unknown register values, 24-bit
 address masking, aligned versus odd candidates, truncation, input bounds,
 separate graph/scan limits, original identity checks, metadata-only output,
 input aliases (including links), and atomic replacement failure. No estimated
