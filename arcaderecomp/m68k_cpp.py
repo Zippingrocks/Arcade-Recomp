@@ -81,6 +81,19 @@ def _emit(ins):
                 f"cpu.d[{dest}] = (cpu.d[{dest}] & ~{mask}) | value; "
                 f"cpu.d_known[{dest}] |= {mask}; "
                 f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
+    if op == "move_address_to_memory":
+        size, source, mode, reg, displacement = args
+        mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
+        statements = [f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state);"]
+        if mode in (2, 5):
+            statements.append(f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{reg}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        statements.append(f"const std::uint32_t value = cpu.a[{source}] & {mask};")
+        statements.append(f"if (!write_move(cpu, bus, {address}, {size}u, value)) return false;")
+        statements += [f"logical_flags(cpu, (value & {sign}) != 0, value == 0);", done]
+        return " ".join(statements)
     if op == "move":
         size, source_kind, source, mode, reg, displacement = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
