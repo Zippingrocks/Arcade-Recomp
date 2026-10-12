@@ -1639,6 +1639,20 @@
         "docs/M68000_OR_MEMORY.md"
       ],
       "note": "Added Motorola-manual-backed byte/word/long OR from non-updating indirect, displacement and absolute memory to Dn with sized destination preservation, exact XNZVC, alignment, 24-bit wrap and high-word-first reads. Three focused GCC/UBSan tests cover all forms/registers, results, unknown state, exclusions and partial read refusals; all 87 MC68000 tests and the 682-test full suite pass. Authenticated word-swapped original 0x6001F0 OR.B absolute-long,D0 now translates; graph grows 198/193 to 245/237 and honestly exposes four new stops, so unsupported sites rise five to eight while translated frontier gains 44 instructions. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no source memory/device value was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "tests/test_m68k_btst_immediate_native.py",
+        "docs/M68000_BTST_IMMEDIATE.md"
+      ],
+      "note": "Added Motorola-manual-backed immediate BTST for data registers and non-updating indirect, displacement, absolute-short and absolute-long memory, with modulo-32/register and modulo-8/memory bit selection, exact Z-only updates and strict selected-bit/address/read knownness. Three focused GCC/UBSan tests cover every supported form and register, modulo inputs, partial-known values, preserved CCR state, exclusions, truncation and refused reads; all 90 MC68000 tests and the 685-test full suite pass. Authenticated word-swapped original BTST #2,(A6) at 0x601A50 and BTST #0,(A6) at 0x601B2C now translate; graph grows 245/237 to 255/245 and honestly exposes four new downstream stop addresses, so unsupported sites rise eight to ten while the translated frontier gains eight instructions. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no tested memory/device value was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

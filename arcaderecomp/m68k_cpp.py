@@ -56,6 +56,26 @@ def _emit(ins):
             fetch += (f"std::uint32_t destination = 0; "
                       f"if (!read_operand(cpu, bus, {address}, {size}u, destination)) return false; ")
         return fetch + f"return compare_immediate(cpu, {size}u, destination, {_u(immediate)}, {next_pc});"
+    if op == "btst_immediate":
+        bit, mode, reg, displacement = args
+        selected = bit & (31 if mode == 0 else 7)
+        bit_mask = _u(1 << selected)
+        if mode == 0:
+            return (f"if ((cpu.d_known[{reg}] & {bit_mask}) != {bit_mask}) "
+                    f"return stop(cpu, Stop::undefined_state); "
+                    f"const bool zero = (cpu.d[{reg}] & {bit_mask}) == 0; "
+                    f"cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~4u) | (zero ? 4u : 0u)); "
+                    f"cpu.sr_known |= 4u; {done}")
+        statements = []
+        if mode in (2, 5):
+            statements.append(f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{reg}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        statements.append(f"std::uint32_t value = 0; if (!read_operand(cpu, bus, {address}, 1u, value)) return false;")
+        statements.append(f"const bool zero = (value & {bit_mask}) == 0;")
+        statements += ["cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~4u) | (zero ? 4u : 0u)); cpu.sr_known |= 4u;", done]
+        return " ".join(statements)
     if op == "move_memory_to_d":
         size, mode, source, displacement, dest = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))

@@ -80,6 +80,16 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
                 displacement = word(length) << 16 | word(length + 2)
                 length += 4
             return Instruction(pc, length, "cmpi", (size, immediate, mode, reg, displacement))
+    if op & 0xffc0 == 0x0800:
+        mode, reg, bit = (op >> 3) & 7, op & 7, word(2)
+        if mode in (0, 2, 5) or (mode == 7 and reg in (0, 1)):
+            displacement, length = 0, 4
+            if mode == 5 or (mode, reg) == (7, 0):
+                displacement, length = _signed(word(4), 16), 6
+            elif (mode, reg) == (7, 1):
+                displacement, length = word(4) << 16 | word(6), 8
+            return Instruction(pc, length, "btst_immediate",
+                               (bit, mode, reg, displacement))
     if op & 0xff00 == 0x4200 and ((op >> 6) & 3) != 3:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         if mode == 0:
