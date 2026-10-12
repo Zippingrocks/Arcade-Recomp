@@ -561,6 +561,72 @@ inline bool multiply_unsigned_word(CPU& cpu, unsigned source,
     return finish(cpu, next);
 }
 
+inline bool movem_store(CPU& cpu, Bus& bus, unsigned bytes, unsigned base,
+                        std::uint16_t mask, bool predecrement,
+                        std::uint32_t next) {
+    if ((bytes != 2u && bytes != 4u) || base >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    if (!cpu.a_known[base]) return stop(cpu, Stop::undefined_state);
+    for (unsigned bit = 0; bit < 16u; ++bit) {
+        if (!(mask & (1u << bit))) continue;
+        const bool address = predecrement ? bit < 8u : bit >= 8u;
+        const unsigned reg = predecrement ?
+            (bit < 8u ? 7u - bit : 15u - bit) :
+            (bit < 8u ? bit : bit - 8u);
+        if (address) {
+            if (!cpu.a_known[reg]) return stop(cpu, Stop::undefined_state);
+        } else {
+            const std::uint32_t required = bytes == 4u ? 0xffffffffu : 0xffffu;
+            if ((cpu.d_known[reg] & required) != required)
+                return stop(cpu, Stop::undefined_state);
+        }
+    }
+    const std::uint32_t initial_base = cpu.a[base];
+    std::uint32_t address = initial_base;
+    for (unsigned bit = 0; bit < 16u; ++bit) {
+        if (!(mask & (1u << bit))) continue;
+        const bool address_register = predecrement ? bit < 8u : bit >= 8u;
+        const unsigned reg = predecrement ?
+            (bit < 8u ? 7u - bit : 15u - bit) :
+            (bit < 8u ? bit : bit - 8u);
+        const std::uint32_t value = address_register ?
+            (reg == base ? initial_base : cpu.a[reg]) : cpu.d[reg];
+        if (predecrement) address -= bytes;
+        if (!write_move(cpu, bus, address, bytes, value)) return false;
+        if (predecrement) cpu.a[base] = address;
+        else address += bytes;
+    }
+    return finish(cpu, next);
+}
+
+inline bool movem_load_postincrement(CPU& cpu, Bus& bus, unsigned bytes,
+                                     unsigned base, std::uint16_t mask,
+                                     std::uint32_t next) {
+    if ((bytes != 2u && bytes != 4u) || base >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    if (!cpu.a_known[base]) return stop(cpu, Stop::undefined_state);
+    std::uint32_t address = cpu.a[base];
+    for (unsigned bit = 0; bit < 16u; ++bit) {
+        if (!(mask & (1u << bit))) continue;
+        std::uint32_t value = 0;
+        if (!read_operand(cpu, bus, address, bytes, value)) return false;
+        address += bytes;
+        if (bit < 8u) {
+            if (bytes == 2u && (value & 0x8000u)) value |= 0xffff0000u;
+            cpu.d[bit] = value;
+            cpu.d_known[bit] = 0xffffffffu;
+        } else if (bit - 8u != base) {
+            if (bytes == 2u && (value & 0x8000u)) value |= 0xffff0000u;
+            cpu.a[bit - 8u] = value;
+            cpu.a_known[bit - 8u] = true;
+        }
+        // Motorola specifies that a listed postincrement base ignores the
+        // loaded memory value and retains the postincremented effective address.
+        cpu.a[base] = address;
+    }
+    return finish(cpu, next);
+}
+
 // Motorola NEGX supports multi-precision negation: X is an input and C/X
 // report the borrow. Z is cumulative, remaining set only when it was already
 // set and this sized result is zero. An unknown retained Z remains unknown.

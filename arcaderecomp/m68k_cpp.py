@@ -260,6 +260,14 @@ def _emit(ins):
     if op == "swap_d":
         reg, = args
         return f"return swap_data(cpu, {reg}u, {next_pc});"
+    if op == "movem_store":
+        size, base, mask, predecrement = args
+        return (f"return movem_store(cpu, bus, {size}u, {base}u, {mask}u, "
+                f"{'true' if predecrement else 'false'}, {next_pc});")
+    if op == "movem_load_postincrement":
+        size, base, mask = args
+        return (f"return movem_load_postincrement(cpu, bus, {size}u, "
+                f"{base}u, {mask}u, {next_pc});")
     if op == "movea":
         size, mode, source, dest, extra = args
         mask = "0xffffu" if size == 2 else "0xffffffffu"
