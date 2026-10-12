@@ -160,6 +160,10 @@ def _emit(ins):
         size, dest, immediate = args
         return (f"return add_quick_data(cpu, {size}u, {dest}u, {immediate}u, "
                 f"{next_pc});")
+    if op == "subq_d":
+        size, dest, immediate = args
+        return (f"return subtract_quick_data(cpu, {size}u, {dest}u, "
+                f"{immediate}u, {next_pc});")
     if op == "clr_memory":
         size, mode, reg, displacement = args
         statements = []
