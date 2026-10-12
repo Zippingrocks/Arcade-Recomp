@@ -83,8 +83,25 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
             elif (mode, reg) == (7, 1):
                 displacement, length = word(2) << 16 | word(4), 6
             return Instruction(pc, length, "clr_memory", (size, mode, reg, displacement))
-    if op & 0xf1f8 in (0x2040, 0x3040):
-        return Instruction(pc, 2, "movea_d", (2 if op & 0x1000 else 4, op & 7, (op >> 9) & 7))
+    if op & 0xf1c0 in (0x2040, 0x3040):
+        size, mode, reg, dest = (2 if op & 0x1000 else 4), (op >> 3) & 7, op & 7, (op >> 9) & 7
+        if mode in (0, 1, 2):
+            return Instruction(pc, 2, "movea", (size, mode, reg, dest, 0))
+        if mode == 5:
+            return Instruction(pc, 4, "movea", (size, mode, reg, dest,
+                                                _signed(word(2), 16)))
+        if mode == 7 and reg == 0:
+            return Instruction(pc, 4, "movea", (size, mode, reg, dest,
+                                                _signed(word(2), 16)))
+        if mode == 7 and reg == 1:
+            return Instruction(pc, 6, "movea", (size, mode, reg, dest,
+                                                word(2) << 16 | word(4)))
+        if mode == 7 and reg == 4:
+            value, length = word(2), 4
+            if size == 4:
+                value, length = value << 16 | word(4), 6
+            return Instruction(pc, length, "movea", (size, mode, reg, dest,
+                                                      value))
     if op >> 12 in (1, 2, 3):
         size = {1: 1, 2: 4, 3: 2}[op >> 12]
         src_mode, src_reg = (op >> 3) & 7, op & 7

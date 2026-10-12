@@ -97,13 +97,31 @@ def _emit(ins):
         mask = _u((1 << (size * 8)) - 1)
         return (f"cpu.d[{reg}] &= ~{mask}; cpu.d_known[{reg}] |= {mask}; "
                 f"logical_flags(cpu, false, true); {done}")
-    if op == "movea_d":
-        size, source, dest = args
+    if op == "movea":
+        size, mode, source, dest, extra = args
         mask = "0xffffu" if size == 2 else "0xffffffffu"
-        value = (f"((cpu.d[{source}] & 0x8000u) ? (cpu.d[{source}] | 0xffff0000u) : "
-                 f"(cpu.d[{source}] & 0xffffu))") if size == 2 else f"cpu.d[{source}]"
-        return (f"if ((cpu.d_known[{source}] & {mask}) != {mask}) return stop(cpu, Stop::undefined_state); "
-                f"cpu.a[{dest}] = {value}; cpu.a_known[{dest}] = true; {done}")
+        statements = []
+        if mode == 0:
+            statements.append(f"if ((cpu.d_known[{source}] & {mask}) != {mask}) return stop(cpu, Stop::undefined_state);")
+            value = f"cpu.d[{source}]"
+        elif mode == 1:
+            statements.append(f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state);")
+            value = f"cpu.a[{source}]"
+        elif mode in (2, 5):
+            statements.append(f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{source}] + {_u(extra)}"
+            statements.append(f"std::uint32_t value = 0; if (!read_operand(cpu, bus, {address}, {size}u, value)) return false;")
+            value = "value"
+        elif mode == 7 and source in (0, 1):
+            statements.append(f"std::uint32_t value = 0; if (!read_operand(cpu, bus, {_u(extra)}, {size}u, value)) return false;")
+            value = "value"
+        else:
+            value = _u(extra)
+        if size == 2:
+            value = f"(({value} & 0x8000u) ? ({value} | 0xffff0000u) : ({value} & 0xffffu))"
+        statements.append(f"cpu.a[{dest}] = {value}; cpu.a_known[{dest}] = true;")
+        statements.append(done)
+        return " ".join(statements)
     if op == "lea_absolute":
         dest, address = args
         return f"cpu.a[{dest}] = {_u(address)}; cpu.a_known[{dest}] = true; {done}"
