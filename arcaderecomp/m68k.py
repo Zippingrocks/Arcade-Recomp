@@ -91,6 +91,16 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
             elif (mode, reg) == (7, 1):
                 displacement, length = word(2) << 16 | word(4), 6
             return Instruction(pc, length, "clr_memory", (size, mode, reg, displacement))
+    if op & 0xff00 == 0x4a00 and ((op >> 6) & 3) != 3:
+        size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
+        if mode in (0, 2, 5) or (mode == 7 and reg in (0, 1)):
+            displacement, length = 0, 2
+            if mode == 5 or (mode, reg) == (7, 0):
+                displacement, length = _signed(word(2), 16), 4
+            elif (mode, reg) == (7, 1):
+                displacement, length = word(2) << 16 | word(4), 6
+            return Instruction(pc, length, "tst",
+                               (size, mode, reg, displacement))
     if (op & 0xff00 == 0x4000 and ((op >> 6) & 3) != 3 and
             (op >> 3) & 7 == 0):
         return Instruction(pc, 2, "negx_d",

@@ -131,6 +131,23 @@ def _emit(ins):
         mask = _u((1 << (size * 8)) - 1)
         return (f"cpu.d[{reg}] &= ~{mask}; cpu.d_known[{reg}] |= {mask}; "
                 f"logical_flags(cpu, false, true); {done}")
+    if op == "tst":
+        size, mode, reg, displacement = args
+        mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
+        if mode == 0:
+            return (f"if ((cpu.d_known[{reg}] & {mask}) != {mask}) "
+                    f"return stop(cpu, Stop::undefined_state); "
+                    f"const std::uint32_t value = cpu.d[{reg}] & {mask}; "
+                    f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
+        statements = []
+        if mode in (2, 5):
+            statements.append(f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{reg}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        statements.append(f"std::uint32_t value = 0; if (!read_operand(cpu, bus, {address}, {size}u, value)) return false;")
+        statements += [f"logical_flags(cpu, (value & {sign}) != 0, value == 0);", done]
+        return " ".join(statements)
     if op == "negx_d":
         size, reg = args
         return f"return negate_extend_data(cpu, {size}u, {reg}u, {next_pc});"
