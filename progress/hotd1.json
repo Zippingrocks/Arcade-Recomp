@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Implement the documented SCSP word at 0x00100402 now exposed by the bounded original-HOTD sound-control probe; establish physical sound reset and remaining control-bit/strobe behavior, then extend 68000, RAM, interrupts and timed audio without guessed device replies.",
+      "next": "Implement bounded 512 KiB sound RAM now exposed by the read at 0x00000c08 while establishing physical reset-vector wiring; then extend SCSP DSP/audio, 68000, interrupts and timing without guessed device replies.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1821,6 +1821,19 @@
         "docs/MODEL2_SOUND_CONTROL.md"
       ],
       "note": "Implemented an opt-in original-HOTD Model 2 sound-control write contract from the exact 8 MiB manifest and cited public reference map; synthetic native tests pass and an authenticated original-byte probe advances from 18 to 32795 instructions before SCSP 0x100402. No PCB trace, reset sequence, SCSP synthesis, bank switching or audio is established, so the estimate remains unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.scsp",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "runtime/scsp_common_control.hpp",
+        "tests/test_scsp_common_control_native.py",
+        "docs/SCSP_DSP_MEMORY_CONTROL.md"
+      ],
+      "note": "Implemented the manual-defined write-only SCSP DSP ring-buffer word at 0x100402 with exhaustive reserved-bit/lane tests. Authenticated original-byte execution accepts value 0x0138 and advances from 32795 to 32797 instructions before a strict sound-RAM read at 0x0c08. No reset timing, DSP execution, synthesis, audio or PCB trace is established, so the estimate remains unchanged."
     }
   ]
 }

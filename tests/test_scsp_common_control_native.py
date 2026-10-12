@@ -6,6 +6,43 @@ from test_m68k_bootstrap_native import native, words
 
 
 class SCSPCommonControlTests(unittest.TestCase):
+    def test_dsp_memory_control_all_values_lanes_and_derived_boundaries(self):
+        native('#include "scsp_common_control.hpp"\n', r'''
+using arcaderecomp::scsp::DspMemoryControl;
+int main() {
+    for (unsigned value=0; value<65536u; ++value) {
+        DspMemoryControl reg;
+        const bool accepted=reg.write16(static_cast<std::uint16_t>(value));
+        if (accepted!=((value&~DspMemoryControl::writable)==0u)) return 1;
+        if (reg.completed_writes()!=(accepted?1u:0u) ||
+                reg.written_known_mask()!=(accepted?0x01ffu:0u)) return 2;
+        std::uint32_t length=0xa5a5a5a5u,base=0xa5a5a5a5u;
+        if (reg.ring_buffer_length_words(length)!=accepted ||
+                reg.ring_buffer_base_byte(base)!=accepted) return 3;
+        if (accepted && (length!=(0x2000u<<((value>>7u)&3u)) ||
+                base!=((value&0x7fu)<<13u))) return 4;
+    }
+    for (unsigned offset=0; offset<2; ++offset) for (unsigned value=0; value<256; ++value) {
+        DspMemoryControl reg;
+        const bool accepted=reg.write8(offset,static_cast<std::uint8_t>(value));
+        const bool expected=offset==0u ? value<=1u : true;
+        if (accepted!=expected || reg.completed_writes()!=(accepted?1u:0u)) return 5;
+        if (accepted && reg.written_known_mask()!=(offset==0u?0x0100u:0x00ffu)) return 6;
+        if (reg.configuration_known()) return 7;
+    }
+    DspMemoryControl original;
+    if (!original.write16(0x0138u) || !original.configuration_known()) return 8;
+    std::uint32_t length=0,base=0;
+    if (!original.ring_buffer_length_words(length) || length!=0x8000u ||
+            !original.ring_buffer_base_byte(base) || base!=0x70000u ||
+            base+length*2u!=0x80000u) return 9;
+    original.invalidate();
+    if (original.configuration_known() || original.completed_writes() ||
+            original.written_fields() || original.written_known_mask()) return 10;
+    return 0;
+}
+''')
+
     def test_all_word_and_byte_writes_and_read_only_fields(self):
         native('#include "scsp_common_control.hpp"\n', r'''
 using arcaderecomp::scsp::CommonControl;
@@ -81,7 +118,7 @@ int main() {
         try{(void)bus.read8(0x100401);return 7;}catch(const BusFault&){}
         if(step(cpu,bus)||cpu.pc!=10||cpu.completed!=2||cpu.access_address!=0x300007||
            !cpu.access_write||cpu.access_width!=1)return 8;
-        for(unsigned address:{0x1003ffu,0x100402u,0x100404u,0x400001u}) {
+        for(unsigned address:{0x1003ffu,0x100404u,0x400001u}) {
             try{bus.read8_discard(address);return 9;}catch(const BusFault&){}
         }
         if(bus.common_control().completed_discarded_reads()!=1)return 10;
@@ -110,14 +147,20 @@ int main() {
     bus.enable_common_control_research(true);
     bus.write16(0x100400,0x030f);
     if(bus.common_control().written_fields()!=0x030f||bus.common_control().completed_writes()!=1)return 6;
-    for(unsigned address:{0x1003ffu,0x100401u,0x100402u,0x400000u,0x600000u}) {
-        try{bus.write16(address,0);return 7;}catch(const BusFault& e){if(!e.write||e.width!=2)return 8;}
+    bus.write16(0x100402,0x0138);
+    if(bus.dsp_memory_control().written_fields()!=0x0138u||
+       bus.dsp_memory_control().completed_writes()!=1u)return 7;
+    for(unsigned address:{0x1003ffu,0x100401u,0x100404u,0x400000u,0x600000u}) {
+        try{bus.write16(address,0);return 8;}catch(const BusFault& e){if(!e.write||e.width!=2)return 9;}
     }
-    try{bus.write16(0x100400,0x0310);return 9;}catch(const BusFault&){}
-    if(bus.common_control().written_fields()!=0x030f||bus.common_control().completed_writes()!=1)return 10;
+    try{bus.write16(0x100400,0x0310);return 10;}catch(const BusFault&){}
+    try{bus.write16(0x100402,0x0200);return 11;}catch(const BusFault&){}
+    if(bus.common_control().written_fields()!=0x030f||bus.common_control().completed_writes()!=1||
+       bus.dsp_memory_control().completed_writes()!=1)return 12;
     bus.write8(0x100401,0);
-    if(bus.common_control().written_fields()!=0x0300||!bus.common_control().output_muted())return 11;
-    try{(void)bus.read16(0x100400);return 12;}catch(const BusFault&){}
+    if(bus.common_control().written_fields()!=0x0300||!bus.common_control().output_muted())return 13;
+    try{(void)bus.read16(0x100400);return 14;}catch(const BusFault&){}
+    try{(void)bus.read16(0x100402);return 15;}catch(const BusFault&){}
     return 0;
 }
 ''')

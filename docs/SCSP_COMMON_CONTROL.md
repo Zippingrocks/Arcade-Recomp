@@ -3,7 +3,10 @@
 Status (2026-10-11): independently implemented register semantics and native
 synthetic tests; no original-cabinet reset, timing or audio verification.
 
-`runtime/scsp_common_control.hpp` models the first SCSP common-control word.
+`runtime/scsp_common_control.hpp` models the first two SCSP common-control
+words. The first contains memory/DAC/volume/version control; the separately
+documented [second word](SCSP_DSP_MEMORY_CONTROL.md) contains DSP ring-buffer
+length and base fields.
 The PDF-reading review checked the actual register-table layout and access
 annotations in Sega's [SCSP User's Manual ST-077-R2-052594](https://antime.kapsi.fi/sega/files/ST-077-R2-052594.pdf),
 printed pages 5, 28, 35 and 88-89. Bits 9, 8 and 3:0 are MEM4MB, DAC18B and
@@ -45,9 +48,11 @@ inputs completes 18 instructions, including one discarded SCSP control read
 and one volume write, before attempting a byte write to `0x00400001`. The
 separate [bounded original-HOTD sound-control contract](MODEL2_SOUND_CONTROL.md)
 can now explicitly accept that proven low-lane transaction. With both models
-enabled, the probe completes 32,795 instructions and refuses the next unknown
-SCSP word at `0x00100402`. Ordinary consuming reads of the unknown chip version
-remain refused even after the successful CLR.
+enabled, the probe first completed 32,795 instructions at the next SCSP word.
+That manual-defined DSP memory word is now implemented as well: the probe
+completes 32,797 instructions and refuses the first sound-RAM word read at
+`0x00000c08`. Ordinary consuming reads of the unknown chip version remain
+refused even after the successful CLR.
 
 Without the flag, the existing 17-instruction boundary at the SCSP read
 `0x00100401` remains unchanged. Both modes are architecture-subset research
@@ -61,10 +66,9 @@ write-only readback, refused/read-discard distinctions, strict defaults,
 unknown-device refusal and word alignment/endian boundaries. They run with
 GCC and Clang when available, with undefined-behavior checks.
 
-Next requirements: establish the remaining sound-board bit/strobe behavior,
-reset wiring and sequencing; implement the `0x00100402` SCSP word from primary
-documentation, then SCSP audio/timing and more sound CPU instructions. These
-small register models alone do not justify increasing
+Next requirements: implement bounded sound RAM while establishing physical
+reset-vector wiring and sequencing; then SCSP DSP/audio timing and more sound
+CPU instructions. These small register models alone do not justify increasing
 the SCSP or overall audio estimate above 0%, or original HOTD1 above 10%.
 
 The [sound-control reference audit](SOUND_CONTROL_REFERENCE_AUDIT.md) now

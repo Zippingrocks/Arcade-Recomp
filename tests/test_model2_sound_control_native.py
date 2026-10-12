@@ -65,12 +65,13 @@ int main() {
 ''')
 
     def test_generated_original_form_advances_only_with_opt_in(self):
-        # MOVE.B #0,$400001; MOVE.W #$300,$100400; MOVE.W #$138,$100402.
+        # Control writes followed by an unimplemented MIDI/status word.
         source, report = emit_cpp(words(0x13fc, 0, 0x0040, 1,
                                         0x33fc, 0x0300, 0x0010, 0x0400,
                                         0x33fc, 0x0138, 0x0010, 0x0402,
+                                        0x33fc, 0, 0x0010, 0x0404,
                                         0xffff), 0)
-        self.assertEqual(report.translated, 3)
+        self.assertEqual(report.translated, 4)
         native(source, r'''
 #include "m68k_sound_bus.hpp"
 using namespace arcaderecomp_m68k_generated;
@@ -90,8 +91,10 @@ int main() {
         if (cpu.completed!=1u || cpu.pc!=8u || bus.hotd_sound_control().completed_writes()!=1u) return 3;
         if (!step(cpu,bus) || cpu.completed!=2u || cpu.pc!=16u ||
                 bus.common_control().written_fields()!=0x0300u) return 4;
-        if (step(cpu,bus) || cpu.completed!=2u || cpu.pc!=16u ||
-                cpu.access_address!=0x100402u || !cpu.access_write || cpu.access_width!=2u) return 5;
+        if (!step(cpu,bus) || cpu.completed!=3u || cpu.pc!=24u ||
+                bus.dsp_memory_control().written_fields()!=0x0138u) return 5;
+        if (step(cpu,bus) || cpu.completed!=3u || cpu.pc!=24u ||
+                cpu.access_address!=0x100404u || !cpu.access_write || cpu.access_width!=2u) return 6;
     }
     return 0;
 }

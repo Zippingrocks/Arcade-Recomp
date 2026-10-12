@@ -61,9 +61,10 @@ SCSP access after 17 instructions. Generated C++, reconstructed bytes and the
 local chip image remain in ignored `build/` storage.
 
 This result establishes neither physical reset sequencing nor audio output.
-The next continuous-execution dependency is the SCSP word at `0x100402`;
-correct register semantics must come from Yamaha documentation and independent
-tests, without turning the SCSP aperture into permissive RAM. Sound RAM,
+The next dependency exposed here was the SCSP word at `0x100402`. Its
+[manual-defined ring-buffer fields](SCSP_DSP_MEMORY_CONTROL.md) are now modeled
+separately, moving the continuous boundary to sound RAM at `0x00000c08`.
+Sound RAM,
 interrupts, MIDI transport, timing, synthesis, mixing and cabinet validation
 remain unresolved. Audio stays at 0%, sound-ROM execution at 5%, and overall
 original HOTD1 at the separately reviewed ~10% estimate.
