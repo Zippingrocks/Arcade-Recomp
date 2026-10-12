@@ -1726,6 +1726,21 @@
         "docs/M68000_INDEXED_ADDRESS.md"
       ],
       "note": "Added original-MC68000 brief indexed effective addressing for CLR memory, MOVEA memory source, MOVE memory to Dn and MOVE Dn to memory. Three focused GCC/Clang UBSan tests cover every base/index register, data/address and word/long indexes, signed byte displacements, all widths/families, aliases, exact flags and transactions, unknown state, reserved later-core encodings and truncation. Four authenticated word-swapped indexed sites at 0x600344, 0x600394, 0x601B7A and 0x6023B4 now translate; the reset-vector graph grows 307/296 to 335/326 and unsupported sites fall eleven to nine while the translated frontier gains thirty instructions. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no memory/device value was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_arithmetic_frontier_native.py",
+        "docs/M68000_ARITHMETIC_FRONTIER.md"
+      ],
+      "note": "Added Motorola-manual-backed byte/word/long SUBI to Dn, non-updating memory-source ADD to Dn and non-updating memory SUBQ read-modify-write, with exact XNZVC, upper-bit preservation, strict addressing and real bus transactions. Four focused GCC/Clang UBSan tests cover exhaustive byte SUBI, wide boundaries, every register/quick immediate, indirect/displacement/absolute forms, transaction order, exact results/flags, exclusions, invalid helpers and truncation. Authenticated word-swapped sites at 0x6006E2, 0x601A64 and 0x601B42 now translate; the graph grows 335/326 to 352/344 and unsupported sites fall nine to eight while the translated frontier gains eighteen instructions. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no memory/device value was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

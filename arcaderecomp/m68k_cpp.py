@@ -40,6 +40,10 @@ def _emit(ins):
         size, reg, immediate = args
         return (f"return add_immediate_data(cpu, {size}u, {reg}u, "
                 f"{_u(immediate)}, {next_pc});")
+    if op == "subi_d":
+        size, reg, immediate = args
+        return (f"return subtract_immediate_data(cpu, {size}u, {reg}u, "
+                f"{_u(immediate)}, {next_pc});")
     if op == "cmpi":
         size, immediate, mode, reg, displacement = args
         mask = _u((1 << (size * 8)) - 1)
@@ -274,6 +278,26 @@ def _emit(ins):
         size, source, dest = args
         return (f"return subtract_data(cpu, {size}u, {source}u, {dest}u, "
                 f"{next_pc});")
+    if op == "add_memory_to_d":
+        size, mode, source, displacement, destination = args
+        mask = _u((1 << (size * 8)) - 1)
+        statements = [
+            f"if ((cpu.d_known[{destination}] & {mask}) != {mask}) "
+            f"return stop(cpu, Stop::undefined_state);"]
+        if mode in (2, 5):
+            statements.append(
+                f"if (!cpu.a_known[{source}]) "
+                f"return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{source}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        statements.append(
+            f"std::uint32_t source_value = 0; if (!read_operand(cpu, bus, "
+            f"{address}, {size}u, source_value)) return false;")
+        statements.append(
+            f"return add_immediate_data(cpu, {size}u, {destination}u, "
+            f"source_value, {next_pc});")
+        return " ".join(statements)
     if op == "or_memory_to_d":
         size, mode, source, displacement, destination = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
@@ -316,6 +340,20 @@ def _emit(ins):
         size, dest, immediate = args
         return (f"return subtract_quick_data(cpu, {size}u, {dest}u, "
                 f"{immediate}u, {next_pc});")
+    if op == "subq_memory":
+        size, mode, reg, displacement, immediate = args
+        statements = []
+        if mode in (2, 5):
+            statements.append(
+                f"if (!cpu.a_known[{reg}]) "
+                f"return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{reg}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        statements.append(
+            f"return subtract_quick_memory(cpu, bus, {address}, {size}u, "
+            f"{immediate}u, {next_pc});")
+        return " ".join(statements)
     if op == "clr_memory":
         size, mode, reg, displacement = args
         statements = []
