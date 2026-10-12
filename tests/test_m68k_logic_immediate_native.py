@@ -227,7 +227,7 @@ int main() {
         CPU c;reset_from_vectors(c,0,0);const auto before=c;
         if(logic_immediate_d(c,1,0,reg,0,4)||!unchanged(c,before))return 3;
     }
-    Bus bus;CPU c;reset_from_vectors(c,0,0);c.sr=0x2000;const auto before=c;
+    Bus bus;CPU c;reset_from_vectors(c,0,0);c.sr=0xa000;const auto before=c;
     if(step(c,bus)||c.stop!=Stop::unsupported_control||!unchanged(c,before))return 4;
     if(step(c,bus)||!unchanged(c,before))return 5;
 }

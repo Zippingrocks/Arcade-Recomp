@@ -34,7 +34,8 @@ HARNESS = r'''
 using namespace arcaderecomp_m68k_generated;
 using Key=std::tuple<unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
     unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
-    unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
+    unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
+    unsigned,unsigned,unsigned,unsigned>;
 static void byte(SoundROMBus& bus,unsigned a,unsigned v) {
     if(!bus.establish_sound_ram_byte_research(a,static_cast<std::uint8_t>(v)))throw std::runtime_error("premise");
 }
@@ -75,7 +76,9 @@ static Key run(const std::vector<std::uint8_t>& image,unsigned kind,unsigned sav
             static_cast<unsigned>(bus.slot_loop_key_control().completed_writes()),
             static_cast<unsigned>(bus.slot_loop_key_control().completed_executions()),
             static_cast<unsigned>(bus.timers().completed_writes()),
-            static_cast<unsigned>(bus.interrupt_control().completed_writes())};
+            static_cast<unsigned>(bus.interrupt_control().completed_writes()),
+            bus.interrupt_control().enable(0),bus.interrupt_control().enable_known_mask(0),
+            bus.interrupt_control().pending(0),bus.interrupt_control().pending_known_mask(0)};
 }
 int main(int argc,char** argv) {
     if(argc!=2)return 2;
@@ -98,9 +101,18 @@ int main(int argc,char** argv) {
             std::get<22>(a)==std::get<22>(b)&&std::get<23>(a)==std::get<23>(b)&&
             std::get<24>(a)==std::get<24>(b)&&std::get<25>(a)==std::get<25>(b)&&
             std::get<26>(a)==std::get<26>(b)&&std::get<27>(a)==std::get<27>(b)&&
-            std::get<28>(a)==std::get<28>(b);
+            std::get<28>(a)==std::get<28>(b)&&std::get<29>(a)==std::get<29>(b)&&
+            std::get<30>(a)==std::get<30>(b)&&std::get<31>(a)==std::get<31>(b)&&
+            std::get<32>(a)==std::get<32>(b);
     };
-    if(!same_boundary(first,second)||std::get<6>(first)!=0u||std::get<6>(second)!=0u)return 5;
+    auto diagnostic=[](const char* name,const Key& value){
+        std::cerr<<name<<": stop="<<std::get<0>(value)<<" pc="<<std::get<1>(value)
+          <<" address="<<std::get<2>(value)<<" width="<<std::get<3>(value)
+          <<" write="<<std::get<4>(value)<<" completed="<<std::get<5>(value)<<'\n';
+    };
+    if(!same_boundary(first,second)||std::get<6>(first)!=0u||std::get<6>(second)!=0u){
+        diagnostic("mismatch",first);diagnostic("empty",second);return 5;
+    }
     unsigned marker_completed=0;
     for(unsigned saved=0;saved<256u;++saved) {
         const Key result=run(image,2,saved);
@@ -135,7 +147,11 @@ int main(int argc,char** argv) {
        <<",\"slot_key_writes\":"<<std::get<25>(first)
        <<",\"slot_key_executions\":"<<std::get<26>(first)
        <<",\"timer_writes\":"<<std::get<27>(first)
-       <<",\"interrupt_control_writes\":"<<std::get<28>(first)<<"}}\n";
+       <<",\"interrupt_control_writes\":"<<std::get<28>(first)
+       <<",\"sound_interrupt_enable\":"<<std::get<29>(first)
+       <<",\"sound_interrupt_enable_known\":"<<std::get<30>(first)
+       <<",\"sound_interrupt_pending\":"<<std::get<31>(first)
+       <<",\"sound_interrupt_pending_known\":"<<std::get<32>(first)<<"}}\n";
     return 0;
 }
 '''
@@ -163,8 +179,10 @@ def main(argv=None):
     subprocess.run([args.compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
                     "-fsanitize=undefined", "-fno-sanitize-recover=all", "-I", str(ROOT / "runtime"),
                     str(cpp), "-o", str(binary)], check=True, timeout=60)
-    result = subprocess.run([str(binary), str(image_path)], check=True, capture_output=True,
+    result = subprocess.run([str(binary), str(image_path)], check=False, capture_output=True,
                             text=True, timeout=60)
+    if result.returncode:
+        raise RuntimeError(f"native explorer failed ({result.returncode}): {result.stderr.strip()}")
     print(json.dumps({"schema": "hotdo-sound-signature-explorer-v1",
                       "chip_identity": identity, "image_sha256": hashlib.sha256(image).hexdigest(),
                       "proof": "explicit exhaustive software-state partition; not physical reset evidence",
