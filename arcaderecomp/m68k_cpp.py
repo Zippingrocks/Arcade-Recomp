@@ -28,6 +28,29 @@ def _emit(ins):
         reg, value = args
         return (f"cpu.d[{reg}] = {_u(value)}; cpu.d_known[{reg}] = 0xffffffffu; "
                 f"logical_flags(cpu, {'true' if value < 0 else 'false'}, {'true' if value == 0 else 'false'}); {done}")
+    if op == "move":
+        size, source_kind, source, mode, reg, displacement = args
+        mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
+        statements = []
+        if source_kind == 0:
+            statements.append(f"if ((cpu.d_known[{source}] & {mask}) != {mask}) return stop(cpu, Stop::undefined_state);")
+            value = f"cpu.d[{source}] & {mask}"
+        else:
+            value = _u(source)
+        if mode == 5:
+            statements.append(f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state);")
+        statements.append(f"const std::uint32_t value = {value};")
+        if mode == 0:
+            statements.append(f"cpu.d[{reg}] = (cpu.d[{reg}] & ~{mask}) | value; cpu.d_known[{reg}] |= {mask};")
+        else:
+            address = f"cpu.a[{reg}] + {_u(displacement)}" if mode == 5 else _u(displacement)
+            statements.append(f"if (!write_move(cpu, bus, {address}, {size}u, value)) return false;")
+        statements += [f"logical_flags(cpu, (value & {sign}) != 0, value == 0);", done]
+        return " ".join(statements)
+    if op == "shift_immediate":
+        size, reg, count, left, kind = args
+        return (f"return shift_immediate(cpu, {size}u, {reg}u, {count}u, "
+                f"{'true' if left else 'false'}, {'true' if kind == 3 else 'false'}, {next_pc});")
     if op == "clr_d":
         size, reg = args
         mask = _u((1 << (size * 8)) - 1)
@@ -47,7 +70,7 @@ def _emit(ins):
         reg, displacement = args
         return (f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state); "
                 f"const std::uint32_t address = (cpu.a[{reg}] + {_u(displacement)}) & 0x00ffffffu; "
-                f"(void)bus.read8(address); bus.write8(address, 0); logical_flags(cpu, false, true); {done}")
+                f"bus.read8_discard(address); bus.write8(address, 0); logical_flags(cpu, false, true); {done}")
     if op == "bcc":
         return (f"bool taken = false; if (!condition(cpu, {args[0]}u, taken)) return false; "
                 f"return finish(cpu, taken ? {_u(ins.target)} : {next_pc});")
@@ -74,7 +97,7 @@ def emit_cpp(image: bytes, entry: int, base: int = 0, limit: int = 4096):
         source.append(f"case {_u(ins.pc)}: {{ {_emit(ins)} }}")
     source += ["default: return stop(cpu, Stop::untranslated_pc);", "}",
                "} catch(const BusFault& fault) {",
-               "cpu.access_address = fault.address; cpu.access_write = fault.write;",
+               "cpu.access_address = fault.address; cpu.access_write = fault.write; cpu.access_width = fault.width;",
                "return stop(cpu, Stop::bus_access);", "}", "}", "}"]
     return "\n".join(source) + "\n", TranslationReport(entry, len(instructions),
         len(instructions) - len(unsupported), unsupported, limited)

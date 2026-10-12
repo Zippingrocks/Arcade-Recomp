@@ -65,6 +65,11 @@ and informed by known structure, so uniqueness within it is not a
 statistical probability or a universal proof of the layout. A controlled
 recompile or a genuinely matched second design is still needed.
 
+The later [legacy-reference holdout audit](EPF8282_LEGACY_REFERENCE_HOLDOUTS.md)
+adds two non-A EPF8282 SOF/TTF format checks and inspects these fixed
+coordinates without refitting. Missing fitted equations and the device
+generation difference prevent it from establishing held-out logic validation.
+
 Reference repository: `fayaw/spearlegacyLLRF`, commit
 `6a0d68153d731518f07e98762f82d25e042838a8`, directory
 `spear-rf-code-legacy/rfApp/ksc_v152/PLDs/bid/`.

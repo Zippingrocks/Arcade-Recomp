@@ -225,6 +225,23 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                 f"{'true' if src_fp else 'false'}, {dst}u, "
                 f"{'true' if dst_fp else 'false'})) return false;")
 
+    if ins.form == "REG" and op == "movr":
+        # Intel KB MOVR 6C9: real32 GPR / extended80 FP register move.
+        # Only exact canonical normal values and signed zeros are supported.
+        src = word & 31
+        dst = (word >> 19) & 31
+        src_fp = bool(word & 0x20)
+        dst_fp = bool(word & 0x2000)
+        if not (word & 0x1000) or word & (0x40 | 0x800):
+            return None
+        if (word >> 14) & 31:
+            return None
+        if (src_fp and src >= 4) or (dst_fp and dst >= 4):
+            return None
+        return (f"if (!move_real_exact(cpu, {src}u, "
+                f"{'true' if src_fp else 'false'}, {dst}u, "
+                f"{'true' if dst_fp else 'false'})) return false;")
+
     if ins.form == "REG" and op == "movrl":
         # Intel KB MOVRL 6D9: 64-bit IEEE long-real <-> FP extended-real.
         # No host floating-point operations. Handle only exact normal/zero
@@ -615,6 +632,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_copy_sign.hpp"
 #include "i960_fp_convert.hpp"
 #include "i960_fp_long_real.hpp"
+#include "i960_fp_real_move.hpp"
 #include "i960_fp_logb.hpp"
 #include "i960_fp_to_integer.hpp"
 #include "i960_fp_add_exact.hpp"

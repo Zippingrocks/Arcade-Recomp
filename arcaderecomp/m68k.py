@@ -52,6 +52,37 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
             return Instruction(pc, 4, "clr_byte_displacement", (reg, _signed(word(2), 16)))
     if op & 0xf1f8 in (0x2040, 0x3040):
         return Instruction(pc, 2, "movea_d", (2 if op & 0x1000 else 4, op & 7, (op >> 9) & 7))
+    if op >> 12 in (1, 2, 3):
+        size = {1: 1, 2: 4, 3: 2}[op >> 12]
+        src_mode, src_reg = (op >> 3) & 7, op & 7
+        dst_mode, dst_reg = (op >> 6) & 7, (op >> 9) & 7
+        if ((src_mode == 0 or (src_mode, src_reg) == (7, 4)) and
+                (dst_mode == 0 or (size != 4 and
+                 (dst_mode == 5 or (dst_mode == 7 and dst_reg in (0, 1)))))):
+            length = 2
+            if src_mode == 0:
+                source_kind, source = 0, src_reg
+            else:
+                source_kind, source = 1, word(length)
+                length += 2
+                if size == 4:
+                    source = source << 16 | word(length)
+                    length += 2
+                source &= (1 << (size * 8)) - 1
+            displacement = 0
+            if dst_mode == 5 or (dst_mode, dst_reg) == (7, 0):
+                displacement = _signed(word(length), 16)
+                length += 2
+            elif (dst_mode, dst_reg) == (7, 1):
+                displacement = word(length) << 16 | word(length + 2)
+                length += 4
+            return Instruction(pc, length, "move", (size, source_kind, source,
+                                                    dst_mode, dst_reg, displacement))
+    if (op & 0xf020 == 0xe000 and ((op >> 6) & 3) != 3 and
+            ((op >> 3) & 3) in (1, 3)):
+        size = (1, 2, 4)[(op >> 6) & 3]
+        return Instruction(pc, 2, "shift_immediate", (size, op & 7,
+                           ((op >> 9) & 7) or 8, (op >> 8) & 1, (op >> 3) & 3))
     if op & 0xf1ff == 0x41f9:
         return Instruction(pc, 6, "lea_absolute", ((op >> 9) & 7, word(2) << 16 | word(4)))
     if op & 0xf0f8 == 0x50c8:

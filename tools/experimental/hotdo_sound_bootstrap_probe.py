@@ -27,9 +27,10 @@ HARNESS = r'''
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <string>
 #include <vector>
 int main(int argc, char** argv) {
-    if (argc != 2) return 2;
+    if (argc != 3 || (std::string(argv[2]) != "0" && std::string(argv[2]) != "1")) return 2;
     std::ifstream file(argv[1], std::ios::binary);
     if (!file) return 3;
     std::vector<std::uint8_t> image((std::istreambuf_iterator<char>(file)), {});
@@ -42,13 +43,19 @@ int main(int argc, char** argv) {
     CPU cpu;
     if (!reset_from_vectors(cpu, be32(0), be32(4))) return 5;
     SoundROMBus bus(std::move(image));
+    bus.enable_common_control_research(std::string(argv[2]) == "1");
     while (cpu.completed < 100000u && step(cpu, bus)) {}
     std::cout << "{\"completed_instructions\":" << cpu.completed
       << ",\"pc\":" << cpu.pc << ",\"sr\":" << cpu.sr
       << ",\"ssp\":" << cpu.a[7] << ",\"a5\":" << cpu.a[5]
       << ",\"stop_code\":" << static_cast<unsigned>(cpu.stop)
       << ",\"denied_address\":" << cpu.access_address
-      << ",\"denied_write\":" << (cpu.access_write ? "true" : "false") << "}\n";
+      << ",\"denied_width\":" << unsigned(cpu.access_width)
+      << ",\"denied_write\":" << (cpu.access_write ? "true" : "false")
+      << ",\"scsp_discarded_reads\":" << bus.common_control().completed_discarded_reads()
+      << ",\"scsp_control_writes\":" << bus.common_control().completed_writes()
+      << ",\"scsp_written_fields\":" << bus.common_control().written_fields()
+      << ",\"scsp_written_known_mask\":" << bus.common_control().written_known_mask() << "}\n";
     return cpu.stop == Stop::none ? 6 : 0;
 }
 '''
@@ -59,6 +66,8 @@ def main(argv=None):
     parser.add_argument("--chip", type=Path, required=True)
     parser.add_argument("--work-dir", type=Path, default=ROOT / "build" / "m68k-sound-bootstrap")
     parser.add_argument("--compiler", default=shutil.which("g++") or shutil.which("clang++"))
+    parser.add_argument("--scsp-common-controls", action="store_true",
+                        help="Opt in to documented SCSP common-control transactions; not sound or reset timing")
     args = parser.parse_args(argv)
     if not args.compiler:
         parser.error("A C++17 g++/clang++ compiler is required")
@@ -88,10 +97,11 @@ def main(argv=None):
     subprocess.run([args.compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-Werror",
                     "-fsanitize=undefined", "-fno-sanitize-recover=all", "-I", str(ROOT / "runtime"),
                     str(cpp), "-o", str(binary)], check=True, timeout=60)
-    result = subprocess.run([str(binary), str(image_path)], check=True, capture_output=True,
+    result = subprocess.run([str(binary), str(image_path), str(int(args.scsp_common_controls))], check=True, capture_output=True,
                             text=True, timeout=30)
     print(json.dumps({"schema": "hotdo-sound-aot-bootstrap-v1", "chip_sha1": sha1,
                       "proof": "original-byte architecture-subset; explicit vector input; not cabinet reset",
+                      "scsp_common_control_research": args.scsp_common_controls,
                       "translation": asdict(report), "execution": json.loads(result.stdout)}, indent=2))
 
 
