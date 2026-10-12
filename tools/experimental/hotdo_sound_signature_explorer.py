@@ -24,6 +24,14 @@ from arcaderecomp.m68k_cpp import emit_cpp
 from arcaderecomp.sound_control_audit import authenticate_chip
 
 
+# The exact original sequence at 0x600288 masks the selector with 0x0e, then
+# 0x600292 forms A1 from the PC-relative jump table at 0x600298.  Therefore
+# JMP (A1) at 0x600296 can reach exactly these eight even instruction roots.
+# Supplying the bounded set enrolls code for the native dispatcher; JMP itself
+# still consumes and validates the run-time register value.
+PROVEN_JMP_A1_TARGETS = tuple(range(0x00600298, 0x006002A8, 2))
+
+
 HARNESS = r'''
 #include "m68k_sound_bus.hpp"
 #include <fstream>
@@ -35,7 +43,8 @@ using namespace arcaderecomp_m68k_generated;
 using Key=std::tuple<unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
     unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
     unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
-    unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
+    unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,
+    unsigned,unsigned,unsigned,unsigned,unsigned>;
 static void byte(SoundROMBus& bus,unsigned a,unsigned v) {
     if(!bus.establish_sound_ram_byte_research(a,static_cast<std::uint8_t>(v)))throw std::runtime_error("premise");
 }
@@ -79,7 +88,9 @@ static Key run(const std::vector<std::uint8_t>& image,unsigned kind,unsigned sav
             static_cast<unsigned>(bus.interrupt_control().completed_writes()),
             bus.interrupt_control().enable(0),bus.interrupt_control().enable_known_mask(0),
             bus.interrupt_control().pending(0),bus.interrupt_control().pending_known_mask(0),
-            cpu.d[0]&0xffu,cpu.d_known[0]&0xffu,cpu.a[1],cpu.a_known[1]?1u:0u};
+            cpu.d[0]&0xffu,cpu.d_known[0]&0xffu,cpu.a[1],cpu.a_known[1]?1u:0u,
+            cpu.a[0],cpu.a_known[0]?1u:0u,cpu.a[4],cpu.a_known[4]?1u:0u,
+            cpu.d[2],cpu.d_known[2],cpu.d[6],cpu.d_known[6]};
 }
 int main(int argc,char** argv) {
     if(argc!=2)return 2;
@@ -106,7 +117,11 @@ int main(int argc,char** argv) {
             std::get<30>(a)==std::get<30>(b)&&std::get<31>(a)==std::get<31>(b)&&
             std::get<32>(a)==std::get<32>(b)&&std::get<33>(a)==std::get<33>(b)&&
             std::get<34>(a)==std::get<34>(b)&&std::get<35>(a)==std::get<35>(b)&&
-            std::get<36>(a)==std::get<36>(b);
+            std::get<36>(a)==std::get<36>(b)&&std::get<37>(a)==std::get<37>(b)&&
+            std::get<38>(a)==std::get<38>(b)&&std::get<39>(a)==std::get<39>(b)&&
+            std::get<40>(a)==std::get<40>(b)&&std::get<41>(a)==std::get<41>(b)&&
+            std::get<42>(a)==std::get<42>(b)&&std::get<43>(a)==std::get<43>(b)&&
+            std::get<44>(a)==std::get<44>(b);
     };
     auto diagnostic=[](const char* name,const Key& value){
         std::cerr<<name<<": stop="<<std::get<0>(value)<<" pc="<<std::get<1>(value)
@@ -158,7 +173,15 @@ int main(int argc,char** argv) {
        <<",\"boundary_d0_low\":"<<std::get<33>(first)
        <<",\"boundary_d0_low_known\":"<<std::get<34>(first)
        <<",\"boundary_a1\":"<<std::get<35>(first)
-       <<",\"boundary_a1_known\":"<<std::get<36>(first)<<"}}\n";
+       <<",\"boundary_a1_known\":"<<std::get<36>(first)
+       <<",\"boundary_a0\":"<<std::get<37>(first)
+       <<",\"boundary_a0_known\":"<<std::get<38>(first)
+       <<",\"boundary_a4\":"<<std::get<39>(first)
+       <<",\"boundary_a4_known\":"<<std::get<40>(first)
+       <<",\"boundary_d2\":"<<std::get<41>(first)
+       <<",\"boundary_d2_known\":"<<std::get<42>(first)
+       <<",\"boundary_d6\":"<<std::get<43>(first)
+       <<",\"boundary_d6_known\":"<<std::get<44>(first)<<"}}\n";
     return 0;
 }
 '''
@@ -177,7 +200,9 @@ def main(argv=None):
     if not output.is_relative_to(build_root) or output == build_root:
         parser.error("Private generated output must stay below this checkout's ignored build/")
     image, identity = authenticate_chip(args.chip)
-    source, translation = emit_cpp(image, int.from_bytes(image[4:8], "big"), base=0x600000)
+    source, translation = emit_cpp(
+        image, int.from_bytes(image[4:8], "big"), base=0x600000,
+        additional_entries=PROVEN_JMP_A1_TARGETS)
     output.mkdir(parents=True, exist_ok=True)
     run_dir = Path(tempfile.mkdtemp(prefix="run-", dir=output))
     cpp, binary, image_path = run_dir / "private.cpp", run_dir / "probe", run_dir / "audiocpu.bin"
