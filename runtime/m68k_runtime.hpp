@@ -447,6 +447,19 @@ inline bool add_immediate_data(CPU& cpu, unsigned bytes, unsigned reg,
     return finish(cpu, next);
 }
 
+inline bool add_data(CPU& cpu, unsigned bytes, unsigned source,
+                     unsigned destination, std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) ||
+        source >= 8u || destination >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu :
+        (1u << (bytes * 8u)) - 1u;
+    if ((cpu.d_known[source] & mask) != mask)
+        return stop(cpu, Stop::undefined_state);
+    return add_immediate_data(cpu, bytes, destination,
+                              cpu.d[source] & mask, next);
+}
+
 // Motorola SUB Dn,Dn: the sized destination minus source sets all five
 // arithmetic condition codes. C and X both represent unsigned borrow.
 inline bool subtract_data(CPU& cpu, unsigned bytes, unsigned source,
@@ -554,6 +567,57 @@ inline bool add_quick_memory(CPU& cpu, Bus& bus, std::uint32_t address,
     return finish(cpu, next);
 }
 
+inline bool add_data_memory(CPU& cpu, Bus& bus, std::uint32_t address,
+                            unsigned bytes, unsigned source,
+                            std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) || source >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu :
+        (1u << (bytes * 8u)) - 1u;
+    if ((cpu.d_known[source] & mask) != mask)
+        return stop(cpu, Stop::undefined_state);
+    const std::uint32_t source_value = cpu.d[source] & mask;
+    std::uint32_t destination = 0;
+    if (!read_operand(cpu, bus, address, bytes, destination)) return false;
+    const std::uint32_t result = (destination + source_value) & mask;
+    const std::uint32_t sign = 1u << (bytes * 8u - 1u);
+    const bool carry = static_cast<std::uint64_t>(destination) +
+                       source_value > mask;
+    const bool overflow = (~(destination ^ source_value) &
+                           (destination ^ result) & sign) != 0u;
+    if (!write_move(cpu, bus, address, bytes, result)) return false;
+    cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~31u) |
+        (carry ? 17u : 0u) | (result & sign ? 8u : 0u) |
+        (result == 0u ? 4u : 0u) | (overflow ? 2u : 0u));
+    cpu.sr_known |= 31u;
+    return finish(cpu, next);
+}
+
+inline bool subtract_data_memory(CPU& cpu, Bus& bus, std::uint32_t address,
+                                 unsigned bytes, unsigned source,
+                                 std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) || source >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu :
+        (1u << (bytes * 8u)) - 1u;
+    if ((cpu.d_known[source] & mask) != mask)
+        return stop(cpu, Stop::undefined_state);
+    const std::uint32_t source_value = cpu.d[source] & mask;
+    std::uint32_t destination = 0;
+    if (!read_operand(cpu, bus, address, bytes, destination)) return false;
+    const std::uint32_t result = (destination - source_value) & mask;
+    const std::uint32_t sign = 1u << (bytes * 8u - 1u);
+    const bool borrow = destination < source_value;
+    const bool overflow = ((destination ^ source_value) &
+                           (destination ^ result) & sign) != 0u;
+    if (!write_move(cpu, bus, address, bytes, result)) return false;
+    cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~31u) |
+        (borrow ? 17u : 0u) | (result & sign ? 8u : 0u) |
+        (result == 0u ? 4u : 0u) | (overflow ? 2u : 0u));
+    cpu.sr_known |= 31u;
+    return finish(cpu, next);
+}
+
 inline bool bit_set_immediate_memory(CPU& cpu, Bus& bus,
                                      std::uint32_t address, unsigned bit,
                                      std::uint32_t next) {
@@ -577,6 +641,20 @@ inline bool multiply_unsigned_word(CPU& cpu, unsigned source,
         return stop(cpu, Stop::undefined_state);
     const std::uint32_t result = (cpu.d[source] & 0xffffu) *
                                  (cpu.d[destination] & 0xffffu);
+    cpu.d[destination] = result;
+    cpu.d_known[destination] = 0xffffffffu;
+    logical_flags(cpu, (result & 0x80000000u) != 0u, result == 0u);
+    return finish(cpu, next);
+}
+
+inline bool multiply_unsigned_word_immediate(CPU& cpu, unsigned source,
+                                             unsigned destination,
+                                             std::uint32_t next) {
+    if (source > 0xffffu || destination >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    if ((cpu.d_known[destination] & 0xffffu) != 0xffffu)
+        return stop(cpu, Stop::undefined_state);
+    const std::uint32_t result = source * (cpu.d[destination] & 0xffffu);
     cpu.d[destination] = result;
     cpu.d_known[destination] = 0xffffffffu;
     logical_flags(cpu, (result & 0x80000000u) != 0u, result == 0u);
