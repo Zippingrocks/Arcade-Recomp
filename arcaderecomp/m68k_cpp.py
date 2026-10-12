@@ -80,6 +80,15 @@ def _emit(ins):
         statements.append(f"const bool zero = (value & {bit_mask}) == 0;")
         statements += ["cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~4u) | (zero ? 4u : 0u)); cpu.sr_known |= 4u;", done]
         return " ".join(statements)
+    if op == "bclr_immediate_d":
+        bit, reg = args
+        bit_mask = _u(1 << (bit & 31))
+        return (f"if ((cpu.d_known[{reg}] & {bit_mask}) != {bit_mask}) "
+                f"return stop(cpu, Stop::undefined_state); "
+                f"const bool zero = (cpu.d[{reg}] & {bit_mask}) == 0u; "
+                f"cpu.d[{reg}] &= ~{bit_mask}; cpu.d_known[{reg}] |= {bit_mask}; "
+                f"cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~4u) | "
+                f"(zero ? 4u : 0u)); cpu.sr_known |= 4u; {done}")
     if op == "bset_immediate_memory":
         bit, mode, reg, displacement = args
         if mode in (2, 5):
@@ -90,6 +99,12 @@ def _emit(ins):
             prefix, address = "", _u(displacement)
         return (prefix + f"return bit_set_immediate_memory(cpu, bus, {address}, "
                 f"{bit}u, {next_pc});")
+    if op == "bset_immediate_indexed":
+        bit, base, extension = args
+        return (f"std::uint32_t address = 0; if (!indexed_address(cpu, "
+                f"{base}u, {extension}u, address)) return false; "
+                f"return bit_set_immediate_memory(cpu, bus, address, {bit}u, "
+                f"{next_pc});")
     if op == "move_memory_to_d":
         size, mode, source, displacement, dest = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
@@ -335,9 +350,17 @@ def _emit(ins):
         size, source, dest = args
         return (f"return subtract_data(cpu, {size}u, {source}u, {dest}u, "
                 f"{next_pc});")
+    if op == "add_d":
+        size, source, dest = args
+        return (f"return add_data(cpu, {size}u, {source}u, {dest}u, "
+                f"{next_pc});")
     if op == "mulu_d":
         source, destination = args
         return (f"return multiply_unsigned_word(cpu, {source}u, "
+                f"{destination}u, {next_pc});")
+    if op == "mulu_immediate":
+        source, destination = args
+        return (f"return multiply_unsigned_word_immediate(cpu, {source}u, "
                 f"{destination}u, {next_pc});")
     if op == "add_memory_to_d":
         size, mode, source, displacement, destination = args
@@ -358,6 +381,41 @@ def _emit(ins):
         statements.append(
             f"return add_immediate_data(cpu, {size}u, {destination}u, "
             f"source_value, {next_pc});")
+        return " ".join(statements)
+    if op == "add_d_to_memory":
+        size, source, mode, destination, displacement = args
+        statements = []
+        if mode in (2, 5):
+            statements.append(
+                f"if (!cpu.a_known[{destination}]) "
+                f"return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{destination}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        statements.append(
+            f"return add_data_memory(cpu, bus, {address}, {size}u, "
+            f"{source}u, {next_pc});")
+        return " ".join(statements)
+    if op in ("add_d_to_indexed", "sub_d_to_indexed"):
+        size, source, base, extension = args
+        helper = "add_data_memory" if op.startswith("add") else "subtract_data_memory"
+        return (f"std::uint32_t address = 0; if (!indexed_address(cpu, "
+                f"{base}u, {extension}u, address)) return false; return "
+                f"{helper}(cpu, bus, address, {size}u, {source}u, "
+                f"{next_pc});")
+    if op == "sub_d_to_memory":
+        size, source, mode, destination, displacement = args
+        statements = []
+        if mode in (2, 5):
+            statements.append(
+                f"if (!cpu.a_known[{destination}]) "
+                f"return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{destination}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        statements.append(
+            f"return subtract_data_memory(cpu, bus, {address}, {size}u, "
+            f"{source}u, {next_pc});")
         return " ".join(statements)
     if op == "or_memory_to_d":
         size, mode, source, displacement, destination = args

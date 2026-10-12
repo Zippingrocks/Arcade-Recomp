@@ -27,6 +27,14 @@ def bset_memory(bit, mode, reg, displacement=0):
                  *extensions(mode, reg, displacement))
 
 
+def bclr_d(bit, reg):
+    return words(0x0880 | reg, bit)
+
+
+def bset_indexed(bit, base, extension):
+    return words(0x08f0 | base, bit, extension)
+
+
 def mulu(source, destination, mode=0):
     return words(0xc0c0 | destination << 9 | mode << 3 | source)
 
@@ -106,18 +114,79 @@ int main() {
                 ins = decode(mulu(source, destination), 0)
                 self.assertEqual((ins.size, ins.mnemonic, ins.operands),
                                  (2, "mulu_d", (source, destination)))
+        for bit in (0, 1, 7, 8, 31, 32, 255, 0xffff):
+            for reg in range(8):
+                ins = decode(bclr_d(bit, reg), 0)
+                self.assertEqual((ins.size, ins.mnemonic, ins.operands),
+                                 (4, "bclr_immediate_d", (bit, reg)))
+                for extension in (0x0002, 0x78fc, 0x8006, 0xf8fe):
+                    ins = decode(bset_indexed(bit, reg, extension), 0)
+                    self.assertEqual(
+                        (ins.size, ins.mnemonic, ins.operands),
+                        (6, "bset_immediate_indexed",
+                         (bit, reg, extension)))
+            self.assertEqual(
+                decode(bset_indexed(bit, 0, 0x0100), 0).mnemonic,
+                "unsupported")
         for mode in (0, 1, 3, 4, 6):
             self.assertNotEqual(decode(addq_memory(2, 1, mode, 0), 0).mnemonic,
                                 "addq_memory")
-        for mode in (0, 1, 3, 4, 6):
+        for mode in (0, 1, 3, 4):
             self.assertNotEqual(decode(bset_memory(2, mode, 0), 0).mnemonic,
                                 "bset_immediate_memory")
         for mode in range(1, 8):
             self.assertNotEqual(decode(mulu(0, 0, mode), 0).mnemonic, "mulu_d")
         for image in (addq_memory(2, 1, 5, 0)[:2],
-                      bset_memory(2, 5, 0)[:4]):
+                      bset_memory(2, 5, 0)[:4], bclr_d(2, 0)[:2],
+                      bset_indexed(2, 0, 0)[:4]):
             with self.assertRaises(ValueError):
                 decode(image, 0)
+
+    def test_native_bclr_register_and_bset_indexed(self):
+        image, rows = bytearray(), []
+        bits = (0, 1, 7, 8, 31, 32, 255)
+        indexed = (0x0002, 0x78fc, 0x8006, 0xf8fe)
+        for bit in bits:
+            for reg in range(8):
+                rows.append((len(image), 0, bit, reg, 0))
+                image += bclr_d(bit, reg)
+                for extension in indexed:
+                    rows.append((len(image), 1, bit, reg, extension))
+                    image += bset_indexed(bit, reg, extension)
+        image += words(0xffff)
+        source, report = emit_cpp(image, 0)
+        self.assertEqual(report.translated, len(rows))
+        table = "static const unsigned rows[][5]={" + ",".join(
+            "{" + ",".join(map(str, row)) + "}" for row in rows) + "};\n"
+        native(source, table + r'''
+using namespace arcaderecomp_m68k_generated;
+struct RMW:Bus{unsigned count=0,value=0,addresses[2]{},values[2]{};bool writes[2]{};
+ std::uint8_t read8(std::uint32_t a)override{addresses[count]=a;values[count]=value;writes[count++]=false;return static_cast<std::uint8_t>(value);}
+ void write8(std::uint32_t a,std::uint8_t v)override{addresses[count]=a;values[count]=v;writes[count++]=true;}};
+int main(){const unsigned samples[]={0u,1u,0x7fu,0x80u,0xffu,0x80000000u,0xffffffffu};
+ for(const auto& row:rows)for(unsigned raw:samples){CPU cpu;reset_from_vectors(cpu,0x2000,row[0]);
+  for(unsigned r=0;r<8u;++r){cpu.d[r]=raw+r*4u;cpu.d_known[r]=0xffffffffu;
+    cpu.a[r]=0x2000u+r*0x100u;cpu.a_known[r]=true;}cpu.d[row[3]]=raw;
+  cpu.sr=0x271bu;cpu.sr_known=0xffebu;const auto before=cpu;RMW bus;bus.value=raw;
+  if(!step(cpu,bus)||cpu.stop!=Stop::none||cpu.completed!=1u)return 1;
+  if(row[1]==0u){const unsigned mask=1u<<(row[2]&31u);const bool zero=(raw&mask)==0u;
+    if(cpu.d[row[3]]!=(raw&~mask)||bus.count||
+      cpu.sr!=((0x271bu&~4u)|(zero?4u:0u))||cpu.sr_known!=0xffefu)return 2;
+  }else{const unsigned ext=row[4],index_reg=(ext>>12u)&7u;
+    unsigned index=(ext&0x8000u)?before.a[index_reg]:before.d[index_reg];
+    if(!(ext&0x0800u))index=(index&0x8000u)?(index&0xffffu)|0xffff0000u:index&0xffffu;
+    const unsigned byte=ext&0xffu,disp=byte&0x80u?byte|0xffffff00u:byte;
+    const unsigned address=(before.a[row[3]]+index+disp)&0xffffffu,mask=1u<<(row[2]&7u);
+    const unsigned byte_value=raw&0xffu;const bool zero=(byte_value&mask)==0u;
+    if(bus.count!=2u||bus.addresses[0]!=address||bus.addresses[1]!=address||
+      bus.writes[0]||!bus.writes[1]||bus.values[1]!=(byte_value|mask)||
+      cpu.sr!=((0x271bu&~4u)|(zero?4u:0u))||cpu.sr_known!=0xffefu)return 3;
+  }
+ }
+ CPU cpu;reset_from_vectors(cpu,0x2000,0);cpu.d_known[0]=0xfffffffeu;const auto before=cpu;RMW bus;
+ if(step(cpu,bus)||cpu.stop!=Stop::undefined_state||cpu.d!=before.d||bus.count)return 4;
+ return 0;}
+''')
 
     def test_native_addq_and_bset_memory_rmw_values_flags_and_order(self):
         image, rows = bytearray(), []
