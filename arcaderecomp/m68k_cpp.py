@@ -69,6 +69,14 @@ def _emit(ins):
         size, source, dest = args
         return (f"return move_memory_postincrement(cpu, bus, {size}u, {source}u, "
                 f"{dest}u, {next_pc});")
+    if op == "move_address_to_d":
+        size, source, dest = args
+        mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
+        return (f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state); "
+                f"const std::uint32_t value = cpu.a[{source}] & {mask}; "
+                f"cpu.d[{dest}] = (cpu.d[{dest}] & ~{mask}) | value; "
+                f"cpu.d_known[{dest}] |= {mask}; "
+                f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
     if op == "move":
         size, source_kind, source, mode, reg, displacement = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
