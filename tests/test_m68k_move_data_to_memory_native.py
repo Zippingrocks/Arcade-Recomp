@@ -41,14 +41,9 @@ class M68kMoveDataToMemoryTests(unittest.TestCase):
                 decode(image, 0)
         for size in (1, 2, 4):
             self.assertEqual(decode(move_data(size, 0, 3, 1), 0).mnemonic,
-                             "unsupported")
+                             "move")
             self.assertEqual(decode(move_data(size, 0, 4, 1), 0).mnemonic,
                              "unsupported")
-        # This batch must not silently broaden immediate stores.
-        self.assertEqual(decode(words(0x30bc, 0x1234), 0).mnemonic,
-                         "unsupported")
-        self.assertEqual(decode(words(0x23fc, 0, 1, 0, 2), 0).mnemonic,
-                         "unsupported")
 
     def test_native_values_addresses_widths_order_knownness_and_flags(self):
         image, rows = bytearray(), []

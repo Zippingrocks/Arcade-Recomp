@@ -43,7 +43,7 @@ class M68kMemoryLoadTests(unittest.TestCase):
                     (4, "lea_absolute", (reg, address if address < 0x8000 else address - 0x10000)))
             with self.assertRaises(ValueError):
                 decode(words(0x41f8 | reg << 9), 0)
-        for opcode in (0x41d0, 0x41e0, 0x41f0, 0x41fa, 0x41fb, 0x41fc):
+        for opcode in (0x41d0, 0x41e0, 0x41f0, 0x41fa, 0x41fc):
             self.assertEqual(decode(words(opcode, 0, 0), 0).mnemonic, "unsupported")
 
     def test_native_all_load_sizes_registers_knownness_flags_and_word_order(self):

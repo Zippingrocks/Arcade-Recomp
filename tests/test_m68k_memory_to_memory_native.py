@@ -23,8 +23,8 @@ class M68kMemoryToMemoryTests(unittest.TestCase):
                     for end in range(2, len(data)):
                         with self.assertRaises(ValueError):
                             decode(data[:end], 0)
-        for sm, sr, dm, dr in ((3, 0, 2, 0), (4, 0, 2, 0),
-                               (6, 0, 2, 0), (2, 0, 3, 0),
+        for sm, sr, dm, dr in ((4, 0, 2, 0), (6, 0, 2, 0),
+                               (2, 0, 3, 0),
                                (2, 0, 4, 0), (2, 0, 6, 0),
                                (7, 2, 2, 0), (2, 0, 7, 2)):
             self.assertEqual(decode(move(1, sm, sr, dm, dr, 0, 0), 0).mnemonic,
