@@ -144,6 +144,15 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
                            ((1, 2, 4)[(op >> 6) & 3], op & 7))
     if op & 0xfff8 == 0x4840:
         return Instruction(pc, 2, "swap_d", (op & 7,))
+    if op & 0xff80 in (0x4880, 0x4c80):
+        size, mode, reg = (4 if op & 0x40 else 2), (op >> 3) & 7, op & 7
+        if op & 0x0400:
+            if mode == 3:
+                return Instruction(pc, 4, "movem_load_postincrement",
+                                   (size, reg, word(2)))
+        elif mode in (2, 4):
+            return Instruction(pc, 4, "movem_store",
+                               (size, reg, word(2), mode == 4))
     if op & 0xf1c0 in (0x2040, 0x3040):
         size, mode, reg, dest = (2 if op & 0x1000 else 4), (op >> 3) & 7, op & 7, (op >> 9) & 7
         if mode in (0, 1, 2):
