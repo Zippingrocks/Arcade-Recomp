@@ -122,6 +122,10 @@ def _emit(ins):
         size, reg, count, left, kind = args
         return (f"return shift_immediate(cpu, {size}u, {reg}u, {count}u, "
                 f"{'true' if left else 'false'}, {'true' if kind == 3 else 'false'}, {next_pc});")
+    if op == "logical_shift_register":
+        size, destination, count_register, left = args
+        return (f"return logical_shift_register(cpu, {size}u, {destination}u, "
+                f"{count_register}u, {'true' if left else 'false'}, {next_pc});")
     if op == "clr_d":
         size, reg = args
         mask = _u((1 << (size * 8)) - 1)

@@ -178,6 +178,12 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         size = (1, 2, 4)[(op >> 6) & 3]
         return Instruction(pc, 2, "shift_immediate", (size, op & 7,
                            ((op >> 9) & 7) or 8, (op >> 8) & 1, (op >> 3) & 3))
+    if (op & 0xf020 == 0xe020 and ((op >> 6) & 3) != 3 and
+            ((op >> 3) & 3) == 1):
+        size = (1, 2, 4)[(op >> 6) & 3]
+        return Instruction(pc, 2, "logical_shift_register",
+                           (size, op & 7, (op >> 9) & 7,
+                            (op >> 8) & 1))
     if op & 0xf1ff == 0x41f8:
         return Instruction(pc, 4, "lea_absolute", ((op >> 9) & 7, _signed(word(2), 16)))
     if op & 0xf1ff == 0x41f9:

@@ -281,6 +281,43 @@ inline bool shift_immediate(CPU& cpu, unsigned bytes, unsigned reg, unsigned cou
     return finish(cpu, next);
 }
 
+// MC68000 register-count logical shifts use the count register's low six bits.
+// A zero count clears C but leaves X (and its knownness) unchanged; a nonzero
+// count copies the final shifted-out bit to both C and X.
+inline bool logical_shift_register(CPU& cpu, unsigned bytes, unsigned destination,
+                                   unsigned count_register, bool left,
+                                   std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) ||
+        destination >= 8u || count_register >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const unsigned bits = bytes * 8u;
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu : (1u << bits) - 1u;
+    if ((cpu.d_known[destination] & mask) != mask ||
+        (cpu.d_known[count_register] & 63u) != 63u)
+        return stop(cpu, Stop::undefined_state);
+    const unsigned count = cpu.d[count_register] & 63u;
+    const std::uint32_t sign = 1u << (bits - 1u);
+    std::uint32_t value = cpu.d[destination] & mask;
+    bool carry = false;
+    for (unsigned i = 0; i < count; ++i) {
+        carry = (value & (left ? sign : 1u)) != 0u;
+        value = left ? (value << 1u) & mask : value >> 1u;
+    }
+    cpu.d[destination] = (cpu.d[destination] & ~mask) | value;
+    cpu.d_known[destination] |= mask;
+    const std::uint16_t nz = static_cast<std::uint16_t>(
+        (value & sign ? 8u : 0u) | (value == 0u ? 4u : 0u));
+    if (count != 0u) {
+        cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~31u) |
+            (carry ? 17u : 0u) | nz);
+        cpu.sr_known |= 31u;
+    } else {
+        cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~15u) | nz);
+        cpu.sr_known |= 15u;
+    }
+    return finish(cpu, next);
+}
+
 // Motorola ADDQ to Dn: byte/word updates retain the upper register bits, while
 // all five arithmetic condition codes describe the sized addition. Unknown
 // input bits stop rather than guessing carry or overflow.
