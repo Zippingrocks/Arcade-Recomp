@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Implement bounded MC68000 JMP (An) with proven AOT target enrollment for the authentic known A1 target 0x6002a2 at PC 0x600296; do not accept arbitrary dynamic addresses. Separately implement autovector exception entry and recover reset wiring.",
+      "next": "Run the identity-gated sound probe with legally supplied MPR-19721.32 and MPR-19722.34 sample chips to resolve the authenticated 0xA9D9F4 read; then implement MC68000 autovector exception entry and recover physical reset wiring. Never invent sample bytes or suppress pending interrupts.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -2090,6 +2090,17 @@
         "docs/SEGA_IO3155649.md"
       ],
       "note": "Pinned two independent public emulator implementations that converge on a TX2 gun-byte selector hypothesis: indices 0..7 map low/high P1Y/P1X/P2Y/P2X and larger indices return off-screen flags. Both force receive status 0x0c and cite no CPU-correlated 837-12079 capture, so this is recorded only as a future-capture discriminator; the predicted initial TX2=FF response is not used. Authentic RX 5%, Model2C 20%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "docs/M68000_INDIRECT_JUMP_TABLE.md"
+      ],
+      "note": "Corrected the audio area's stale next-step pointer after bounded JMP (An) and the exact eight-root table landed. The current authenticated boundary is the identity-gated sample-ROM read at 0xA9D9F4; after legally supplied MPR-19721/19722 data, MC68000 autovector entry and physical reset wiring remain. Roadmap correction only: audio stays 0%, audio.m68k 5%, audio.rom 10%, overall HOTD1 10%."
     }
   ]
 }
