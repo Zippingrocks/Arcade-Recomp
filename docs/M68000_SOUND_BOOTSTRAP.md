@@ -14,8 +14,9 @@ Unknown instructions and undiscovered PCs stop explicitly.
 
 The supported MC68000 subset is:
 
-- MOVE immediate to SR, restricted to supervisor mode, trace disabled and
-  interrupt mask 7; unsupported control changes stop before modifying state.
+- MOVE immediate to SR, restricted to destinations that remain in supervisor
+  mode with trace disabled; all interrupt-mask and CCR values are supported,
+  while stack-bank changes and trace entry stop before modifying state.
 - CLR byte/word/long to data registers; MOVEQ; MOVEA word/long from a data
   register; LEA absolute-long; NOP.
 - BRA, Bcc and BSR byte/word displacements; DBcc with a word counter; RTS

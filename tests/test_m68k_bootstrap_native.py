@@ -267,7 +267,7 @@ int main() {
     reset_from_vectors(cpu,0x3456,0x600100);cpu.pc|=1;
     if(step(cpu,bus)||cpu.stop!=Stop::instruction_address)return 9;
     reset_from_vectors(cpu,0x3456,0x600100);
-    if(move_sr(cpu,0x2000,0x600104)||cpu.sr!=0x2700||cpu.pc!=0x600100)return 10;
+    if(!move_sr(cpu,0x2000,0x600104)||cpu.sr!=0x2000||cpu.pc!=0x600104)return 10;
     reset_from_vectors(cpu,0x3456,0x600100);cpu.sr=0;
     if(move_sr(cpu,0x2700,0x600104)||cpu.stop!=Stop::privilege)return 11;
     reset_from_vectors(cpu,0x3456,0x600112);
