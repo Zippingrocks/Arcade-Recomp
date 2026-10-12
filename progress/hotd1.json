@@ -1506,6 +1506,20 @@
         "docs/M68000_POSTINCREMENT_LOAD.md"
       ],
       "note": "Added Motorola-manual-backed byte/word/long MOVE (An)+,Dn with sized destination preservation, exact XNZVC, A7 byte alignment increment, 24-bit big-endian reads and post-read 32-bit address updates. Three focused GCC/UBSan tests cover every register pair, widths, physical-address wrap, unknown/alignment stops and both partial long-read refusals; all 57 MC68000 tests and the 652-test full suite pass. Original 0x60038A MOVE.B (A1)+,D0 now translates; reset-vector graph grows 145/138 to 151/144 and advances that path to an indexed MOVEA stop at 0x600394 while leaving seven explicit unsupported sites. Authenticated probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no RAM or device data was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "tests/test_m68k_adda_data_native.py",
+        "docs/M68000_ADDA_DATA.md"
+      ],
+      "note": "Added Motorola-manual-backed ADDA.W/L Dn,An with exact word sign extension, full 32-bit address arithmetic and completely preserved condition codes. Three focused GCC/UBSan tests cover every register pair, boundary operands, wraparound and partial-knownness failures; all 60 MC68000 tests and the 655-test full suite pass. Original 0x6003C2 ADDA.L D0,A1 now translates; reset-vector graph grows 151/144 to 161/153 and exposes arithmetic/data-move stops at 0x6003D4 and 0x6003F4 while leaving eight explicit unsupported sites. Authenticated probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no RAM or device data was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

@@ -156,6 +156,10 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
     if op & 0xf1f8 == 0x41e8:
         return Instruction(pc, 4, "lea_displacement",
                            (op & 7, (op >> 9) & 7, _signed(word(2), 16)))
+    if op & 0xf1f8 in (0xd0c0, 0xd1c0):
+        return Instruction(pc, 2, "adda_d",
+                           (4 if op & 0x0100 else 2, op & 7,
+                            (op >> 9) & 7))
     if (op & 0xf100 == 0x5000 and ((op >> 6) & 3) != 3 and
             (op >> 3) & 7 == 0):
         size = (1, 2, 4)[(op >> 6) & 3]
