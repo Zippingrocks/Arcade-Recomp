@@ -63,8 +63,27 @@ The target manifest identifies the required original HOTD sample chips as
 workspace.  The strict bus therefore correctly stops rather than returning
 zeros or mirroring unrelated data.
 
-The next task is an identity-checked sample-region provider implementing the
-documented direct and banked read-only windows, followed by rerunning this
-same authenticated state partition with the two private sample chips.  Sample
-playback, DSP execution, timing and audible output remain absent.  Estimates
-and Gates A/B/C do not change.
+## Identity-gated sample-ROM provider
+
+`SoundROMBus` now optionally accepts the manifest's exact 8 MiB reconstructed
+sample region.  It implements immutable byte and big-endian word reads across
+the public map without broadening any write:
+
+- `0x800000..0x9fffff` maps sample offsets `0x000000..0x1fffff`;
+- `0xa00000..0xdfffff` maps offsets `0x200000..0x5fffff`; and
+- `0xe00000..0xffffff` maps offsets `0x600000..0x7fffff`.
+
+The experimental private explorer accepts the two sample chips only together,
+authenticates their exact manifest sizes and SHA-1 identities independently of
+filename/order, applies each chip's declared 16-bit byte swap, and keeps the
+assembled region under ignored `build/`.  With no chips supplied, the same
+read remains a strict bus fault and the report explicitly says the sample
+region is unauthenticated.  Synthetic native tests cover every aperture edge,
+physical 24-bit address masking, word endianness, absent/wrong-sized regions
+and write refusal.
+
+The next evidence blocker is therefore the two private original sample chips,
+followed by rerunning this same authenticated state partition with
+`--sample-chips`.  Their bytes are not downloaded, substituted or committed.
+Sample playback, DSP execution, timing and audible output remain absent.
+Estimates and Gates A/B/C do not change.

@@ -17,6 +17,7 @@ namespace arcaderecomp::m68k {
 // SCSP synthesis, RAM and cabinet reset wiring are unsupported.
 class SoundROMBus final : public Bus {
     std::vector<std::uint8_t> rom_;
+    std::vector<std::uint8_t> samples_;
     bool sound_ram_enabled_ = false;
     bool common_control_enabled_ = false;
     bool slot_mixer_enabled_ = false;
@@ -38,9 +39,24 @@ class SoundROMBus final : public Bus {
     arcaderecomp::scsp::DspMicroprogram dsp_microprogram_;
     arcaderecomp::model2::HotdSoundControl hotd_sound_control_;
     SoundRAM sound_ram_;
+    bool sample_offset(std::uint32_t address, std::uint32_t& offset) const {
+        if (samples_.empty()) return false;
+        if (address >= 0x800000u && address < 0xa00000u)
+            offset = address - 0x800000u;
+        else if (address >= 0xa00000u && address < 0xe00000u)
+            offset = 0x200000u + address - 0xa00000u;
+        else if (address >= 0xe00000u)
+            offset = 0x600000u + address - 0xe00000u;
+        else return false;
+        return offset < samples_.size();
+    }
 public:
-    explicit SoundROMBus(std::vector<std::uint8_t> rom) : rom_(std::move(rom)) {
+    explicit SoundROMBus(std::vector<std::uint8_t> rom,
+                         std::vector<std::uint8_t> samples = {})
+        : rom_(std::move(rom)), samples_(std::move(samples)) {
         if (rom_.size() != 0x80000u) throw std::invalid_argument("sound ROM must be 512 KiB");
+        if (!samples_.empty() && samples_.size() != 0x800000u)
+            throw std::invalid_argument("sample ROM region must be 8 MiB");
     }
     bool interrupt_level(unsigned& level) override {
         if(!common_control_enabled_){level=0;return true;}
@@ -52,6 +68,8 @@ public:
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.read8(address, value))
             return value;
         if (address >= 0x600000u && address < 0x680000u) return rom_[address - 0x600000u];
+        std::uint32_t sample = 0;
+        if (sample_offset(address, sample)) return samples_[sample];
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_loop_key_control_.read8(address - 0x100000u, value)) return value;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
@@ -121,6 +139,10 @@ public:
         if (!(address & 1u) && address >= 0x600000u && address < 0x680000u)
             return static_cast<std::uint16_t>((std::uint16_t(rom_[address - 0x600000u]) << 8) |
                                              rom_[address - 0x600000u + 1u]);
+        std::uint32_t sample = 0;
+        if (!(address & 1u) && sample_offset(address, sample) && sample + 1u < samples_.size())
+            return static_cast<std::uint16_t>((std::uint16_t(samples_[sample]) << 8u) |
+                                             samples_[sample + 1u]);
         // Reserved high-byte bits have no documented readback; no guessed word.
         throw BusFault(address, false, 2u);
     }
