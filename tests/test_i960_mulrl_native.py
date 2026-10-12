@@ -120,8 +120,15 @@ class MULRLNativeTests(unittest.TestCase):
         rows = [(a, b, (a * b) & ((1 << 64) - 1), (a * b) >> 64) for a, b in pairs]
         native([mulrl(), 0xffffffff], "static const std::uint64_t rows[][4]={" + table(rows) + "};\n" + r"""
 using namespace arcaderecomp_generated;
-int main(){for(const auto& row:rows){const auto p=multiply_unsigned_64_wide(row[0],row[1]);
-if(p.low!=row[2]||p.high!=row[3])return 1;}return 0;}
+int main(){
+    for(const auto& row:rows){
+        const auto p=multiply_unsigned_64_wide(row[0],row[1]);
+        if(p.low!=row[2]||p.high!=row[3])return 1;
+    }
+    CPU cpu{};Bus bus{};cpu.fp_defined[0]=cpu.fp_defined[2]=true;
+    if(!step(cpu,bus)||cpu.ip!=4u||cpu.r[8]!=0u||cpu.r[9]!=0u)return 2;
+    return 0;
+}
 """)
 
     def test_binary64_matrix_all_eight_register_modes_and_ac_profiles(self):
@@ -129,7 +136,7 @@ if(p.low!=row[2]||p.high!=row[3])return 1;}return 0;}
                          af=bool(k & 1), bf=bool(k & 2), df=bool(k & 4)) for k in range(8)]
         native(program + [0xffffffff], "static const std::uint64_t rows[][18]={" + table(binary_rows()) + "};\n" + COMMON + r"""
 int main(){Bus bus{};
-for(const auto& row:rows)for(unsigned mode=0;mode<8u;++mode)
+for(const auto& row:rows){for(unsigned mode=0;mode<8u;++mode){
 for(auto ac:{0u,0x401f917fu,0x801f917fu,0xff1f917fu}){
     CPU cpu{};cpu.ip=mode*4u;if(!kb_establish_arithmetic_controls(cpu,ac))return 1;
     for(unsigned i=0;i<32u;++i)cpu.r[i]=0x12345600u+i;
@@ -149,14 +156,15 @@ for(auto ac:{0u,0x401f917fu,0x801f917fu,0xff1f917fu}){
         if(!ok||cpu.stop_code!=StopCode::none)return 2;
     }else if(ok||cpu.stop_code!=(row[field]==1u?StopCode::unsupported_floating_rounding:StopCode::unsupported_floating_format))return 3;
     if(!same_data(cpu,expected))return 4;
-}return 0;}
+}}}
+return 0;}
 """)
 
     def test_full_extended_precision_and_destination_range_boundaries(self):
         native([mulrl(), mulrl(d=1, df=True), 0xffffffff],
                "static const std::uint64_t rows[][14]={" + table(extended_rows()) + "};\n" + COMMON + r"""
 int main(){Bus bus{};
-for(const auto& row:rows)for(unsigned form=0;form<2u;++form){
+for(const auto& row:rows){for(unsigned form=0;form<2u;++form){
     CPU cpu{};cpu.ip=form*4u;cpu.cc_defined=false;
     cpu.arithmetic_controls_other=0x80100000u;cpu.arithmetic_controls_other_defined_mask=0x80100000u;
     cpu.fp[0]={static_cast<std::uint32_t>(row[0]),static_cast<std::uint32_t>(row[1]),static_cast<std::uint16_t>(row[2])};
@@ -171,12 +179,15 @@ for(const auto& row:rows)for(unsigned form=0;form<2u;++form){
         if(!ok)return 1;
     }else if(ok||cpu.stop_code!=(row[field]==1u?StopCode::unsupported_floating_rounding:StopCode::unsupported_floating_format))return 2;
     if(!same_data(cpu,expected))return 3;
-}return 0;}
+}}
+return 0;}
 """)
 
     def test_aliases_zero_signs_and_highest_register_boundaries(self):
         native([mulrl(), 0xffffffff], COMMON + r"""
 int main(){
+    CPU initial{};Bus bus{};initial.fp_defined[0]=initial.fp_defined[2]=true;
+    if(!step(initial,bus)||initial.ip!=4u||initial.r[8]!=0u||initial.r[9]!=0u)return 5;
     for(unsigned first=0;first<4u;++first)for(unsigned second=0;second<4u;++second)
     for(unsigned dst=0;dst<4u;++dst){
         CPU cpu{};cpu.fp[first]={0u,0xc0000000u,16383u};cpu.fp_defined[first]=true;

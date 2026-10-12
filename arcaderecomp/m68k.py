@@ -64,8 +64,13 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         if mode == 0:
             return Instruction(pc, 2, "clr_d", (size, reg))
-        if mode == 5 and size == 1:
-            return Instruction(pc, 4, "clr_byte_displacement", (reg, _signed(word(2), 16)))
+        if mode in (2, 3, 5) or (mode == 7 and reg in (0, 1)):
+            displacement, length = 0, 2
+            if mode == 5 or (mode, reg) == (7, 0):
+                displacement, length = _signed(word(2), 16), 4
+            elif (mode, reg) == (7, 1):
+                displacement, length = word(2) << 16 | word(4), 6
+            return Instruction(pc, length, "clr_memory", (size, mode, reg, displacement))
     if op & 0xf1f8 in (0x2040, 0x3040):
         return Instruction(pc, 2, "movea_d", (2 if op & 0x1000 else 4, op & 7, (op >> 9) & 7))
     if op >> 12 in (1, 2, 3):

@@ -1295,6 +1295,59 @@
         "tools/hotd1_strict_boot_probe.cpp"
       ],
       "note": "Separately reviewed exact CPU arithmetic, sound loads and measured host reconstruction speed. Full local WSL suite passes 604 tests without skips in 132.417 seconds. Fresh regenerated original main-CPU native probe remains at 1910 instructions, 318 mapped writes and two documented serial transmissions before refused status at 0x01C0001A; opt-in SCSP sound probe remains at 18 instructions before refused 0x400001. Isolated original-byte checks use supplied synthetic state, not cabinet-reference proof. Authentic serial startup, sound-board control/reset, geometry/video, audio and gameplay remain unresolved. CPU 55%, Model2C 20%, audio 0%, overall original HOTD1 10%; Gates A/B/C stay open."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.floating",
+      "percent_before": 40,
+      "percent_after": 40,
+      "evidence": [
+        "tests/test_i960_mulrl_native.py",
+        "https://github.com/Zippingrocks/Arcade-Recomp/actions/runs/38200570947"
+      ],
+      "note": "PR CI exposed four Clang compilation failures in MULRL test harnesses despite successful local GCC execution: helper-only tests did not use emitted step, and two nested-loop harnesses triggered misleading-indentation diagnostics. Exercised emitted step and added explicit braces, keeping all warning/error flags enabled. All six MULRL tests pass GCC/UBSan again and Clang 19 strict syntax checking; syntax checking is not a Clang execution result. Numeric runtime semantics unchanged; awaiting fresh full CI, floating 40%, CPU 55%, HOTD1 10%."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.floating",
+      "percent_before": 40,
+      "percent_after": 40,
+      "evidence": [
+        "runtime/i960_fp_sqrt_exact.hpp",
+        "tests/test_i960_sqrtr_native.py",
+        "docs/I960_SQRTR.md"
+      ],
+      "note": "Added native SQRTR 688 exact positive-normal/signed-zero binary32/extended80 source/destination forms with bounded portable integer root search and independent Fraction/isqrt oracle. Six GCC/UBSan tests pass, covering 3098 integer-root, 1730 binary32 and 392 extended vectors, aliases, AC knownness and atomic unsupported-state stops; strict Clang syntax checks pass. Original g6-to-g4 site 0x1204 passes 6920 synthetic-state checks. Two-root graph now 3248 candidates/3247 translations, next unsupported ADDRL 79F at 0x121C. No rounded/special/fault behavior or continuous boot proof; floating 40%, CPU 55%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "runtime/m68k_runtime.hpp",
+        "arcaderecomp/m68k_cpp.py",
+        "tests/test_m68k_clr_memory_native.py",
+        "docs/M68000_CLR_MEMORY.md"
+      ],
+      "note": "Added CLR B/W/L bounded memory forms and postincrement. Primary Motorola read-before-clear behavior plus visually verified original Atari 1995 CLR.L reverse-write warning establish the source-composed read-high/read-low/write-low/write-high contract. Five GCC/UBSan tests and Clang strict syntax checks cover all 78 forms, flags/knownness, bus widths, wrap, all refusal points and retained partial effects. CPU state freeze on refusal is explicitly diagnostic, not physical BERR rollback. Original site passes 4096 synthetic-state checks; isolated original loop executes 57347 instructions over 28672 synthetic longs then stops at ANDI.B 0x6001A6. Static graph43/42; no sound RAM/device acceptance, timed audio or cabinet proof. Sound CPU5%, audio0%, HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "hotd1",
+      "percent_before": 10,
+      "percent_after": 10,
+      "evidence": [
+        "docs/I960_SQRTR.md",
+        "docs/M68000_CLR_MEMORY.md",
+        "docs/ROM_RECONSTRUCTION_PERFORMANCE.md",
+        "tools/hotd1_strict_boot_probe.cpp"
+      ],
+      "note": "Expanded the pending batch after the user's follow-up with exact SQRTR and source-backed CLR memory operations, retaining all prior limitations. Full final local WSL suite passes 615 tests without skips in 145.826 seconds; new and repaired harnesses also pass strict Clang 19 syntax checks, pending actual fresh CI execution. Parent reran authenticated SQRTR and CLR isolated checks and freshly rebuilt continuous probes: main remains 1910 instructions/318 mapped writes/two TX before refused serial status0x01C0001A; optional sound remains18 before refused boardwrite0x400001. Source research and synthetic-state original instruction loops are not cabinet captures. CPU55%, Model2C20%, audio0%, overallHOTD1 10%; Gates A/B/C remain open."
     }
   ]
 }

@@ -80,6 +80,7 @@ REGISTER = {
     0x66d: ("flushreg", ""),
     0x674: ("cvtir", "sd"),
     0x677: ("scaler", "sss"),
+    0x688: ("sqrtr", "sd"),
     0x68a: ("logbnr", "sd"),
     0x6c2: ("cvtzri", "sd"),
     0x6c3: ("cvtzril", "sd"),
@@ -226,7 +227,7 @@ def decode(image: bytes, pc: int) -> Instruction:
     if extended in REGISTER:
         name, form = REGISTER[extended]
         floating = name in {
-            "cvtir", "cvtzri", "cvtzril", "logbnr", "movr", "movrl", "movre",
+            "cvtir", "cvtzri", "cvtzril", "sqrtr", "logbnr", "movr", "movrl", "movre",
             "cpysre", "cpyrsre", "scaler", "divr", "mulr", "mulrl", "subr", "addr",
         }
         # Intel KB Appendix B: bits 5/6 are reserved zero, NOT FP selectors.
@@ -246,7 +247,7 @@ def decode(image: bytes, pc: int) -> Instruction:
             a = str(src) if word & 0x800 else reg(src)
             d = f"fp{dst}" if word & 0x2000 else reg(dst)
             return Instruction(pc, word, 4, "REG", name, (a, d))
-        if name in ("cvtzri", "cvtzril", "logbnr", "movr", "movrl", "movre"):
+        if name in ("cvtzri", "cvtzril", "sqrtr", "logbnr", "movr", "movrl", "movre"):
             src = word & 31
             dst = (word >> 19) & 31
             a = floating_operand(src, bool(word & 0x800))

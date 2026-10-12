@@ -43,6 +43,7 @@ struct Bus {
     // A word cycle is not silently decomposed into two potentially side-effecting
     // byte accesses. Each board provider must explicitly implement word lanes.
     virtual std::uint16_t read16(std::uint32_t address) { throw BusFault(address, false, 2); }
+    virtual void read16_discard(std::uint32_t address) { (void)read16(address); }
     virtual void write16(std::uint32_t address, std::uint16_t) { throw BusFault(address, true, 2); }
 };
 
@@ -116,6 +117,33 @@ inline bool compare_immediate(CPU& cpu, unsigned bytes, std::uint32_t destinatio
     if (overflow) cpu.sr |= 2u;
     if (destination < immediate) cpu.sr |= 1u;
     return finish(cpu, next);
+}
+
+// MC68000 CLR reads the destination before clearing it (Motorola PRM 4-74).
+// Long operand reads are high word then low word. CLR.L writes are the reverse:
+// low word then high word (Atari Hardware Bugs & Warnings, 26-Apr-1995, p.6).
+// These are separate data transactions, not TAS's indivisible RMW bus cycle.
+// This helper intentionally commits no CPU state on a diagnostic refusal;
+// already accepted bus effects survive. It does not model BERR microstate.
+inline bool clear_memory(CPU& cpu, Bus& bus, std::uint32_t address, unsigned bytes) {
+    if (bytes != 1u && bytes != 2u && bytes != 4u)
+        return stop(cpu, Stop::unsupported_instruction);
+    address &= 0x00ffffffu;
+    if (bytes != 1u && (address & 1u)) {
+        cpu.access_address = address;
+        cpu.access_width = static_cast<std::uint8_t>(bytes); cpu.access_write = false;
+        return stop(cpu, Stop::data_address);
+    }
+    if (bytes == 1u) {
+        bus.read8_discard(address); bus.write8(address, 0);
+    } else if (bytes == 2u) {
+        bus.read16_discard(address); bus.write16(address, 0);
+    } else {
+        const std::uint32_t low_address = (address + 2u) & 0x00ffffffu;
+        bus.read16_discard(address); bus.read16_discard(low_address);
+        bus.write16(low_address, 0); bus.write16(address, 0);
+    }
+    return true;
 }
 
 inline bool write_move(CPU& cpu, Bus& bus, std::uint32_t address, unsigned bytes,

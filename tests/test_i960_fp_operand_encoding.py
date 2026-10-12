@@ -15,7 +15,7 @@ def instruction(opcode, src=0, second=0, dst=2, modes=0):
 
 class FloatingOperandEncodingTests(unittest.TestCase):
     def test_reserved_bits_are_rejected_for_every_supported_fp_family(self):
-        for opcode in (0x674, 0x677, 0x68a, 0x6c2, 0x6c3, 0x6c9,
+        for opcode in (0x674, 0x677, 0x688, 0x68a, 0x6c2, 0x6c3, 0x6c9,
                        0x6d9, 0x6e1, 0x6e2, 0x6e3, 0x78b, 0x78c, 0x78d, 0x78f, 0x79c):
             for reserved in (0x20, 0x40, 0x60):
                 word = instruction(opcode, modes=0x3000) | reserved
@@ -25,7 +25,7 @@ class FloatingOperandEncodingTests(unittest.TestCase):
                     self.assertIn(0, emit_cpp(image, 0, 8)[1].unsupported)
 
     def test_real_unary_sources_use_m1_not_reserved_bits(self):
-        for opcode in (0x68a, 0x6c2, 0x6c3, 0x6c9, 0x6d9, 0x6e1):
+        for opcode in (0x688, 0x68a, 0x6c2, 0x6c3, 0x6c9, 0x6d9, 0x6e1):
             for source in range(32):
                 word = instruction(opcode, src=source, dst=20, modes=0x1800)
                 ins = decode(struct.pack("<I", word), 0)

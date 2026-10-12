@@ -74,11 +74,13 @@ postincrement at `0x0060019c`. A strict bus instead refuses the initial byte
 read at `0x00000c04`; entering at LEA performs four register-only instructions
 before the same unsupported CLR. This is not continuous sound startup.
 
-The original vector-entry static graph now discovers **39 sites, 38
+At the memory-load checkpoint, the original vector-entry static graph discovers **39 sites, 38
 translated**, with one unsupported site at `0x0060019c` and no traversal-limit
 hit. These supersede the prior CMPI-stage static counts, not any hardware
 fidelity estimate. Original bytes and generated original-code validation
 artifacts remain private under ignored `build/`.
+The subsequent [memory CLR extension](M68000_CLR_MEMORY.md) records the newer
+static frontier and isolated clear-loop checks.
 
 The physical sound-board reset sequence, RAM state, unknown `0x00400001`
 control write, interrupts and timed SCSP/audio output remain unverified or

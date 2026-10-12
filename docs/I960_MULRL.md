@@ -55,12 +55,14 @@ under GCC/UBSan. The reconstructed main-CPU region's SHA-256 is
 The private verifier is under ignored `build/`; original bytes and generated
 game C++ are not published.
 
-The two-root static walk (0x5F0/0x6B0, limit 16,384) now discovers **3,242**
+At the MULRL checkpoint, the two-root static walk (0x5F0/0x6B0, limit 16,384) discovers **3,242**
 candidate instructions and translates **3,241**. It stops at newly exposed
 **SQRTR 688h, 0x1204**. This is not a fully translated static program,
 exhaustive reachable-code coverage or continuous game execution. Even
 translated instructions retain value-dependent unsupported-state stops;
 authentic serial RX/status and other hardware boundaries are unchanged.
+The subsequent [SQRTR extension](I960_SQRTR.md) records the newer static
+frontier; neither checkpoint establishes continuous execution.
 
 Estimated floating progress stays **40%**, CPU **55%**, overall original
 HOTD1 **10%**. Gates A/B/C remain open; no cabinet-reference, playable boot,

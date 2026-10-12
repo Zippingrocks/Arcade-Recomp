@@ -223,6 +223,21 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                 f"{'true' if source_fp else 'false'}, {dst}u)) "
                 "return false;")
 
+    if ins.form == "REG" and op == "sqrtr":
+        # Intel KB 688: binary32 GPR / extended80 FP square root.
+        # Irrational, inexact and exceptional results explicitly stop.
+        src = word & 31
+        dst = (word >> 19) & 31
+        src_fp = bool(word & 0x800)
+        dst_fp = bool(word & 0x2000)
+        if not (word & 0x1000) or word & 0x60 or (word >> 14) & 31:
+            return None
+        if (src_fp and src >= 4) or (dst_fp and dst >= 4):
+            return None
+        return (f"if (!square_root_real_exact(cpu, {src}u, "
+                f"{'true' if src_fp else 'false'}, {dst}u, "
+                f"{'true' if dst_fp else 'false'})) return false;")
+
     if ins.form == "REG" and op == "logbnr":
         # IEEE-754 logb(x) returns the integral binary exponent in FP
         # format (e.g. logb(3249) = 11.0). Extract integer exponents
@@ -656,6 +671,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_add_exact.hpp"
 #include "i960_fp_multiply_exact.hpp"
 #include "i960_fp_multiply_long_exact.hpp"
+#include "i960_fp_sqrt_exact.hpp"
 #include "i960_fp_divide_exact.hpp"
 #include "i960_fp_scale_exact.hpp"
 
