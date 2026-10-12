@@ -1776,6 +1776,22 @@
         "docs/M68000_MOVEM.md"
       ],
       "note": "Added Motorola-manual-backed original-MC68000 MOVEM word/long stores through (An) and -(An), plus loads through (An)+, including reversed predecrement mask/order, original-base store behavior, word sign extension, base-in-list postincrement behavior, strict transactions and preserved flags. Four focused GCC/Clang UBSan tests cover every base/width, sparse/full masks, exact values/order, exclusions, truncation and partial refusal; all 117 MC68000 tests pass. Four authenticated word-swapped MOVEM sites at 0x601A84, 0x601BEE, 0x6023D8 and 0x6023EE now translate; the graph grows 386/380 to 581/568, gaining 195 discovered and 188 translated instructions. The larger frontier honestly exposes thirteen stops: five postincrement TSTs, six postincrement-source memory-to-memory MOVEs and two run-time indirect JMPs. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no RAM/device value or indirect target was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_tst_native.py",
+        "tests/test_m68k_move_frontier_native.py",
+        "docs/M68000_POSTINCREMENT_INDEXED.md"
+      ],
+      "note": "Added Motorola-manual-backed byte/word/long TST (An)+ and MOVE (An)+ to original-core brief indexed memory, with source-before-destination evaluation, A7 byte increments, base/index/source alias timing, strict transfers and exact flags. Eight focused GCC/Clang UBSan tests cover every width/source/base, data/address word/long indexes, signed displacements, reserved extensions, truncation, alignment, unknown destination state and refused source/destination transactions; all 119 MC68000 tests pass. Five authenticated postincrement TST and six indexed MOVE sites now translate; the graph grows 581/568 to 708/700, gaining 127 discovered and 132 translated instructions while unsupported sites fall thirteen to eight. The new frontier is three unproven run-time indirect JMPs plus one memory ADD.L, one immediate MULU.W and three register ADD.W sites. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no RAM/device value or indirect target was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }
