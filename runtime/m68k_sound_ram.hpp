@@ -47,6 +47,12 @@ public:
         return true;
     }
 
+    // Establishes an externally supplied research premise. This is not a CPU
+    // bus transaction and makes no claim about physical power-on contents.
+    bool establish8(std::uint32_t offset, std::uint8_t value) {
+        return write8(offset, value);
+    }
+
     bool write16(std::uint32_t offset, std::uint16_t value) {
         if ((offset & 1u) || offset + 1u >= size) return false;
         return write8(offset, static_cast<std::uint8_t>(value >> 8u)) &&

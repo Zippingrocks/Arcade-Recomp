@@ -13,7 +13,7 @@ int main() {
     SoundRAM ram; std::uint8_t byte=0x5a; std::uint16_t word=0x5aa5;
     if (ram.known_bytes() || ram.read8(0,byte) || byte!=0x5a || ram.read16(0,word) ||
             word!=0x5aa5 || !ram.read8_discard(0) || !ram.read16_discard(0)) return 1;
-    if (!ram.write8(0,0x12) || ram.known_bytes()!=1u || !ram.read8(0,byte) || byte!=0x12 ||
+    if (!ram.establish8(0,0x12) || ram.known_bytes()!=1u || !ram.read8(0,byte) || byte!=0x12 ||
             ram.read16(0,word)) return 2;
     if (!ram.write8(1,0x34) || ram.known_bytes()!=2u || !ram.read16(0,word) || word!=0x1234u) return 3;
     if (!ram.write16(0x7fffeu,0xabcd) || ram.known_bytes()!=4u ||
@@ -32,12 +32,14 @@ int main() {
 using namespace arcaderecomp::m68k;
 int main() {
     SoundROMBus bus(std::vector<std::uint8_t>(0x80000u,0));
+    if (bus.establish_sound_ram_byte_research(0,1)) return 8;
     try { bus.write8(0,1); return 1; } catch (const BusFault&) {}
     bus.enable_sound_ram_research(true);
+    if (!bus.establish_sound_ram_byte_research(2,0x56u) || bus.read8(2)!=0x56u) return 9;
     try { (void)bus.read8(0); return 2; } catch (const BusFault& e) { if(e.write||e.width!=1u)return 3; }
     bus.write8(0x1000000u,0x12u); // physical 24-bit alias of RAM byte zero
     bus.write8(1,0x34u);
-    if (bus.read16(0)!=0x1234u || bus.sound_ram().known_bytes()!=2u) return 4;
+    if (bus.read16(0)!=0x1234u || bus.sound_ram().known_bytes()!=3u) return 4;
     bus.write16(0x7fffeu,0xabcdu);
     if (bus.read8(0x7fffeu)!=0xabu || bus.read8(0x7ffffu)!=0xcdu) return 5;
     for (unsigned address: {0x80000u,0x5fffffu,0x680000u}) {

@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Establish the physical reset history of sound-RAM bytes 0x0c04..0x0c0f, or prove every ErrorSet signature branch converges safely, while recovering reset-vector wiring; never choose convenient zero-filled RAM.",
+      "next": "Implement the manual-defined 32-slot SCSP register file now exposed by CLR.B at 0x100017, preserving read-before-clear and reserved-bit strictness; independently recover physical reset-vector wiring.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -353,7 +353,7 @@
         {
           "id": "audio.rom",
           "title": "Sound-side ROM execution",
-          "percent": 5
+          "percent": 10
         },
         {
           "id": "audio.scsp",
@@ -1847,6 +1847,19 @@
         "docs/M68000_SOUND_RAM.md"
       ],
       "note": "Added the documented 512 KiB sound-RAM aperture with per-byte knownness, exact big-endian lanes and CLR discarded-read behavior. Synthetic native tests pass; the authenticated original-byte probe remains at 32797 instructions because bytes 0x0c08 onward have no observed reset value. No zero fill, startup branch, reset wiring or hardware state was invented, so the estimate remains unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "estimate",
+      "scope": "audio.rom",
+      "percent_before": 5,
+      "percent_after": 10,
+      "evidence": [
+        "arcaderecomp/sound_startup_signature.py",
+        "tests/test_sound_startup_signature.py",
+        "docs/M68000_SOUND_STARTUP_SIGNATURE.md"
+      ],
+      "note": "Authenticated the exact ErrorSet decision sequence and exhaustively partitioned all 2^72 assignments of the nine relevant unknown RAM bytes into 257 architectural states without choosing a power-on value. Native representatives cover both mismatch paths and all 256 preserved bytes. Every class clears 0x70000 RAM bytes and reaches the same documented SCSP slot-register read at 0x100017 after 262341..262344 instructions, so sound-ROM execution rises conservatively from 5% to 10%; physical reset, SCSP sound generation and audio remain unproven."
     }
   ]
 }

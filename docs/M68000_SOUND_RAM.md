@@ -40,12 +40,10 @@ against the `ErrorSet` signature before deciding whether to preserve a byte
 at `0x0c04`; silently returning zero would choose a startup history that has
 not been observed.
 
-This change intentionally does not raise the instruction count. It turns the
-same address from an absent-RAM implementation gap into a precise evidence
-boundary: initial/reset history for bytes `0x0c04..0x0c0f` is needed, or an
-abstract proof must show all possible signature branches converge safely.
-Supplying a convenient zero is not such a proof.
+The follow-up [exhaustive signature proof](M68000_SOUND_STARTUP_SIGNATURE.md)
+now covers every possible value of bytes `0x0c04` and `0x0c08..0x0c0f` without
+selecting a convenient reset value. All 257 resulting architectural classes
+reach the same SCSP slot-register boundary after more than 262,000 instructions.
 
-No percentage changes: sound-ROM execution remains 5%, audio 0%, and overall
-original HOTD1 ~10%. Sound reset, SCSP/DSP execution, interrupts, timing and
-audible output remain unresolved; Gates A/B/C are open.
+Sound reset, physical reset-vector wiring, SCSP synthesis, interrupts, timing
+and audible output remain unresolved; Gates A/B/C are open.
