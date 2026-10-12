@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Implement the SCSP sound-CPU interrupt enable/pending/reset register group beginning at 0x10041e with documented timer request integration, then continue strict authenticated startup. Independently measure the setting-prohibited DSP span and recover physical reset-vector wiring.",
+      "next": "Generalize documented privileged MC68000 MOVE immediate to SR beyond the earlier 0x27xx initializer subset, beginning with the authentic 0x2200 interrupt-mask write at PC 0x600216c, then continue strict startup. Independently recover physical reset-vector wiring.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1963,6 +1963,21 @@
         "docs/SCSP_TIMERS.md"
       ],
       "note": "Implemented the three manual-defined SCSP timer words with exact 11-bit fields, independent 1..128-sample prescalers, explicit-only 44.1 kHz sample ticks, request latching at 0xff and fail-closed post-pending behavior. Exhaustive native tests cover every word, timer and cadence; the full suite is 755/755. All 257 authenticated startup classes write all three timers and advance from 285113..285116 to 285119..285122 instructions at SCIEB 0x10041e. Interrupt enable/clear/delivery, continuous timing, synthesis and audio remain absent, so audio.scsp stays 0%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.scsp",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "runtime/scsp_interrupt_control.hpp",
+        "runtime/m68k_sound_bus.hpp",
+        "tests/test_scsp_interrupt_control_native.py",
+        "tools/experimental/hotdo_sound_signature_explorer.py",
+        "docs/SCSP_INTERRUPT_CONTROL.md"
+      ],
+      "note": "Implemented the manual-defined SCSP sound/main interrupt enable, pending/reset and three-plane sound-level words with exact factor masks, knownness, manual bit-5 commands and explicit Timer A/B/C request integration. Focused exhaustive native tests pass; the full suite is 757/757. All 257 authenticated startup classes perform seven interrupt-control writes and advance from 285119..285122 to 287063..287066 instructions, reaching documented privileged MOVE #$2200,SR at 0x600216c. CPU interrupt delivery, continuous scheduling, synthesis and audio remain absent, so audio.scsp stays 0%."
     }
   ]
 }

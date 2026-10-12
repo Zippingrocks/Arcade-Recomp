@@ -4,6 +4,7 @@
 #include "model2_sound_control.hpp"
 #include "scsp_common_control.hpp"
 #include "scsp_dsp_coefficients.hpp"
+#include "scsp_interrupt_control.hpp"
 #include "scsp_prohibited_window.hpp"
 #include "scsp_slot_key.hpp"
 #include "scsp_slot_mixer.hpp"
@@ -23,6 +24,7 @@ class SoundROMBus final : public Bus {
     bool hotd_sound_control_enabled_ = false;
     arcaderecomp::scsp::CommonControl common_control_;
     arcaderecomp::scsp::DspMemoryControl dsp_memory_control_;
+    arcaderecomp::scsp::InterruptControl interrupt_control_;
     arcaderecomp::scsp::Timers timers_;
     arcaderecomp::scsp::SlotLoopKeyControl slot_loop_key_control_;
     arcaderecomp::scsp::SlotEnvelopeReleaseControl slot_envelope_release_control_;
@@ -196,6 +198,8 @@ public:
                 dsp_memory_control_.write16(value)) return;
         if (common_control_enabled_ && address >= 0x100418u && address <= 0x10041cu &&
                 timers_.write16(address - 0x100400u, value)) return;
+        if (common_control_enabled_ && address >= 0x10041eu && address <= 0x10042eu &&
+                interrupt_control_.write16(address - 0x100400u, value)) return;
         if (hotd_sound_control_enabled_ && address == 0x400000u &&
                 hotd_sound_control_.write16(value)) return;
         throw BusFault(address, true, 2u);
@@ -219,6 +223,15 @@ public:
     }
     arcaderecomp::scsp::Timers& timers() { return timers_; }
     const arcaderecomp::scsp::Timers& timers() const { return timers_; }
+    const arcaderecomp::scsp::InterruptControl& interrupt_control() const {
+        return interrupt_control_;
+    }
+    bool tick_scsp_sample_research(){
+        if(!timers_.tick_sample())return false;
+        for(unsigned timer=0;timer<3u;++timer)
+            if(timers_.interrupt_request(timer))interrupt_control_.observe(6u+timer);
+        return true;
+    }
     const arcaderecomp::model2::HotdSoundControl& hotd_sound_control() const {
         return hotd_sound_control_;
     }
