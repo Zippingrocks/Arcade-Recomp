@@ -42,6 +42,10 @@ public:
     explicit SoundROMBus(std::vector<std::uint8_t> rom) : rom_(std::move(rom)) {
         if (rom_.size() != 0x80000u) throw std::invalid_argument("sound ROM must be 512 KiB");
     }
+    bool interrupt_level(unsigned& level) override {
+        if(!common_control_enabled_){level=0;return true;}
+        return interrupt_control_.sound_cpu_interrupt_level(level);
+    }
     std::uint8_t read8(std::uint32_t address) override {
         address &= 0xffffffu;
         std::uint8_t value = 0;

@@ -77,6 +77,20 @@ public:
         const auto bit=static_cast<std::uint8_t>(1u<<(factor<8u?factor:7u));
         return (sound_level_known_[0]&sound_level_known_[1]&sound_level_known_[2]&bit)!=0;
     }
+    bool sound_cpu_interrupt_level(unsigned& result)const{
+        result=0;
+        for(unsigned factor=0;factor<11u;++factor){
+            const auto bit=static_cast<std::uint16_t>(1u<<factor);
+            if(!(enable_known_[0]&bit))return false;
+            if(!(enable_[0]&bit))continue;
+            if(!(pending_known_[0]&bit))return false;
+            if(!(pending_[0]&bit))continue;
+            if(!sound_level_known(factor))return false;
+            const unsigned level=sound_level(factor);
+            if(level>result)result=level;
+        }
+        return true;
+    }
     std::uint64_t completed_writes()const{return writes_;}
 };
 

@@ -45,6 +45,9 @@ struct Bus {
     virtual std::uint16_t read16(std::uint32_t address) { throw BusFault(address, false, 2); }
     virtual void read16_discard(std::uint32_t address) { (void)read16(address); }
     virtual void write16(std::uint32_t address, std::uint16_t) { throw BusFault(address, true, 2); }
+    // Return true only when the current external interrupt level is known.
+    // Level zero proves no request; 1..7 identify the asserted level.
+    virtual bool interrupt_level(unsigned& level) { level = 0; return true; }
 };
 
 inline bool stop(CPU& cpu, Stop reason) {
@@ -61,12 +64,19 @@ inline bool reset_from_vectors(CPU& cpu, std::uint32_t ssp, std::uint32_t pc) {
     return true;
 }
 
-inline bool execution_allowed(CPU& cpu) {
+inline bool execution_allowed(CPU& cpu, Bus& bus) {
     if (cpu.stop != Stop::none) return false;
     if (cpu.pc & 1u) return stop(cpu, Stop::instruction_address);
-    // No trace exception, stack-bank switch or interrupt acceptance is modeled.
+    // No trace exception or stack-bank switch is modeled.
     if ((cpu.sr_known & 0xa700u) != 0xa700u) return stop(cpu, Stop::undefined_state);
-    if ((cpu.sr & 0xa700u) != 0x2700u) return stop(cpu, Stop::unsupported_control);
+    if ((cpu.sr & 0xa000u) != 0x2000u) return stop(cpu, Stop::unsupported_control);
+    const unsigned mask=(cpu.sr>>8u)&7u;
+    if(mask==7u)return true;
+    unsigned external_level=0;
+    if(!bus.interrupt_level(external_level)||external_level>7u)
+        return stop(cpu, Stop::unsupported_control);
+    // Sampling is exact; exception entry remains a separate required unit.
+    if(external_level>mask)return stop(cpu, Stop::unsupported_control);
     return true;
 }
 

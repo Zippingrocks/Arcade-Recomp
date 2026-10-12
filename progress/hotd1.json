@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Couple proven SCSP pending/enable/level state to bounded MC68000 interrupt sampling and autovector exception entry after MOVE #$2200,SR, without ignoring unknown asynchronous requests. Independently recover physical reset-vector wiring.",
+      "next": "Determine documented/physical SCSP COEF byte-write handling for the original upload beginning at 0x100700, especially upper reserved or signed bits, then implement exact lanes without weakening field masks. Separately implement MC68000 autovector exception entry and recover reset wiring.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1992,6 +1992,22 @@
         "docs/M68000_MOVE_SR.md"
       ],
       "note": "Generalized privileged MOVE immediate to SR from the prior 0x27xx-only subset to every reserved-bit-clean CCR/interrupt-mask value that remains supervisor with trace clear. Exhaustive native tests cover all 65536 immediates, privilege/knownness and the authentic 0x2200 instruction; the full suite is 759/759. All 257 startup classes complete one more instruction, from 287063..287066 to 287064..287067, then correctly refuse continued execution with interrupt mask 2 because asynchronous SCSP interrupt sampling/autovector entry is not yet coupled. Sound CPU stays 5%; ignoring possible pending interrupts is not accepted."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "runtime/m68k_runtime.hpp",
+        "runtime/scsp_interrupt_control.hpp",
+        "runtime/m68k_sound_bus.hpp",
+        "tests/test_m68k_scsp_interrupt_sampling_native.py",
+        "tools/experimental/hotdo_sound_signature_explorer.py",
+        "docs/M68000_SCSP_INTERRUPT_SAMPLING.md"
+      ],
+      "note": "Added fail-closed bus interrupt-level sampling: mask 7 is inherently safe; lower masks require a known level; accepted requests stop pending autovector entry. SCSP level derivation uses exact enable/pending/level knownness. The full suite passes 762/762. Authenticated init proves SCIEB=0x0c8 known 0x7ff and all enabled pending factors known clear, so all 257 classes advance from 287064..287067 to 308029..308032 instructions and a second DSP clear before the COEF byte upload at 0x100700. No asynchronous request is ignored; sound CPU remains 5%."
     }
   ]
 }

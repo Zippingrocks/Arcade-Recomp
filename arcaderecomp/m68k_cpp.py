@@ -523,7 +523,7 @@ def emit_cpp(image: bytes, entry: int, base: int = 0, limit: int = 4096):
     source = ['#include "m68k_runtime.hpp"', "namespace arcaderecomp_m68k_generated {",
               "using namespace arcaderecomp::m68k;",
               "inline bool step(CPU& cpu, Bus& bus) {",
-              "if (!execution_allowed(cpu)) return false;",
+              "if (!execution_allowed(cpu, bus)) return false;",
               "(void)bus; try { switch(cpu.pc) {"]
     for ins in instructions:
         source.append(f"case {_u(ins.pc)}: {{ {_emit(ins)} }}")
