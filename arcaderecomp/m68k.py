@@ -72,6 +72,16 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         size = {1: 1, 2: 4, 3: 2}[op >> 12]
         src_mode, src_reg = (op >> 3) & 7, op & 7
         dst_mode, dst_reg = (op >> 6) & 7, (op >> 9) & 7
+        if dst_mode == 0 and (src_mode in (2, 5) or
+                              (src_mode == 7 and src_reg in (0, 1))):
+            # Memory-source MOVE, without address-register updates or indexing.
+            displacement, length = 0, 2
+            if src_mode == 5 or (src_mode, src_reg) == (7, 0):
+                displacement, length = _signed(word(2), 16), 4
+            elif (src_mode, src_reg) == (7, 1):
+                displacement, length = word(2) << 16 | word(4), 6
+            return Instruction(pc, length, "move_memory_to_d",
+                               (size, src_mode, src_reg, displacement, dst_reg))
         if ((src_mode == 0 or (src_mode, src_reg) == (7, 4)) and
                 (dst_mode == 0 or (size != 4 and
                  (dst_mode == 5 or (dst_mode == 7 and dst_reg in (0, 1)))))):
@@ -99,6 +109,8 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         size = (1, 2, 4)[(op >> 6) & 3]
         return Instruction(pc, 2, "shift_immediate", (size, op & 7,
                            ((op >> 9) & 7) or 8, (op >> 8) & 1, (op >> 3) & 3))
+    if op & 0xf1ff == 0x41f8:
+        return Instruction(pc, 4, "lea_absolute", ((op >> 9) & 7, _signed(word(2), 16)))
     if op & 0xf1ff == 0x41f9:
         return Instruction(pc, 6, "lea_absolute", ((op >> 9) & 7, word(2) << 16 | word(4)))
     if op & 0xf0f8 == 0x50c8:

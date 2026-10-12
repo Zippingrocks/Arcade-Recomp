@@ -44,6 +44,19 @@ def _emit(ins):
             fetch += (f"std::uint32_t destination = 0; "
                       f"if (!read_operand(cpu, bus, {address}, {size}u, destination)) return false; ")
         return fetch + f"return compare_immediate(cpu, {size}u, destination, {_u(immediate)}, {next_pc});"
+    if op == "move_memory_to_d":
+        size, mode, source, displacement, dest = args
+        mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
+        fetch = ""
+        if mode in (2, 5):
+            fetch = f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state); "
+            address = f"cpu.a[{source}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        return (fetch + f"std::uint32_t value = 0; "
+                f"if (!read_operand(cpu, bus, {address}, {size}u, value)) return false; "
+                f"cpu.d[{dest}] = (cpu.d[{dest}] & ~{mask}) | value; cpu.d_known[{dest}] |= {mask}; "
+                f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
     if op == "move":
         size, source_kind, source, mode, reg, displacement = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))

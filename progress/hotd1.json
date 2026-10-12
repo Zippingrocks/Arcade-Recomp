@@ -1238,6 +1238,63 @@
         "tools/hotd1_strict_boot_probe.cpp"
       ],
       "note": "Separately reviewed project scope after correcting flawed synthetic FP source encodings and extending verified instruction subsets. Fresh private strict main-CPU run remains 1910 instructions, 318 mapped writes and two documented TX writes before refused 0x01C0001A status; optional sound probe remains 18 instructions before refused 0x400001 board write. Original-site checks use explicit synthetic state, not independent cabinet traces. No playable boot, audio/video or measured FPS gain. CPU 55%, Model2C 20%, audio 0%, overall original HOTD1 10%; all completion Gates A/B/C stay open."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.floating",
+      "percent_before": 40,
+      "percent_after": 40,
+      "evidence": [
+        "runtime/i960_fp_multiply_long_exact.hpp",
+        "tests/test_i960_mulrl_native.py",
+        "docs/I960_MULRL.md"
+      ],
+      "note": "Implemented MULRL 79C exact normal/signed-zero binary64 GPR-pair and extended80 FP forms with portable 64x64-to-128 integer multiplication, independent integer/rational oracles, source alias capture and atomic refusal. Six ROM-free GCC/UBSan tests pass; authenticated original site 0x1200 passes 6208 synthetic-state checks. Two-root graph expands to 3242 candidates/3241 translations, stopping at SQRTR 0x1204; neither static translation nor isolated site checks prove continuous execution. Inexact/special results, architectural faults and cabinet traces remain unsupported. Floating 40%, CPU 55%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "tests/test_m68k_memory_load_native.py",
+        "docs/M68000_MEMORY_LOAD.md",
+        "docs/SOUND_CONTROL_REFERENCE_AUDIT.md"
+      ],
+      "note": "Added non-updating memory-source MOVE byte/word/long into Dn and sign-extended absolute-short LEA, preserving upper-register/CCR knownness and strict ordered bus reads. All 22 sound CPU tests pass GCC/UBSan; original sites pass 8192 synthetic-state checks and 256 isolated block scenarios, with strict read refusal retained. Static sound graph expands to 39 sites/38 translations, next CLR.L (A0)+ at 0x60019C. Recorded a first-hand HOTD JP1 audio repair as capture provenance only, not evidence of sound-control bits. No RAM, reset wiring, 0x400001 acceptance or timed audio added; sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "tools.rom_audit",
+      "percent_before": 95,
+      "percent_after": 95,
+      "evidence": [
+        "arcaderecomp/roms.py",
+        "tests/test_roms.py",
+        "tests/test_rom_reconstruction_benchmark.py",
+        "tools/benchmark_rom_reconstruction.py",
+        "docs/ROM_RECONSTRUCTION_PERFORMANCE.md"
+      ],
+      "note": "Replaced Python-level occupancy scans with native byte searches and added contiguous-load fast path, retaining authentication/overlap/mirror checks and rejecting negative offsets or empty ranges before slicing. Sixteen focused tests pass, including 1056 independent byte-placement cases. Nine-trial local synthetic benchmarks show 2.39-4.36x reconstruction speedup. All 29 authenticated original chips reconstruct seven byte-identical regions versus actual 5ef4bb37 baseline; seven-trial local medians improve 1.48-2.81x. This is host reconstruction throughput, excluding I/O/hash verification, not gameplay FPS or hardware fidelity. ROM tooling 95%, Model2C 20%, original HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "hotd1",
+      "percent_before": 10,
+      "percent_after": 10,
+      "evidence": [
+        "docs/I960_MULRL.md",
+        "docs/M68000_MEMORY_LOAD.md",
+        "docs/ROM_RECONSTRUCTION_PERFORMANCE.md",
+        "tools/hotd1_strict_boot_probe.cpp"
+      ],
+      "note": "Separately reviewed exact CPU arithmetic, sound loads and measured host reconstruction speed. Full local WSL suite passes 604 tests without skips in 132.417 seconds. Fresh regenerated original main-CPU native probe remains at 1910 instructions, 318 mapped writes and two documented serial transmissions before refused status at 0x01C0001A; opt-in SCSP sound probe remains at 18 instructions before refused 0x400001. Isolated original-byte checks use supplied synthetic state, not cabinet-reference proof. Authentic serial startup, sound-board control/reset, geometry/video, audio and gameplay remain unresolved. CPU 55%, Model2C 20%, audio 0%, overall original HOTD1 10%; Gates A/B/C stay open."
     }
   ]
 }

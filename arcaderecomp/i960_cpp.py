@@ -165,6 +165,19 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!multiply_real32_exact(cpu, cpu.r[{first}], "
                 f"cpu.r[{second}], {dst}u)) return false;")
 
+    if ins.form == "REG" and op == "mulrl":
+        # Intel KB 79C: binary64 GPR pairs / extended80 FP operands.
+        # Destination format determines precision; only exact results commit.
+        if word & 0x60:
+            return None
+        indices = (word & 31, (word >> 14) & 31, (word >> 19) & 31)
+        modes = (bool(word & 0x800), bool(word & 0x1000), bool(word & 0x2000))
+        if any(i >= 4 if fp else (i & 1) != 0 for i, fp in zip(indices, modes)):
+            return None
+        arguments = ", ".join(f"{i}u, {'true' if fp else 'false'}"
+                              for i, fp in zip(indices, modes))
+        return f"if (!multiply_long_real_exact(cpu, {arguments})) return false;"
+
     if ins.form == "REG" and op == "subr":
         # Intel 80960KB SUBR 78D: src2 - src1, using normal IEEE real32
         # GPRs only. Reuse exact integer-significand ADDR after flipping
@@ -642,6 +655,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_to_long_integer.hpp"
 #include "i960_fp_add_exact.hpp"
 #include "i960_fp_multiply_exact.hpp"
+#include "i960_fp_multiply_long_exact.hpp"
 #include "i960_fp_divide_exact.hpp"
 #include "i960_fp_scale_exact.hpp"
 

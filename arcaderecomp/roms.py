@@ -104,21 +104,32 @@ def reconstruct(region, matches):
         offset = number(spec["offset"])
         if not 0 < group <= stride <= 32 or len(data) % group:
             raise RomError("Invalid ROM wiring")
-        if offset + (len(data) // group - 1) * stride + group > size:
+        if (offset < 0 or not data or
+                offset + (len(data) // group - 1) * stride + group > size):
             raise RomError("ROM load out of bounds")
+        if group == stride:
+            # Contiguous chips need neither lane copies nor Python-level
+            # iteration over the occupancy bitmap. Its only values are 0/1.
+            end = offset + len(data)
+            if used.find(b"\x01", offset, end) != -1:
+                raise RomError("Overlapping ROM chips")
+            memory[offset:end] = data
+            used[offset:end] = b"\x01" * len(data)
+            continue
         for lane in range(group):
             segment = data[lane::group]
             start = offset + lane
             stop = start + len(segment) * stride
-            if any(used[start:stop:stride]):
+            if 1 in used[start:stop:stride]:
                 raise RomError("Overlapping ROM chips")
             memory[start:stop:stride] = segment
             used[start:stop:stride] = b"\x01" * len(segment)
     for mapping in region.get("copies", []):
         src, dst, length = map(number, (mapping["source"], mapping["target"], mapping["size"]))
-        if src + length > size or dst + length > size or not all(used[src:src + length]):
+        if (src < 0 or dst < 0 or length <= 0 or src + length > size or
+                dst + length > size or used.find(b"\x00", src, src + length) != -1):
             raise RomError("Invalid memory mirror")
-        if any(used[dst:dst + length]):
+        if used.find(b"\x01", dst, dst + length) != -1:
             raise RomError("Overlapping memory mirror")
         memory[dst:dst + length] = memory[src:src + length]
         used[dst:dst + length] = b"\x01" * length

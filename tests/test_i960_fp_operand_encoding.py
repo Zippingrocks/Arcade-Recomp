@@ -16,7 +16,7 @@ def instruction(opcode, src=0, second=0, dst=2, modes=0):
 class FloatingOperandEncodingTests(unittest.TestCase):
     def test_reserved_bits_are_rejected_for_every_supported_fp_family(self):
         for opcode in (0x674, 0x677, 0x68a, 0x6c2, 0x6c3, 0x6c9,
-                       0x6d9, 0x6e1, 0x6e2, 0x6e3, 0x78b, 0x78c, 0x78d, 0x78f):
+                       0x6d9, 0x6e1, 0x6e2, 0x6e3, 0x78b, 0x78c, 0x78d, 0x78f, 0x79c):
             for reserved in (0x20, 0x40, 0x60):
                 word = instruction(opcode, modes=0x3000) | reserved
                 with self.subTest(opcode=hex(opcode), reserved=reserved):
@@ -36,7 +36,7 @@ class FloatingOperandEncodingTests(unittest.TestCase):
                     self.assertEqual(ins.mnemonic, "unknown")
 
     def test_binary_sources_and_integer_source_exceptions(self):
-        for opcode in (0x6e2, 0x6e3, 0x78b, 0x78c, 0x78d, 0x78f):
+        for opcode in (0x6e2, 0x6e3, 0x78b, 0x78c, 0x78d, 0x78f, 0x79c):
             for a in range(4):
                 for b in range(4):
                     word = instruction(opcode, a, b, 3, 0x3800)
