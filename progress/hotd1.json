@@ -1449,6 +1449,21 @@
         "docs/M68000_MOVEA.md"
       ],
       "note": "Added Motorola-manual-backed word/long MOVEA from Dn, An, non-updating indirect/displacement, absolute short/long and immediate sources with exact sign extension, preserved CCR and strict bus faults. Three focused GCC/UBSan tests and all 45 MC68000 tests pass; authenticated generated source passes strict Clang O2 syntax. Four original sites at 0x600218, 0x600372, 0x60045C and 0x600492 now translate; reset-vector graph grows 90/80 to 108/100 and exposes ADDQ at 0x600228 and MOVE A3,D7 at 0x600378. Continuous probes remain 17 strict or 18 optional at the prior device boundaries. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_addq_native.py",
+        "docs/M68000_ADDQ.md"
+      ],
+      "note": "Added Motorola-manual-backed byte/word/long ADDQ #1..8 to Dn with width-limited results, exact XNZVC, upper-register preservation and fail-closed unknown operands. Three focused exhaustive GCC/UBSan tests and all 48 MC68000 tests pass; authenticated generated source passes strict Clang O2 syntax. Original 0x600228 and 0x60044A are both ADDQ.B #8,D2 and now translate; reset-vector graph grows 108/100 to 116/108, exposing LEA displacement stops at 0x600242 and 0x60044C. Continuous probes remain 17 strict or 18 optional at prior device boundaries. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }
