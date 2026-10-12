@@ -245,6 +245,20 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                 f"{'true' if src_fp else 'false'}, {dst}u, "
                 f"{'true' if dst_fp else 'false'})) return false;")
 
+    if ins.form == "REG" and op in ("cpysre", "cpyrsre"):
+        if word & (0x800 | 0x1000):
+            return None
+        indices = (word & 31, (word >> 14) & 31, (word >> 19) & 31)
+        modes = (bool(word & 0x20), bool(word & 0x40), bool(word & 0x2000))
+        if not any(modes):
+            return None
+        if any(i >= 4 if fp else (i & 3) != 0 for i, fp in zip(indices, modes)):
+            return None
+        arguments = ", ".join(f"{i}u, {'true' if fp else 'false'}"
+                              for i, fp in zip(indices, modes))
+        return (f"if (!copy_sign_extended_normal(cpu, {arguments}, "
+                f"{'true' if op == 'cpyrsre' else 'false'})) return false;")
+
     if ins.form == "REG" and op == "movre":
         # Intel 80960KB MOVRE 6E1: bit-exact 80-bit transfer with 16-bit
         # high-word padding when moving from fp0..fp3 to a GPR triple.
@@ -594,6 +608,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_integer_arithmetic.hpp"
 #include "i960_process_controls.hpp"
 #include "i960_fp_registers.hpp"
+#include "i960_fp_copy_sign.hpp"
 #include "i960_fp_convert.hpp"
 #include "i960_fp_long_real.hpp"
 #include "i960_fp_logb.hpp"
