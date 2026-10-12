@@ -1464,6 +1464,20 @@
         "docs/M68000_ADDQ.md"
       ],
       "note": "Added Motorola-manual-backed byte/word/long ADDQ #1..8 to Dn with width-limited results, exact XNZVC, upper-register preservation and fail-closed unknown operands. Three focused exhaustive GCC/UBSan tests and all 48 MC68000 tests pass; authenticated generated source passes strict Clang O2 syntax. Original 0x600228 and 0x60044A are both ADDQ.B #8,D2 and now translate; reset-vector graph grows 108/100 to 116/108, exposing LEA displacement stops at 0x600242 and 0x60044C. Continuous probes remain 17 strict or 18 optional at prior device boundaries. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "tests/test_m68k_lea_displacement_native.py",
+        "docs/M68000_LEA_DISPLACEMENT.md"
+      ],
+      "note": "Added Motorola-manual-backed LEA (d16,An),Am with signed 16-bit displacement, 32-bit address wrap, complete destination knownness, preserved CCR and zero bus access. Three focused exhaustive GCC/UBSan tests cover all register pairs, boundary displacements, aliasing, unknown sources and callback exclusion; all 51 MC68000 tests and the 646-test full suite pass. Original sites 0x600242, 0x60044C and 0x6021B6 now translate; reset-vector graph grows 116/108 to 134/128 and leaves six explicit unsupported sites. Authenticated probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no memory or device response was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

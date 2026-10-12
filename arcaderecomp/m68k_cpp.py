@@ -125,6 +125,11 @@ def _emit(ins):
     if op == "lea_absolute":
         dest, address = args
         return f"cpu.a[{dest}] = {_u(address)}; cpu.a_known[{dest}] = true; {done}"
+    if op == "lea_displacement":
+        source, dest, displacement = args
+        return (f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state); "
+                f"cpu.a[{dest}] = cpu.a[{source}] + {_u(displacement)}; "
+                f"cpu.a_known[{dest}] = true; {done}")
     if op == "addq_d":
         size, dest, immediate = args
         return (f"return add_quick_data(cpu, {size}u, {dest}u, {immediate}u, "
