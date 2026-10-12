@@ -390,6 +390,9 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                     "} "
                     f"cpu.r[{dst}] = bits ? index : 0xffffffffu; "
                     "cpu.cc = bits ? 2 : 0; cpu.cc_defined = true; }")
+        if op == "modac":
+            # Intel KB 645h: src1 is mask, src2 replacement, dst old AC.
+            return f"if (!kb_modac_checked(cpu, {a}, {b}, {dst}u)) return false;"
         if op == "modpc":
             # Intel KB REG 655h: src1 is a dummy; SRC2 supplies MASK.
             # The destination is also the proposed control word and receives
@@ -606,6 +609,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_sync_runtime.hpp"
 #include "i960_transfer_shift.hpp"
 #include "i960_integer_arithmetic.hpp"
+#include "i960_arithmetic_controls.hpp"
 #include "i960_process_controls.hpp"
 #include "i960_fp_registers.hpp"
 #include "i960_fp_copy_sign.hpp"
