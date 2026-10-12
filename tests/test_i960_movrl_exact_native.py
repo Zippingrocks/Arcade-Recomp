@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def movrl(src=16, dst=0, *, src_fp=False, dst_fp=True, literal=False):
     return (0x6d000480 | 0x1000 | src | (dst << 19) |
-            (0x20 if src_fp else 0) | (0x2000 if dst_fp else 0) |
+            (0x800 if src_fp else 0) | (0x2000 if dst_fp else 0) |
             (0x800 if literal else 0))
 
 

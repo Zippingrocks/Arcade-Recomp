@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def cvtzri(source=20, destination=17, source_fp=False, literal=False):
     return (0x6c000100 | 0x1000 | source | (destination << 19)
-            | (0x20 if source_fp else 0) | (0x800 if literal else 0))
+            | (0x800 if source_fp or literal else 0))
 
 
 def native(words, harness):

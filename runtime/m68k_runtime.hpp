@@ -78,6 +78,46 @@ inline void logical_flags(CPU& cpu, bool negative, bool zero) {
     cpu.sr_known |= 15u;  // X's value AND definedness are preserved.
 }
 
+// MC68000 non-updating data operand read. A long uses two word transactions,
+// high word first; each address reaches the physical 24-bit bus independently.
+// Do not roll back a successful first read if the second read is rejected.
+inline bool read_operand(CPU& cpu, Bus& bus, std::uint32_t address, unsigned bytes,
+                         std::uint32_t& value) {
+    if (bytes != 1u && bytes != 2u && bytes != 4u)
+        return stop(cpu, Stop::unsupported_instruction);
+    address &= 0x00ffffffu;
+    if (bytes != 1u && (address & 1u)) {
+        cpu.access_address = address;
+        cpu.access_width = static_cast<std::uint8_t>(bytes); cpu.access_write = false;
+        return stop(cpu, Stop::data_address);
+    }
+    if (bytes == 1u) value = bus.read8(address);
+    else if (bytes == 2u) value = bus.read16(address);
+    else {
+        const std::uint32_t high = bus.read16(address);
+        const std::uint32_t low = bus.read16((address + 2u) & 0x00ffffffu);
+        value = (high << 16u) | low;
+    }
+    return true;
+}
+
+inline bool compare_immediate(CPU& cpu, unsigned bytes, std::uint32_t destination,
+                              std::uint32_t immediate, std::uint32_t next) {
+    if (bytes != 1u && bytes != 2u && bytes != 4u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu : (1u << (bytes * 8u)) - 1u;
+    const std::uint32_t sign = 1u << (bytes * 8u - 1u);
+    destination &= mask; immediate &= mask;
+    const std::uint32_t result = (destination - immediate) & mask;
+    const bool overflow = ((destination ^ immediate) & (destination ^ result) & sign) != 0;
+    // Comparison sets NZVC from destination - immediate; X is not consumed or
+    // changed, including its knownness. No destination register/memory write.
+    logical_flags(cpu, (result & sign) != 0, result == 0);
+    if (overflow) cpu.sr |= 2u;
+    if (destination < immediate) cpu.sr |= 1u;
+    return finish(cpu, next);
+}
+
 inline bool write_move(CPU& cpu, Bus& bus, std::uint32_t address, unsigned bytes,
                        std::uint32_t value) {
     address &= 0x00ffffffu;

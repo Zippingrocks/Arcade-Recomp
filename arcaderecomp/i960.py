@@ -82,6 +82,7 @@ REGISTER = {
     0x677: ("scaler", "sss"),
     0x68a: ("logbnr", "sd"),
     0x6c2: ("cvtzri", "sd"),
+    0x6c3: ("cvtzril", "sd"),
     0x6c9: ("movr", "sd"),
     0x6d9: ("movrl", "sd"),
     0x6e1: ("movre", "sd"),
@@ -223,6 +224,19 @@ def decode(image: bytes, pc: int) -> Instruction:
     extended = (major << 4) | ((word >> 7) & 15)
     if extended in REGISTER:
         name, form = REGISTER[extended]
+        floating = name in {
+            "cvtir", "cvtzri", "cvtzril", "logbnr", "movr", "movrl", "movre",
+            "cpysre", "cpyrsre", "scaler", "divr", "mulr", "subr", "addr",
+        }
+        # Intel KB Appendix B: bits 5/6 are reserved zero, NOT FP selectors.
+        # For real source operands M1/M2=1 selects fp0..fp3 (indices 0..3).
+        # Indices 16/22 are floating literals, outside the supported subset.
+        if floating and word & 0x60:
+            return _unknown(pc, word, "reserved floating REG bits 5/6")
+
+        def floating_operand(index: int, mode: bool) -> str | None:
+            return reg(index) if not mode else f"fp{index}" if index < 4 else None
+
         if name == "cvtir":
             src = word & 31
             dst = (word >> 19) & 31
@@ -231,64 +245,24 @@ def decode(image: bytes, pc: int) -> Instruction:
             a = str(src) if word & 0x800 else reg(src)
             d = f"fp{dst}" if word & 0x2000 else reg(dst)
             return Instruction(pc, word, 4, "REG", name, (a, d))
-        if name == "cvtzri":
-            # Intel KB: real32 (GPR) or extended80 (FP reg) to signed i32,
-            # with round-to-zero semantics. Exception behavior is handled
-            # conservatively in native code, not by this format decoder.
+        if name in ("cvtzri", "cvtzril", "logbnr", "movr", "movrl", "movre"):
             src = word & 31
             dst = (word >> 19) & 31
-            if word & 0x20 and src >= 4:
-                return _unknown(pc, word, "CVTZRI FP register outside fp0..fp3")
-            a = f"fp{src}" if word & 0x20 else reg(src)
-            return Instruction(pc, word, 4, "REG", name, (a, reg(dst)))
-        if name == "logbnr":
-            # Intel 80960KB 68Ah: binary exponent in real format.
-            # Src1 is real32 in a GPR or 80-bit extended in fp0..fp3;
-            # destination is real32 in a GPR or extended in fp0..fp3.
-            src = word & 31
-            dst = (word >> 19) & 31
-            if (word & 0x20 and src >= 4) or (word & 0x2000 and dst >= 4):
-                return _unknown(pc, word, "LOGBNR FP register outside fp0..fp3")
-            a = f"fp{src}" if word & 0x20 else reg(src)
-            d = f"fp{dst}" if word & 0x2000 else reg(dst)
+            a = floating_operand(src, bool(word & 0x800))
+            integer_destination = name in ("cvtzri", "cvtzril")
+            d = floating_operand(dst, bool(word & 0x2000))
+            if a is None or d is None or (integer_destination and word & 0x2000):
+                return _unknown(pc, word, "unsupported floating operand encoding")
             return Instruction(pc, word, 4, "REG", name, (a, d))
-        if name in ("movr", "movrl"):
-            # M1=0 and S1=1 select fp0..fp3; M3 selects FP destination.
-            # MOVR uses one GPR; MOVRL uses an even-aligned GPR pair.
-            if name == "movr" and word & 0x800:
-                return _unknown(pc, word, "MOVR floating literal unsupported")
-            src = word & 31
-            dst = (word >> 19) & 31
-            if (word & 0x20 and src >= 4) or (word & 0x2000 and dst >= 4):
-                return _unknown(pc, word, f"{name.upper()} FP register outside fp0..fp3")
-            a = f"fp{src}" if word & 0x20 else reg(src)
-            d = f"fp{dst}" if word & 0x2000 else reg(dst)
-            return Instruction(pc, word, 4, "REG", name, (a, d))
-        if name in ("cpysre", "cpyrsre"):
+        if name in ("cpysre", "cpyrsre", "scaler", "divr", "mulr", "subr", "addr"):
             src1, src2, dst = word & 31, (word >> 14) & 31, (word >> 19) & 31
-            if ((word & 0x20 and src1 >= 4) or
-                    (word & 0x40 and src2 >= 4) or
-                    (word & 0x2000 and dst >= 4)):
-                return _unknown(pc, word, "Copy-sign FP register outside fp0..fp3")
-            # Floating literals remain unsupported; never mislabel their
-            # encoding as a general-register source.
-            if word & (0x800 | 0x1000):
-                return _unknown(pc, word, "Copy-sign floating literal unsupported")
-            return Instruction(pc, word, 4, "REG", name, (
-                f"fp{src1}" if word & 0x20 else reg(src1),
-                f"fp{src2}" if word & 0x40 else reg(src2),
-                f"fp{dst}" if word & 0x2000 else reg(dst)))
-        if name == "movre":
-            # Unlike the integer REG forms, s1/m3 select the four on-chip
-            # 80-bit floating-point registers. A later native pass validates
-            # reserved fields, allowed source/destination types and alignment.
-            src = word & 31
-            dst = (word >> 19) & 31
-            if (word & 0x20 and src >= 4) or (word & 0x2000 and dst >= 4):
-                return _unknown(pc, word, "MOVRE FP register outside fp0..fp3")
-            a = f"fp{src}" if word & 0x20 else reg(src)
-            d = f"fp{dst}" if word & 0x2000 else reg(dst)
-            return Instruction(pc, word, 4, "REG", name, (a, d))
+            a = ((str(src1) if word & 0x800 else reg(src1)) if name == "scaler"
+                 else floating_operand(src1, bool(word & 0x800)))
+            b = floating_operand(src2, bool(word & 0x1000))
+            d = floating_operand(dst, bool(word & 0x2000))
+            if a is None or b is None or d is None:
+                return _unknown(pc, word, "unsupported floating operand encoding")
+            return Instruction(pc, word, 4, "REG", name, (a, b, d))
         def operand(index: int, literal: int, special: int) -> str | None:
             if literal and special:
                 return None  # Reserved

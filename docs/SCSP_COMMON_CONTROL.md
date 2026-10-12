@@ -63,3 +63,7 @@ Next requirements: establish the actual sound-board control at `0x00400001`,
 reset wiring and sequencing; implement SCSP audio/timing and more sound CPU
 instructions. This small register model alone does not justify increasing
 the SCSP or overall audio estimate above 0%, or original HOTD1 above 10%.
+
+The [sound-control reference audit](SOUND_CONTROL_REFERENCE_AUDIT.md) now
+identifies six direct-store candidates without accepting this unknown device
+or claiming that syntactic matches are executed instructions.

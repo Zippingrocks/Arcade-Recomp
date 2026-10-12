@@ -1,5 +1,11 @@
 # Intel KB MOVR: exact native real-format moves
 
+Correction: prior FP-source synthetic instruction builders used reserved
+bits instead of M1. That evidence did not prove legal Intel FP-source
+instruction execution. The decoder/emitter and fixtures are now corrected;
+see [the explicit encoding correction](I960_FP_OPERAND_ENCODING.md).
+The original GPR-source checks below were unaffected.
+
 Implemented: `MOVR` **6C9h**, decoded and emitted as native AOT operations.
 The [Intel 80960KB Programmer's Reference Manual, March 1988](https://www.arithmazium.org/classroom/lib/Intel_80960KB_Programmers_Reference_Manual_Mar88.pdf),
 printed pp. 11-86–11-87, 12-10 and 12-15, specifies conversion between
@@ -44,9 +50,11 @@ GCC/UBSan. The reconstructed main-CPU region was authenticated by SHA-256
 `da2315b0b044d279728c8689336da6de0fee5997cf006514a1a633bd0de2fc75`.
 No original bytes or game-derived C++ are published.
 
-The two-root static graph (0x5F0 and 0x6B0, limit 16,384) now has
-3,201 candidate instructions, of which 3,199 translate. Its newly exposed
-stops are MULRL 79Ch at 0x1200 and CVTZRIL 6C3h at 0x1398. Static discovery
+At the MOVR implementation checkpoint, the two-root static graph
+(0x5F0 and 0x6B0, limit 16,384) had
+3,201 candidate instructions, of which 3,199 translated. Its newly exposed
+stops were MULRL 79Ch at 0x1200 and CVTZRIL 6C3h at 0x1398; see
+[CVTZRIL](I960_CVTZRIL.md) for the later checkpoint. Static discovery
 and isolated synthetic-state execution are not continuous game execution
 or original-board reference evidence. Authentic serial RX/status, CPU
 faults/interrupts/rounding and platform gameplay remain unresolved.

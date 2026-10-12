@@ -28,6 +28,22 @@ def _emit(ins):
         reg, value = args
         return (f"cpu.d[{reg}] = {_u(value)}; cpu.d_known[{reg}] = 0xffffffffu; "
                 f"logical_flags(cpu, {'true' if value < 0 else 'false'}, {'true' if value == 0 else 'false'}); {done}")
+    if op == "cmpi":
+        size, immediate, mode, reg, displacement = args
+        mask = _u((1 << (size * 8)) - 1)
+        if mode == 0:
+            fetch = (f"if ((cpu.d_known[{reg}] & {mask}) != {mask}) return stop(cpu, Stop::undefined_state); "
+                     f"const std::uint32_t destination = cpu.d[{reg}] & {mask}; ")
+        else:
+            fetch = ""
+            if mode in (2, 5):
+                fetch += f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state); "
+                address = f"cpu.a[{reg}] + {_u(displacement)}"
+            else:
+                address = _u(displacement)
+            fetch += (f"std::uint32_t destination = 0; "
+                      f"if (!read_operand(cpu, bus, {address}, {size}u, destination)) return false; ")
+        return fetch + f"return compare_immediate(cpu, {size}u, destination, {_u(immediate)}, {next_pc});"
     if op == "move":
         size, source_kind, source, mode, reg, displacement = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))

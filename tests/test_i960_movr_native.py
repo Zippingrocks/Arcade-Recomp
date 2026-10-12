@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def movr(src=16, dst=0, *, src_fp=False, dst_fp=True):
     return (0x6c000480 | 0x1000 | src | (dst << 19) |
-            (0x20 if src_fp else 0) | (0x2000 if dst_fp else 0))
+            (0x800 if src_fp else 0) | (0x2000 if dst_fp else 0))
 
 
 def exact_extended(bits):
@@ -107,11 +107,11 @@ class MovrNativeTests(unittest.TestCase):
             movr(4, 20, src_fp=True, dst_fp=False), movr(16, 4),
             movr() | 0x800, movr() | 0x40,
             movr() | (1 << 14), movr() & ~0x1000,
-            movr() | 0x820,  # unsupported literal, never an FP alias
+            movr() | 0x20,  # reserved bit, never an FP selector
         ):
             _, report = emit_cpp(struct.pack("<2I", bad, 0xffffffff), 0, 8)
             self.assertIn(0, report.unsupported)
-        for literal in (movr() | 0x800, movr(0) | 0x800, movr(1) | 0x820):
+        for literal in (movr(16) | 0x800, movr(22) | 0x800, movr(4) | 0x800):
             self.assertEqual(decode(struct.pack("<I", literal), 0).mnemonic,
                              "unknown")
         # The three existing floating move encodings are independent, not a
