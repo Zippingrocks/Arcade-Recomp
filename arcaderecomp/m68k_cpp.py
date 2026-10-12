@@ -255,6 +255,26 @@ def _emit(ins):
         statements.append(f"cpu.d[{destination}] = (cpu.d[{destination}] & ~{mask}) | result; cpu.d_known[{destination}] |= {mask};")
         statements += [f"logical_flags(cpu, (result & {sign}) != 0, result == 0);", done]
         return " ".join(statements)
+    if op == "cmp_memory_to_d":
+        size, mode, source, displacement, destination = args
+        mask = _u((1 << (size * 8)) - 1)
+        statements = [
+            f"if ((cpu.d_known[{destination}] & {mask}) != {mask}) "
+            f"return stop(cpu, Stop::undefined_state);"]
+        if mode in (2, 5):
+            statements.append(
+                f"if (!cpu.a_known[{source}]) "
+                f"return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{source}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        statements.append(
+            f"std::uint32_t source_value = 0; if (!read_operand(cpu, bus, "
+            f"{address}, {size}u, source_value)) return false;")
+        statements.append(
+            f"return compare_immediate(cpu, {size}u, "
+            f"cpu.d[{destination}] & {mask}, source_value, {next_pc});")
+        return " ".join(statements)
     if op == "addq_d":
         size, dest, immediate = args
         return (f"return add_quick_data(cpu, {size}u, {dest}u, {immediate}u, "
