@@ -1886,6 +1886,20 @@
         "docs/SCSP_DSP_REGISTER_RAM.md"
       ],
       "note": "Implemented the manual-defined 64 COEF[12:0] and 32 MADRS[16:1] R/W words with exact field widths, knownness and read-before-clear transactions. All 257 authenticated startup states clear both files and reach the unassigned 0x1007c0 DSP gap after 262458..262461 instructions. The gap, MPRO, DSP execution, timing and audio remain absent, so audio.scsp remains 0%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.scsp",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "runtime/scsp_dsp_coefficients.hpp",
+        "runtime/m68k_sound_bus.hpp",
+        "tests/test_scsp_dsp_microprogram_native.py",
+        "docs/SCSP_DSP_REGISTER_RAM.md"
+      ],
+      "note": "Added the manual-defined 128x64-bit SCSP MPRO file as 512 exact bus words with per-byte knownness, discarded CLR reads, both byte lanes and strict aperture bounds. GCC/Clang UBSan synthetic-native tests cover every word and the original 256-longword clear shape. Continuous authenticated execution still stops earlier at the undocumented 0x1007c0 gap, and DSP instruction execution, timing and audio remain absent, so audio.scsp remains 0%."
     }
   ]
 }

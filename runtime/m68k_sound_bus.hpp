@@ -23,6 +23,7 @@ class SoundROMBus final : public Bus {
     arcaderecomp::scsp::SlotMixerControl slot_mixer_control_;
     arcaderecomp::scsp::DspCoefficients dsp_coefficients_;
     arcaderecomp::scsp::DspMemoryAddresses dsp_memory_addresses_;
+    arcaderecomp::scsp::DspMicroprogram dsp_microprogram_;
     arcaderecomp::model2::HotdSoundControl hotd_sound_control_;
     SoundRAM sound_ram_;
 public:
@@ -41,6 +42,8 @@ public:
                 dsp_coefficients_.read8(address - 0x100700u, value)) return value;
         if (dsp_registers_enabled_ && address >= 0x100780u && address < 0x1007c0u &&
                 dsp_memory_addresses_.read8(address - 0x100780u, value)) return value;
+        if (dsp_registers_enabled_ && address >= 0x100800u && address < 0x100c00u &&
+                dsp_microprogram_.read8(address - 0x100800u, value)) return value;
         if (common_control_enabled_ && address >= 0x100400u && address <= 0x100401u &&
                 common_control_.read8(address - 0x100400u, value)) return value;
         throw BusFault(address, false);
@@ -54,6 +57,8 @@ public:
                 dsp_coefficients_.read8_discard(address - 0x100700u)) return;
         if (dsp_registers_enabled_ && address >= 0x100780u && address < 0x1007c0u &&
                 dsp_memory_addresses_.read8_discard(address - 0x100780u)) return;
+        if (dsp_registers_enabled_ && address >= 0x100800u && address < 0x100c00u &&
+                dsp_microprogram_.read8_discard(address - 0x100800u)) return;
         if (common_control_enabled_ && address >= 0x100400u && address <= 0x100401u &&
                 common_control_.read8_discard(address - 0x100400u)) return;
         (void)read8(address);
@@ -69,6 +74,8 @@ public:
                 dsp_coefficients_.read16(address - 0x100700u, value)) return value;
         if (dsp_registers_enabled_ && address >= 0x100780u && address < 0x1007c0u &&
                 dsp_memory_addresses_.read16(address - 0x100780u, value)) return value;
+        if (dsp_registers_enabled_ && address >= 0x100800u && address < 0x100c00u &&
+                dsp_microprogram_.read16(address - 0x100800u, value)) return value;
         if (!(address & 1u) && address >= 0x600000u && address < 0x680000u)
             return static_cast<std::uint16_t>((std::uint16_t(rom_[address - 0x600000u]) << 8) |
                                              rom_[address - 0x600000u + 1u]);
@@ -84,6 +91,8 @@ public:
                 dsp_coefficients_.read16_discard(address - 0x100700u)) return;
         if (dsp_registers_enabled_ && address >= 0x100780u && address < 0x1007c0u &&
                 dsp_memory_addresses_.read16_discard(address - 0x100780u)) return;
+        if (dsp_registers_enabled_ && address >= 0x100800u && address < 0x100c00u &&
+                dsp_microprogram_.read16_discard(address - 0x100800u)) return;
         (void)read16(address);
     }
     void write8(std::uint32_t address, std::uint8_t value) override {
@@ -95,6 +104,8 @@ public:
                 dsp_coefficients_.write8(address - 0x100700u, value)) return;
         if (dsp_registers_enabled_ && address >= 0x100780u && address < 0x1007c0u &&
                 dsp_memory_addresses_.write8(address - 0x100780u, value)) return;
+        if (dsp_registers_enabled_ && address >= 0x100800u && address < 0x100c00u &&
+                dsp_microprogram_.write8(address - 0x100800u, value)) return;
         if (common_control_enabled_ && address >= 0x100400u && address <= 0x100401u &&
                 common_control_.write8(address - 0x100400u, value)) return;
         if (common_control_enabled_ && address >= 0x100402u && address <= 0x100403u &&
@@ -112,6 +123,8 @@ public:
                 dsp_coefficients_.write16(address - 0x100700u, value)) return;
         if (dsp_registers_enabled_ && address >= 0x100780u && address < 0x1007c0u &&
                 dsp_memory_addresses_.write16(address - 0x100780u, value)) return;
+        if (dsp_registers_enabled_ && address >= 0x100800u && address < 0x100c00u &&
+                dsp_microprogram_.write16(address - 0x100800u, value)) return;
         if (common_control_enabled_ && address == 0x100400u && common_control_.write16(value)) return;
         if (common_control_enabled_ && address == 0x100402u &&
                 dsp_memory_control_.write16(value)) return;
@@ -148,6 +161,9 @@ public:
     }
     const arcaderecomp::scsp::DspMemoryAddresses& dsp_memory_addresses() const {
         return dsp_memory_addresses_;
+    }
+    const arcaderecomp::scsp::DspMicroprogram& dsp_microprogram() const {
+        return dsp_microprogram_;
     }
     bool establish_scsp_version(unsigned version) { return common_control_.establish_version(version); }
 };

@@ -1,19 +1,23 @@
-# SCSP DSP COEF and MADRS register files
+# SCSP DSP COEF, MADRS and MPRO register files
 
-Status (2026-10-12): the two manual-defined DSP register files preceding MPRO
-are mapped and synthetic-native tested. DSP execution and the reserved address
-gap remain unimplemented.
+Status (2026-10-12): the three manual-defined DSP register files are mapped and
+synthetic-native tested. DSP execution and the reserved address gap remain
+unimplemented.
 
 The [Sega SCSP User's Manual](https://antime.kapsi.fi/sega/files/ST-077-R2-052594.pdf)
 defines:
 
 - 64 R/W `COEF[12:0]` words at `0x100700..0x10077f`; and
-- 32 R/W `MADRS[16:1]` words at `0x100780..0x1007bf`.
+- 32 R/W `MADRS[16:1]` words at `0x100780..0x1007bf`; and
+- 128 R/W 64-bit `MPRO` instructions, exposed as 512 words at
+  `0x100800..0x100bff`.
 
 `runtime/scsp_dsp_coefficients.hpp` models independent value knownness for
 every word. COEF rejects nonzero reserved bits 15:13 and records only the
 documented 13-bit field as known. MADRS uses all 16 register bits; sound-memory
-address bit zero is implicitly absent from the named field. Normal reads
+address bit zero is implicitly absent from the named field. MPRO keeps all
+four big-endian words of each 64-bit instruction independently observable;
+it does not claim to decode or execute that instruction. Normal reads
 require every requested bit to be known. Side-effect-free discarded reads
 permit MC68000 CLR's mandatory read-before-write without manufacturing an
 initial value.
@@ -43,4 +47,8 @@ completed instructions: 262458 / 262460 / 262461 by signature route
 No percentages change. SCSP/audio remain 0%, sound-ROM execution remains 10%,
 overall HOTD1 remains about 10%, and Gates A/B/C remain open. The next honest
 blocker is independent evidence for the `0x1007c0..0x1007ff` gap; it must not
-be silently folded into COEF, MADRS or MPRO.
+be silently folded into COEF, MADRS or MPRO. Because authentic execution stops
+at the first access in that gap, it does not yet exercise MPRO continuously.
+The MPRO proof is therefore synthetic-native: every one of its 512 bus words,
+both byte lanes, unknown-read behavior, exact endpoints and the original
+256-longword clear-loop shape are tested under GCC and Clang with UBSan.
