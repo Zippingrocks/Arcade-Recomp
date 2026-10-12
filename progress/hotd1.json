@@ -2079,6 +2079,17 @@
         "docs/SEGA_IO3155649.md"
       ],
       "note": "Refined the newly recorded public 315-5649 evidence against its detailed immutable protocol note: live logic-analyzer/FTDI work confirms outbound 2 Mbaud framing and TX serialization, but that source explicitly leaves reliable bidirectional RX wiring and per-byte lockstep acknowledgement unfinished. Firmware-derived handshake behavior and a later receive-probe report remain leads, not a published HOTD/837-12079 two-channel capture. No runtime status or RX was added; authentic RX 5%, Model2C 20%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "model2c.authentic_rx",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "docs/SEGA_IO3155649.md"
+      ],
+      "note": "Pinned two independent public emulator implementations that converge on a TX2 gun-byte selector hypothesis: indices 0..7 map low/high P1Y/P1X/P2Y/P2X and larger indices return off-screen flags. Both force receive status 0x0c and cite no CPU-correlated 837-12079 capture, so this is recorded only as a future-capture discriminator; the predicted initial TX2=FF response is not used. Authentic RX 5%, Model2C 20%, overall HOTD1 10% unchanged."
     }
   ]
 }
