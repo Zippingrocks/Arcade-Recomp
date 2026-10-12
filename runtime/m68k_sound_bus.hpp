@@ -80,6 +80,10 @@ public:
     // of physical reset completion or a working/timed SCSP audio device.
     void enable_common_control_research(bool enabled) { common_control_enabled_ = enabled; }
     void enable_sound_ram_research(bool enabled) { sound_ram_enabled_ = enabled; }
+    bool establish_sound_ram_byte_research(std::uint32_t address, std::uint8_t value) {
+        address &= 0xffffffu;
+        return sound_ram_enabled_ && sound_ram_.establish8(address, value);
+    }
     void enable_hotd_sound_control_research(bool enabled) {
         hotd_sound_control_enabled_ = enabled;
     }
