@@ -1693,6 +1693,21 @@
         "tests/test_m68k_cmp_memory_native.py"
       ],
       "note": "Made the new CMP native oracle test portable to CI's Clang -Werror policy by bracing nested iteration explicitly after GCC and the 691-test local suite had accepted the equivalent compact form. The exact focused suite now passes under CXX=clang++; production decoder/emitter semantics, authenticated 302/291 graph result, execution boundaries and estimates are unchanged. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_neg_swap_native.py",
+        "docs/M68000_NEG_SWAP.md"
+      ],
+      "note": "Added Motorola-manual-backed byte/word/long NEG and SWAP data-register operations with selected-bit preservation, exact XNZVC, strict knownness and fail-closed helpers. Three focused GCC/Clang UBSan tests cover every width/register, exhaustive byte inputs, wide boundaries, all prior flag values, SWAP half exchange, unknown state, exclusions and invalid arguments. Authenticated word-swapped NEG.L D5 at 0x601B3A and SWAP D0 at 0x601B74 now translate; the reset-vector graph grows 302/291 to 307/296 and advances both paths to explicit deeper stops at 0x601B42 and 0x601B7A while eleven unsupported sites remain. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no memory/device value was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

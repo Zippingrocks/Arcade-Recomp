@@ -115,6 +115,12 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
             (op >> 3) & 7 == 0):
         return Instruction(pc, 2, "negx_d",
                            ((1, 2, 4)[(op >> 6) & 3], op & 7))
+    if (op & 0xff00 == 0x4400 and ((op >> 6) & 3) != 3 and
+            (op >> 3) & 7 == 0):
+        return Instruction(pc, 2, "neg_d",
+                           ((1, 2, 4)[(op >> 6) & 3], op & 7))
+    if op & 0xfff8 == 0x4840:
+        return Instruction(pc, 2, "swap_d", (op & 7,))
     if op & 0xf1c0 in (0x2040, 0x3040):
         size, mode, reg, dest = (2 if op & 0x1000 else 4), (op >> 3) & 7, op & 7, (op >> 9) & 7
         if mode in (0, 1, 2):

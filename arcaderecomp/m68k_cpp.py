@@ -194,6 +194,12 @@ def _emit(ins):
     if op == "negx_d":
         size, reg = args
         return f"return negate_extend_data(cpu, {size}u, {reg}u, {next_pc});"
+    if op == "neg_d":
+        size, reg = args
+        return f"return negate_data(cpu, {size}u, {reg}u, {next_pc});"
+    if op == "swap_d":
+        reg, = args
+        return f"return swap_data(cpu, {reg}u, {next_pc});"
     if op == "movea":
         size, mode, source, dest, extra = args
         mask = "0xffffu" if size == 2 else "0xffffffffu"
