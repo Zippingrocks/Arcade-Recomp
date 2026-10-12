@@ -80,6 +80,16 @@ def _emit(ins):
         statements.append(f"const bool zero = (value & {bit_mask}) == 0;")
         statements += ["cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~4u) | (zero ? 4u : 0u)); cpu.sr_known |= 4u;", done]
         return " ".join(statements)
+    if op == "bset_immediate_memory":
+        bit, mode, reg, displacement = args
+        if mode in (2, 5):
+            prefix = (f"if (!cpu.a_known[{reg}]) "
+                      f"return stop(cpu, Stop::undefined_state); ")
+            address = f"cpu.a[{reg}] + {_u(displacement)}"
+        else:
+            prefix, address = "", _u(displacement)
+        return (prefix + f"return bit_set_immediate_memory(cpu, bus, {address}, "
+                f"{bit}u, {next_pc});")
     if op == "move_memory_to_d":
         size, mode, source, displacement, dest = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
@@ -133,6 +143,30 @@ def _emit(ins):
         size, source, dest = args
         return (f"return move_memory_postincrement(cpu, bus, {size}u, {source}u, "
                 f"{dest}u, {next_pc});")
+    if op == "move_postincrement_to_memory":
+        size, source, mode, destination, displacement = args
+        sign = _u(1 << (size * 8 - 1))
+        statements = [
+            f"if (!cpu.a_known[{source}]) "
+            f"return stop(cpu, Stop::undefined_state);"]
+        if mode in (2, 5):
+            statements.append(
+                f"if (!cpu.a_known[{destination}]) "
+                f"return stop(cpu, Stop::undefined_state);")
+            address = f"cpu.a[{destination}] + {_u(displacement)}"
+        else:
+            address = _u(displacement)
+        increment = 2 if size == 1 and source == 7 else size
+        statements.append(
+            f"std::uint32_t value = 0; if (!read_operand(cpu, bus, "
+            f"cpu.a[{source}], {size}u, value)) return false;")
+        statements.append(f"cpu.a[{source}] += {increment}u;")
+        statements.append(
+            f"if (!write_move(cpu, bus, {address}, {size}u, value)) "
+            f"return false;")
+        statements += [
+            f"logical_flags(cpu, (value & {sign}) != 0, value == 0);", done]
+        return " ".join(statements)
     if op == "move_address_to_d":
         size, source, dest = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
@@ -145,7 +179,7 @@ def _emit(ins):
         size, source, mode, reg, displacement = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
         statements = [f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state);"]
-        if mode in (2, 5):
+        if mode in (2, 3, 5):
             statements.append(f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state);")
             address = f"cpu.a[{reg}] + {_u(displacement)}"
         else:
@@ -170,8 +204,11 @@ def _emit(ins):
             statements.append(f"cpu.d[{reg}] = (cpu.d[{reg}] & ~{mask}) | value; cpu.d_known[{reg}] |= {mask};")
         else:
             address = (f"cpu.a[{reg}] + {_u(displacement)}"
-                       if mode in (2, 5) else _u(displacement))
+                       if mode in (2, 3, 5) else _u(displacement))
             statements.append(f"if (!write_move(cpu, bus, {address}, {size}u, value)) return false;")
+            if mode == 3:
+                increment = 2 if size == 1 and reg == 7 else size
+                statements.append(f"cpu.a[{reg}] += {increment}u;")
         statements += [f"logical_flags(cpu, (value & {sign}) != 0, value == 0);", done]
         return " ".join(statements)
     if op == "move_d_to_indexed":
@@ -264,6 +301,11 @@ def _emit(ins):
         return (f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state); "
                 f"cpu.a[{dest}] = cpu.a[{source}] + {_u(displacement)}; "
                 f"cpu.a_known[{dest}] = true; {done}")
+    if op == "lea_pc_indexed":
+        dest, extension = args
+        return (f"std::uint32_t address = 0; if (!indexed_pc_address(cpu, "
+                f"{_u(ins.pc + 2)}, {extension}u, address)) return false; "
+                f"cpu.a[{dest}] = address; cpu.a_known[{dest}] = true; {done}")
     if op == "adda_d":
         size, source, dest = args
         mask = "0xffffu" if size == 2 else "0xffffffffu"
@@ -278,6 +320,10 @@ def _emit(ins):
         size, source, dest = args
         return (f"return subtract_data(cpu, {size}u, {source}u, {dest}u, "
                 f"{next_pc});")
+    if op == "mulu_d":
+        source, destination = args
+        return (f"return multiply_unsigned_word(cpu, {source}u, "
+                f"{destination}u, {next_pc});")
     if op == "add_memory_to_d":
         size, mode, source, displacement, destination = args
         mask = _u((1 << (size * 8)) - 1)
@@ -336,6 +382,16 @@ def _emit(ins):
         size, dest, immediate = args
         return (f"return add_quick_data(cpu, {size}u, {dest}u, {immediate}u, "
                 f"{next_pc});")
+    if op == "addq_memory":
+        size, mode, reg, displacement, immediate = args
+        if mode in (2, 5):
+            prefix = (f"if (!cpu.a_known[{reg}]) "
+                      f"return stop(cpu, Stop::undefined_state); ")
+            address = f"cpu.a[{reg}] + {_u(displacement)}"
+        else:
+            prefix, address = "", _u(displacement)
+        return (prefix + f"return add_quick_memory(cpu, bus, {address}, "
+                f"{size}u, {immediate}u, {next_pc});")
     if op == "subq_d":
         size, dest, immediate = args
         return (f"return subtract_quick_data(cpu, {size}u, {dest}u, "

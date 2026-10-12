@@ -109,6 +109,35 @@ inline bool indexed_address(CPU& cpu, unsigned base, std::uint16_t extension,
     return true;
 }
 
+inline bool indexed_pc_address(CPU& cpu, std::uint32_t base,
+                               std::uint16_t extension,
+                               std::uint32_t& address) {
+    if (extension & 0x0700u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const unsigned index = (extension >> 12u) & 7u;
+    const bool address_index = (extension & 0x8000u) != 0u;
+    const bool long_index = (extension & 0x0800u) != 0u;
+    if (address_index && !cpu.a_known[index])
+        return stop(cpu, Stop::undefined_state);
+    std::uint32_t value = 0;
+    if (address_index) {
+        value = cpu.a[index];
+    } else {
+        const std::uint32_t mask = long_index ? 0xffffffffu : 0xffffu;
+        if ((cpu.d_known[index] & mask) != mask)
+            return stop(cpu, Stop::undefined_state);
+        value = cpu.d[index];
+    }
+    if (!long_index) {
+        value &= 0xffffu;
+        if (value & 0x8000u) value |= 0xffff0000u;
+    }
+    const std::uint32_t displacement =
+        (extension & 0x0080u) ? (extension | 0xffffff00u) : (extension & 0x00ffu);
+    address = base + value + displacement;
+    return true;
+}
+
 // Motorola PRM ANDI/ORI/EORI: Dn byte/word writes preserve upper bits, X is
 // unchanged, NZ reflect the result and VC clear. Knownness is diagnostic
 // metadata, not physical CPU state: masked-away unknown bits need no guess.
@@ -477,6 +506,58 @@ inline bool subtract_quick_memory(CPU& cpu, Bus& bus, std::uint32_t address,
         (borrow ? 17u : 0u) | (result & sign ? 8u : 0u) |
         (result == 0u ? 4u : 0u) | (overflow ? 2u : 0u));
     cpu.sr_known |= 31u;
+    return finish(cpu, next);
+}
+
+inline bool add_quick_memory(CPU& cpu, Bus& bus, std::uint32_t address,
+                             unsigned bytes, unsigned immediate,
+                             std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) ||
+        immediate < 1u || immediate > 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const unsigned bits = bytes * 8u;
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu : (1u << bits) - 1u;
+    std::uint32_t destination = 0;
+    if (!read_operand(cpu, bus, address, bytes, destination)) return false;
+    const std::uint32_t result = (destination + immediate) & mask;
+    const std::uint32_t sign = 1u << (bits - 1u);
+    const bool carry = static_cast<std::uint64_t>(destination) + immediate > mask;
+    const bool overflow = (~(destination ^ immediate) &
+                           (destination ^ result) & sign) != 0u;
+    if (!write_move(cpu, bus, address, bytes, result)) return false;
+    cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~31u) |
+        (carry ? 17u : 0u) | (result & sign ? 8u : 0u) |
+        (result == 0u ? 4u : 0u) | (overflow ? 2u : 0u));
+    cpu.sr_known |= 31u;
+    return finish(cpu, next);
+}
+
+inline bool bit_set_immediate_memory(CPU& cpu, Bus& bus,
+                                     std::uint32_t address, unsigned bit,
+                                     std::uint32_t next) {
+    std::uint32_t value = 0;
+    if (!read_operand(cpu, bus, address, 1u, value)) return false;
+    const std::uint32_t mask = 1u << (bit & 7u);
+    const bool zero = (value & mask) == 0u;
+    if (!write_move(cpu, bus, address, 1u, value | mask)) return false;
+    cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~4u) |
+                                       (zero ? 4u : 0u));
+    cpu.sr_known |= 4u;
+    return finish(cpu, next);
+}
+
+inline bool multiply_unsigned_word(CPU& cpu, unsigned source,
+                                   unsigned destination, std::uint32_t next) {
+    if (source >= 8u || destination >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    if ((cpu.d_known[source] & 0xffffu) != 0xffffu ||
+        (cpu.d_known[destination] & 0xffffu) != 0xffffu)
+        return stop(cpu, Stop::undefined_state);
+    const std::uint32_t result = (cpu.d[source] & 0xffffu) *
+                                 (cpu.d[destination] & 0xffffu);
+    cpu.d[destination] = result;
+    cpu.d_known[destination] = 0xffffffffu;
+    logical_flags(cpu, (result & 0x80000000u) != 0u, result == 0u);
     return finish(cpu, next);
 }
 

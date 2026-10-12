@@ -21,7 +21,7 @@ class M68kMemoryMoveTests(unittest.TestCase):
         self.assertEqual(decode(move(4, 2, 0, 3, 1), 0).mnemonic,
                          "unsupported")
         self.assertEqual(decode(move(4, 3, 0, 2, 1), 0).mnemonic,
-                         "unsupported")
+                         "move_postincrement_to_memory")
 
     def test_native_bus_order_aliases_flags_and_a7_byte_increment(self):
         image = b"".join((move(4, 3, 0, 3, 1), move(1, 3, 7, 3, 7),

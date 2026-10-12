@@ -98,6 +98,16 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
                 displacement, length = word(4) << 16 | word(6), 8
             return Instruction(pc, length, "btst_immediate",
                                (bit, mode, reg, displacement))
+    if op & 0xffc0 == 0x08c0:
+        mode, reg, bit = (op >> 3) & 7, op & 7, word(2)
+        if mode in (2, 5) or (mode == 7 and reg in (0, 1)):
+            displacement, length = 0, 4
+            if mode == 5 or (mode, reg) == (7, 0):
+                displacement, length = _signed(word(4), 16), 6
+            elif (mode, reg) == (7, 1):
+                displacement, length = word(4) << 16 | word(6), 8
+            return Instruction(pc, length, "bset_immediate_memory",
+                               (bit, mode, reg, displacement))
     if op & 0xff00 == 0x4200 and ((op >> 6) & 3) != 3:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         if mode == 0:
@@ -180,6 +190,17 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         if src_mode == 3 and dst_mode == 3:
             return Instruction(pc, 2, "move_memory_postincrement",
                                (size, src_reg, dst_reg))
+        if (src_mode == 3 and
+                (dst_mode in (2, 5) or
+                 (dst_mode == 7 and dst_reg in (0, 1)))):
+            displacement, length = 0, 2
+            if dst_mode == 5 or (dst_mode, dst_reg) == (7, 0):
+                displacement, length = _signed(word(2), 16), 4
+            elif (dst_mode, dst_reg) == (7, 1):
+                displacement, length = word(2) << 16 | word(4), 6
+            return Instruction(pc, length, "move_postincrement_to_memory",
+                               (size, src_reg, dst_mode, dst_reg,
+                                displacement))
         if dst_mode == 0 and src_mode == 6:
             extension = word(2)
             if not extension & 0x0700:
@@ -226,14 +247,12 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
             if not extension & 0x0700:
                 return Instruction(pc, 4, "move_d_to_indexed",
                                    (size, src_reg, dst_reg, extension))
-        data_memory_destination = (dst_mode in (2, 5) or
+        data_memory_destination = (dst_mode in (2, 3, 5) or
                                    (dst_mode == 7 and dst_reg in (0, 1)))
         if ((src_mode == 0 and
              (dst_mode == 0 or data_memory_destination)) or
                 ((src_mode, src_reg) == (7, 4) and
-                 (dst_mode == 0 or (size != 4 and
-                  (dst_mode == 5 or
-                   (dst_mode == 7 and dst_reg in (0, 1))))))):
+                 (dst_mode == 0 or data_memory_destination))):
             length = 2
             if src_mode == 0:
                 source_kind, source = 0, src_reg
@@ -271,6 +290,11 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
     if op & 0xf1f8 == 0x41e8:
         return Instruction(pc, 4, "lea_displacement",
                            (op & 7, (op >> 9) & 7, _signed(word(2), 16)))
+    if op & 0xf1ff == 0x41fb:
+        extension = word(2)
+        if not extension & 0x0700:
+            return Instruction(pc, 4, "lea_pc_indexed",
+                               ((op >> 9) & 7, extension))
     if op & 0xf1f8 in (0xd0c0, 0xd1c0):
         return Instruction(pc, 2, "adda_d",
                            (4 if op & 0x0100 else 2, op & 7,
@@ -279,6 +303,8 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         return Instruction(pc, 2, "sub_d",
                            ((1, 2, 4)[(op >> 6) & 3], op & 7,
                             (op >> 9) & 7))
+    if op & 0xf1f8 == 0xc0c0:
+        return Instruction(pc, 2, "mulu_d", (op & 7, (op >> 9) & 7))
     if op & 0xf100 == 0xd000 and ((op >> 6) & 3) != 3:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         if mode in (2, 5) or (mode == 7 and reg in (0, 1)):
@@ -312,11 +338,19 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
             return Instruction(pc, length, "cmp_memory_to_d",
                                (size, mode, reg, displacement,
                                 (op >> 9) & 7))
-    if (op & 0xf100 == 0x5000 and ((op >> 6) & 3) != 3 and
-            (op >> 3) & 7 == 0):
-        size = (1, 2, 4)[(op >> 6) & 3]
-        return Instruction(pc, 2, "addq_d",
-                           (size, op & 7, ((op >> 9) & 7) or 8))
+    if op & 0xf100 == 0x5000 and ((op >> 6) & 3) != 3:
+        size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
+        immediate = ((op >> 9) & 7) or 8
+        if mode == 0:
+            return Instruction(pc, 2, "addq_d", (size, reg, immediate))
+        if mode in (2, 5) or (mode == 7 and reg in (0, 1)):
+            displacement, length = 0, 2
+            if mode == 5 or (mode, reg) == (7, 0):
+                displacement, length = _signed(word(2), 16), 4
+            elif (mode, reg) == (7, 1):
+                displacement, length = word(2) << 16 | word(4), 6
+            return Instruction(pc, length, "addq_memory",
+                               (size, mode, reg, displacement, immediate))
     if op & 0xf100 == 0x5100 and ((op >> 6) & 3) != 3:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         immediate = ((op >> 9) & 7) or 8
