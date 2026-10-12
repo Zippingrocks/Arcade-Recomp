@@ -2116,6 +2116,17 @@
         "docs/M68000_SCSP_INTERRUPT_SAMPLING.md"
       ],
       "note": "Implemented bounded MC68000 level 1..7 autovector entry from known SCSP interrupt levels: exact Motorola AN1012 PC-low/saved-SR/PC-high write order, six-byte frame, vector 24+level fetch, SR transition and a separate successful scheduler boundary. Native tests cover every mask/level, exact bus order, vector selection, unknown state and partial refusal; the full Linux suite passes 773/773 in 213.362s. A strict range/alignment guard on the synthetic CLR test bus also makes its finite address contract explicit and prevents GCC 13 from diagnosing an impossible out-of-range array access while inlining the new generic exception path. Level-7 edge history, IACK electrical timing, RTE and continuous scheduling remain absent; audio.m68k stays 5%, audio 0%, overall HOTD1 10%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "hotd1",
+      "percent_before": 10,
+      "percent_after": 10,
+      "evidence": [
+        ".github/workflows/tests.yml"
+      ],
+      "note": "Made the progress guard's push base selection robust to rewritten non-default branches: if the event's prior SHA is no longer present after checkout, CI compares the branch against the repository default branch's merge-base. Rewritten default-branch pushes remain a hard failure because their lost prior state cannot be audited. This repairs CI evidence handling only and changes no emulation estimate; overall HOTD1 remains 10%."
     }
   ]
 }
