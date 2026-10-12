@@ -42,6 +42,10 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         return Instruction(pc, 2, "nop")
     if op == 0x4e75:
         return Instruction(pc, 2, "rts")
+    if op & 0xfff8 == 0x4ed0:
+        # JMP (An).  The register value remains a run-time fact; static graph
+        # discovery may only translate targets supplied as explicit roots.
+        return Instruction(pc, 2, "jmp_a", (op & 7,))
     if op == 0x46fc:
         return Instruction(pc, 4, "move_to_sr", (word(2),))
     if op & 0xf100 == 0x7000:
@@ -214,6 +218,12 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
                 return Instruction(pc, 4,
                                    "move_postincrement_to_indexed",
                                    (size, src_reg, dst_reg, extension))
+        if src_mode == 6 and dst_mode == 3:
+            extension = word(2)
+            if not extension & 0x0700:
+                return Instruction(pc, 4,
+                                   "move_indexed_to_postincrement",
+                                   (size, src_reg, dst_reg, extension))
         if (src_mode == 3 and
                 (dst_mode in (2, 5) or
                  (dst_mode == 7 and dst_reg in (0, 1)))):
@@ -331,6 +341,10 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         return Instruction(pc, 2, "add_d",
                            ((1, 2, 4)[(op >> 6) & 3], op & 7,
                             (op >> 9) & 7))
+    if op & 0xf1f8 in (0x8000, 0x8040, 0x8080):
+        return Instruction(pc, 2, "or_d",
+                           ((1, 2, 4)[(op >> 6) & 3], op & 7,
+                            (op >> 9) & 7))
     if op & 0xf1f8 == 0xc0c0:
         return Instruction(pc, 2, "mulu_d", (op & 7, (op >> 9) & 7))
     if op & 0xf1ff == 0xc0fc:
@@ -442,7 +456,8 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
     return Instruction(pc, 2, "unsupported")
 
 
-def discover(image: bytes, entry: int, base: int = 0, limit: int = 4096):
+def discover(image: bytes, entry: int, base: int = 0, limit: int = 4096,
+             additional_entries: tuple[int, ...] = ()):
     """Follow only supported direct control flow, stopping at unknown sites."""
     if not isinstance(limit, int) or isinstance(limit, bool) or not 1 <= limit <= 100000:
         raise ValueError("Instruction limit must be 1..100000")
@@ -450,7 +465,13 @@ def discover(image: bytes, entry: int, base: int = 0, limit: int = 4096):
         raise ValueError("Image exceeds the 32-bit address range")
     if not 0 <= entry <= 0xffffffff:
         raise ValueError("Entry exceeds the 32-bit address range")
-    pending, found = [entry], {}
+    roots = (entry, *additional_entries)
+    if any(not isinstance(root, int) or isinstance(root, bool) or
+           not 0 <= root <= 0xffffffff or root & 1 for root in roots):
+        raise ValueError("MC68000 discovery roots must be even 32-bit integers")
+    # Register-indirect transfers never invent a target.  Callers may provide
+    # independently established instruction addresses as explicit AOT roots.
+    pending, found = list(dict.fromkeys(reversed(roots))), {}
     while pending and len(found) < limit:
         pc = pending.pop()
         if pc in found:
@@ -461,7 +482,7 @@ def discover(image: bytes, entry: int, base: int = 0, limit: int = 4096):
             found[pc] = Instruction(pc, 0, "invalid_fetch")
             continue
         found[pc] = ins
-        if ins.mnemonic in ("unsupported", "rts"):
+        if ins.mnemonic in ("unsupported", "rts", "jmp_a"):
             continue
         if ins.target is not None:
             pending.append(ins.target)

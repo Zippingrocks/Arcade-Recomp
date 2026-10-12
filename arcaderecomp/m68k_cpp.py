@@ -26,6 +26,10 @@ def _emit(ins):
         return f"return branch_subroutine(cpu, bus, {_u(ins.target)}, {next_pc});"
     if op == "rts":
         return "return return_subroutine(cpu, bus);"
+    if op == "jmp_a":
+        reg = args[0]
+        return (f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state); "
+                f"return finish(cpu, cpu.a[{reg}]);")
     if op == "move_to_sr":
         return f"return move_sr(cpu, {args[0]}u, {next_pc});"
     if op == "moveq":
@@ -44,6 +48,17 @@ def _emit(ins):
         size, reg, immediate = args
         return (f"return subtract_immediate_data(cpu, {size}u, {reg}u, "
                 f"{_u(immediate)}, {next_pc});")
+    if op == "or_d":
+        size, source, destination = args
+        mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
+        return (f"if ((cpu.d_known[{source}] & {mask}) != {mask} || "
+                f"(cpu.d_known[{destination}] & {mask}) != {mask}) "
+                f"return stop(cpu, Stop::undefined_state); "
+                f"const std::uint32_t result = (cpu.d[{source}] | "
+                f"cpu.d[{destination}]) & {mask}; "
+                f"cpu.d[{destination}] = (cpu.d[{destination}] & ~{mask}) | result; "
+                f"cpu.d_known[{destination}] |= {mask}; "
+                f"logical_flags(cpu, (result & {sign}) != 0u, result == 0u); {done}")
     if op == "cmpi":
         size, immediate, mode, reg, displacement = args
         mask = _u((1 << (size * 8)) - 1)
@@ -186,6 +201,10 @@ def _emit(ins):
         size, source, base, extension = args
         return (f"return move_postincrement_to_indexed(cpu, bus, {size}u, "
                 f"{source}u, {base}u, {extension}u, {next_pc});")
+    if op == "move_indexed_to_postincrement":
+        size, base, destination, extension = args
+        return (f"return move_indexed_to_postincrement(cpu, bus, {size}u, "
+                f"{base}u, {destination}u, {extension}u, {next_pc});")
     if op == "move_address_to_d":
         size, source, dest = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
@@ -517,8 +536,9 @@ def _emit(ins):
     return "return stop(cpu, Stop::" + ("untranslated_pc" if op == "invalid_fetch" else "unsupported_instruction") + ");"
 
 
-def emit_cpp(image: bytes, entry: int, base: int = 0, limit: int = 4096):
-    instructions, limited = discover(image, entry, base, limit)
+def emit_cpp(image: bytes, entry: int, base: int = 0, limit: int = 4096,
+             additional_entries: tuple[int, ...] = ()):
+    instructions, limited = discover(image, entry, base, limit, additional_entries)
     unsupported = tuple(i.pc for i in instructions if i.mnemonic in ("unsupported", "invalid_fetch"))
     source = ['#include "m68k_runtime.hpp"', "namespace arcaderecomp_m68k_generated {",
               "using namespace arcaderecomp::m68k;",

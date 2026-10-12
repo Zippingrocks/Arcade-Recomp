@@ -2023,6 +2023,24 @@
         "docs/SCSP_DSP_REGISTER_RAM.md"
       ],
       "note": "Corrected COEF's bus placement from the earlier low-13-bit interpretation to Sega table 4.5's COEF[12:0] in bits 15:3 (mask 0xfff8, reserved bits 2:0). Exhaustive word/lane tests pass; the full suite is 762/762. The authentic known 0x7f high byte and matching low byte now write exactly one coefficient word; all 257 classes advance from 308029..308032 to 308040..308043 instructions and expose JMP (A1) at 0x600296 with known A1=0x6002a2. This is a correction, not a permissive reserved-bit workaround; SCSP remains 0%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_jmp_indirect_native.py",
+        "tests/test_m68k_indexed_to_postincrement_native.py",
+        "tests/test_m68k_or_data_native.py",
+        "tools/experimental/hotdo_sound_signature_explorer.py",
+        "docs/M68000_INDIRECT_JUMP_TABLE.md"
+      ],
+      "note": "Implemented fail-closed JMP (An) plus explicit AOT roots, the exact eight-entry authenticated jump-table proof, MOVE d8(An,Xn),(Am)+, and register OR.B/W/L. GCC/Clang UBSan coverage and the full 769/769 suite pass in 212.390s. All 257 authenticated startup classes advance from 308040..308043 to 313591..313594 instructions; the graph is 795/795 with zero unsupported opcodes and reaches an exact 16-bit read from the documented banked sample-ROM window at 0xa9d9f4. The required private MPR sample chips are absent, so no data is invented and audio.m68k remains 5%."
     }
   ]
 }

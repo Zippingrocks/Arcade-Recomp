@@ -347,6 +347,29 @@ inline bool move_postincrement_to_indexed(CPU& cpu, Bus& bus, unsigned bytes,
     return finish(cpu, next);
 }
 
+// MOVE d8(An,Xn),(Am)+ resolves and reads the complete source before the
+// destination effective address is used.  This matters when the destination
+// register is also the source base or index.  The destination increment is
+// committed only after its complete write succeeds.
+inline bool move_indexed_to_postincrement(CPU& cpu, Bus& bus, unsigned bytes,
+                                          unsigned base, unsigned destination,
+                                          std::uint16_t extension,
+                                          std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) ||
+        base >= 8u || destination >= 8u || (extension & 0x0700u))
+        return stop(cpu, Stop::unsupported_instruction);
+    std::uint32_t source_address = 0;
+    if (!indexed_address(cpu, base, extension, source_address)) return false;
+    std::uint32_t value = 0;
+    if (!read_operand(cpu, bus, source_address, bytes, value)) return false;
+    if (!cpu.a_known[destination]) return stop(cpu, Stop::undefined_state);
+    if (!write_move(cpu, bus, cpu.a[destination], bytes, value)) return false;
+    cpu.a[destination] += bytes == 1u && destination == 7u ? 2u : bytes;
+    const std::uint32_t sign = 1u << (bytes * 8u - 1u);
+    logical_flags(cpu, (value & sign) != 0u, value == 0u);
+    return finish(cpu, next);
+}
+
 inline bool shift_immediate(CPU& cpu, unsigned bytes, unsigned reg, unsigned count,
                             bool left, bool rotate, std::uint32_t next) {
     if ((bytes != 1u && bytes != 2u && bytes != 4u) || reg >= 8u || count < 1u || count > 8u)
