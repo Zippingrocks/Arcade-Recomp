@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Implement the manual-defined 32-slot SCSP register file now exposed by CLR.B at 0x100017, preserving read-before-clear and reserved-bit strictness; independently recover physical reset-vector wiring.",
+      "next": "Implement the manual-defined SCSP DSP register RAM beginning with the observed longword clear at COEF address 0x100700, preserving field widths, read-before-clear and strict bounds; independently recover physical reset-vector wiring.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1860,6 +1860,19 @@
         "docs/M68000_SOUND_STARTUP_SIGNATURE.md"
       ],
       "note": "Authenticated the exact ErrorSet decision sequence and exhaustively partitioned all 2^72 assignments of the nine relevant unknown RAM bytes into 257 architectural states without choosing a power-on value. Native representatives cover both mismatch paths and all 256 preserved bytes. Every class clears 0x70000 RAM bytes and reaches the same documented SCSP slot-register read at 0x100017 after 262341..262344 instructions, so sound-ROM execution rises conservatively from 5% to 10%; physical reset, SCSP sound generation and audio remain unproven."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.scsp",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "runtime/scsp_slot_mixer.hpp",
+        "tests/test_scsp_slot_mixer_native.py",
+        "docs/SCSP_SLOT_MIXER_CONTROL.md"
+      ],
+      "note": "Implemented the manual-defined final mixer word across the 32-slot SCSP address space with byte-lane knownness and read-before-clear transactions. All 257 authenticated startup states perform the original loop's exactly 18 discarded reads and writes for slots 0..17, advancing to the DSP COEF clear at 0x100700 after 262398..262401 instructions. Slot synthesis, DSP execution, timing and audible output are absent, so audio.scsp remains 0%."
     }
   ]
 }

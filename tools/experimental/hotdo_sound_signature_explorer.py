@@ -32,7 +32,7 @@ HARNESS = r'''
 #include <tuple>
 #include <vector>
 using namespace arcaderecomp_m68k_generated;
-using Key=std::tuple<unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
+using Key=std::tuple<unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned>;
 static void byte(SoundROMBus& bus,unsigned a,unsigned v) {
     if(!bus.establish_sound_ram_byte_research(a,static_cast<std::uint8_t>(v)))throw std::runtime_error("premise");
 }
@@ -45,12 +45,15 @@ static Key run(const std::vector<std::uint8_t>& image,unsigned kind,unsigned sav
     CPU cpu;if(!reset_from_vectors(cpu,be32(0),be32(4)))throw std::runtime_error("vectors");
     SoundROMBus bus(image);bus.enable_common_control_research(true);
     bus.enable_hotd_sound_control_research(true);bus.enable_sound_ram_research(true);
+    bus.enable_slot_mixer_research(true);
     if(kind==0)word(bus,0xc08u,0u);
     else {word(bus,0xc08u,0x4572726fu);word(bus,0xc0cu,kind==1?0u:0x72536574u);if(kind==2)byte(bus,0xc04u,saved);}
     while(cpu.completed<500000u&&step(cpu,bus)){}
     std::uint8_t stored=0xffu;const bool known=bus.sound_ram().read8(0xc04u,stored);
     return {static_cast<unsigned>(cpu.stop),cpu.pc,cpu.access_address,cpu.access_width,
-            cpu.access_write?1u:0u,cpu.completed,known?stored:0x100u,bus.sound_ram().known_bytes()};
+            cpu.access_write?1u:0u,cpu.completed,known?stored:0x100u,bus.sound_ram().known_bytes(),
+            static_cast<unsigned>(bus.slot_mixer_control().completed_discarded_reads()),
+            static_cast<unsigned>(bus.slot_mixer_control().completed_writes())};
 }
 int main(int argc,char** argv) {
     if(argc!=2)return 2;
@@ -62,7 +65,8 @@ int main(int argc,char** argv) {
     auto same_boundary=[](const Key& a,const Key& b) {
         return std::get<0>(a)==std::get<0>(b)&&std::get<1>(a)==std::get<1>(b)&&
             std::get<2>(a)==std::get<2>(b)&&std::get<3>(a)==std::get<3>(b)&&
-            std::get<4>(a)==std::get<4>(b)&&std::get<7>(a)==std::get<7>(b);
+            std::get<4>(a)==std::get<4>(b)&&std::get<7>(a)==std::get<7>(b)&&
+            std::get<8>(a)==std::get<8>(b)&&std::get<9>(a)==std::get<9>(b);
     };
     if(!same_boundary(first,second)||std::get<6>(first)!=0u||std::get<6>(second)!=0u)return 5;
     unsigned marker_completed=0;
@@ -78,7 +82,9 @@ int main(int argc,char** argv) {
        <<"\"common_boundary\":{\"stop_code\":"<<std::get<0>(first)
        <<",\"pc\":"<<std::get<1>(first)<<",\"address\":"<<std::get<2>(first)
        <<",\"width\":"<<std::get<3>(first)<<",\"write\":"<<(std::get<4>(first)?"true":"false")
-       <<",\"known_ram_bytes\":"<<std::get<7>(first)<<"}}\n";
+       <<",\"known_ram_bytes\":"<<std::get<7>(first)
+       <<",\"slot_mixer_discarded_reads\":"<<std::get<8>(first)
+       <<",\"slot_mixer_writes\":"<<std::get<9>(first)<<"}}\n";
     return 0;
 }
 '''
