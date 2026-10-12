@@ -166,6 +166,32 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
                 displacement, length = word(2) << 16 | word(4), 6
             return Instruction(pc, length, "move_memory_to_d",
                                (size, src_mode, src_reg, displacement, dst_reg))
+        memory_source = (src_mode in (2, 5) or
+                         (src_mode == 7 and src_reg in (0, 1)))
+        memory_destination = (dst_mode in (2, 5) or
+                              (dst_mode == 7 and dst_reg in (0, 1)))
+        if memory_source and memory_destination:
+            # Source extensions precede destination extensions in the
+            # instruction stream. Address-updating and indexed modes remain
+            # outside this bounded non-updating form.
+            length, source_displacement = 2, 0
+            if src_mode == 5 or (src_mode, src_reg) == (7, 0):
+                source_displacement = _signed(word(length), 16)
+                length += 2
+            elif (src_mode, src_reg) == (7, 1):
+                source_displacement = word(length) << 16 | word(length + 2)
+                length += 4
+            destination_displacement = 0
+            if dst_mode == 5 or (dst_mode, dst_reg) == (7, 0):
+                destination_displacement = _signed(word(length), 16)
+                length += 2
+            elif (dst_mode, dst_reg) == (7, 1):
+                destination_displacement = word(length) << 16 | word(length + 2)
+                length += 4
+            return Instruction(pc, length, "move_memory_to_memory",
+                               (size, src_mode, src_reg,
+                                source_displacement, dst_mode, dst_reg,
+                                destination_displacement))
         data_memory_destination = (dst_mode in (2, 5) or
                                    (dst_mode == 7 and dst_reg in (0, 1)))
         if ((src_mode == 0 and
