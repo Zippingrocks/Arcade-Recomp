@@ -50,7 +50,7 @@ int main(){CPU cpu;reset_from_vectors(cpu,0x2000u,0);cpu.a[3]=0x100700u;cpu.a_kn
     bus.dsp_coefficients().known_mask(i)!=0x1fffu)return 2;
  bus.read16_discard(0x100780u);
  if(bus.dsp_memory_addresses().completed_discarded_reads()!=1u)return 3;
- try{bus.read16_discard(0x1007c0u);return 4;}catch(const BusFault&){}
+ try{(void)bus.read16(0x1007c0u);return 4;}catch(const BusFault&){}
  try{bus.write16(0x100700u,0x2000u);return 5;}catch(const BusFault&){}
  if(bus.dsp_coefficients().completed_writes()!=64u)return 6;
  return 0;}
@@ -69,7 +69,7 @@ int main(){SoundROMBus bus(std::vector<std::uint8_t>(0x80000u,0));bus.enable_dsp
  bus.write8(0x100780u,0x12u);bus.write8(0x100781u,0x34u);
  if(bus.read16(0x100780u)!=0x1234u)return 3;
  for(unsigned a:{0x1007c0u,0x1007deu,0x1007feu}){
-  try{bus.read16_discard(a);return 4;}catch(const BusFault&){}
+  try{(void)bus.read16(a);return 4;}catch(const BusFault&){}
  }
  return 0;}
 ''')

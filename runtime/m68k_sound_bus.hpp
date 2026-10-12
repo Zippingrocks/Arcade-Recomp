@@ -4,6 +4,7 @@
 #include "model2_sound_control.hpp"
 #include "scsp_common_control.hpp"
 #include "scsp_dsp_coefficients.hpp"
+#include "scsp_prohibited_window.hpp"
 #include "scsp_slot_mixer.hpp"
 #include <utility>
 #include <vector>
@@ -20,9 +21,11 @@ class SoundROMBus final : public Bus {
     bool hotd_sound_control_enabled_ = false;
     arcaderecomp::scsp::CommonControl common_control_;
     arcaderecomp::scsp::DspMemoryControl dsp_memory_control_;
+    arcaderecomp::scsp::SlotInputMixerControl slot_input_mixer_control_;
     arcaderecomp::scsp::SlotMixerControl slot_mixer_control_;
     arcaderecomp::scsp::DspCoefficients dsp_coefficients_;
     arcaderecomp::scsp::DspMemoryAddresses dsp_memory_addresses_;
+    arcaderecomp::scsp::DspProhibitedClearWindow dsp_prohibited_clear_window_;
     arcaderecomp::scsp::DspMicroprogram dsp_microprogram_;
     arcaderecomp::model2::HotdSoundControl hotd_sound_control_;
     SoundRAM sound_ram_;
@@ -36,6 +39,8 @@ public:
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.read8(address, value))
             return value;
         if (address >= 0x600000u && address < 0x680000u) return rom_[address - 0x600000u];
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_input_mixer_control_.read8(address - 0x100000u, value)) return value;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_mixer_control_.read8(address - 0x100000u, value)) return value;
         if (dsp_registers_enabled_ && address >= 0x100700u && address < 0x100780u &&
@@ -69,6 +74,8 @@ public:
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.read16(address, value))
             return value;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_input_mixer_control_.read16(address - 0x100000u, value)) return value;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_mixer_control_.read16(address - 0x100000u, value)) return value;
         if (dsp_registers_enabled_ && address >= 0x100700u && address < 0x100780u &&
                 dsp_coefficients_.read16(address - 0x100700u, value)) return value;
@@ -91,6 +98,8 @@ public:
                 dsp_coefficients_.read16_discard(address - 0x100700u)) return;
         if (dsp_registers_enabled_ && address >= 0x100780u && address < 0x1007c0u &&
                 dsp_memory_addresses_.read16_discard(address - 0x100780u)) return;
+        if (dsp_registers_enabled_ && address >= 0x1007c0u && address < 0x100800u &&
+                dsp_prohibited_clear_window_.read16_discard(address - 0x1007c0u)) return;
         if (dsp_registers_enabled_ && address >= 0x100800u && address < 0x100c00u &&
                 dsp_microprogram_.read16_discard(address - 0x100800u)) return;
         (void)read16(address);
@@ -98,6 +107,8 @@ public:
     void write8(std::uint32_t address, std::uint8_t value) override {
         address &= 0xffffffu;
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.write8(address, value)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_input_mixer_control_.write8(address - 0x100000u, value)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_mixer_control_.write8(address - 0x100000u, value)) return;
         if (dsp_registers_enabled_ && address >= 0x100700u && address < 0x100780u &&
@@ -118,11 +129,15 @@ public:
         address &= 0xffffffu;
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.write16(address, value)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_input_mixer_control_.write16(address - 0x100000u, value)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_mixer_control_.write16(address - 0x100000u, value)) return;
         if (dsp_registers_enabled_ && address >= 0x100700u && address < 0x100780u &&
                 dsp_coefficients_.write16(address - 0x100700u, value)) return;
         if (dsp_registers_enabled_ && address >= 0x100780u && address < 0x1007c0u &&
                 dsp_memory_addresses_.write16(address - 0x100780u, value)) return;
+        if (dsp_registers_enabled_ && address >= 0x1007c0u && address < 0x100800u &&
+                dsp_prohibited_clear_window_.write16(address - 0x1007c0u, value)) return;
         if (dsp_registers_enabled_ && address >= 0x100800u && address < 0x100c00u &&
                 dsp_microprogram_.write16(address - 0x100800u, value)) return;
         if (common_control_enabled_ && address == 0x100400u && common_control_.write16(value)) return;
@@ -156,6 +171,9 @@ public:
     const arcaderecomp::scsp::SlotMixerControl& slot_mixer_control() const {
         return slot_mixer_control_;
     }
+    const arcaderecomp::scsp::SlotInputMixerControl& slot_input_mixer_control() const {
+        return slot_input_mixer_control_;
+    }
     const arcaderecomp::scsp::DspCoefficients& dsp_coefficients() const {
         return dsp_coefficients_;
     }
@@ -164,6 +182,9 @@ public:
     }
     const arcaderecomp::scsp::DspMicroprogram& dsp_microprogram() const {
         return dsp_microprogram_;
+    }
+    const arcaderecomp::scsp::DspProhibitedClearWindow& dsp_prohibited_clear_window() const {
+        return dsp_prohibited_clear_window_;
     }
     bool establish_scsp_version(unsigned version) { return common_control_.establish_version(version); }
 };

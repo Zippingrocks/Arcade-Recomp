@@ -1,10 +1,53 @@
-// SCSP per-slot mixer word only; no synthesis, key state, envelope or timing.
-// Sega ST-077-R2-052594, individual slot control register word +0x16.
+// SCSP per-slot mixer words only; no synthesis, key state, envelope or timing.
+// Sega ST-077-R2-052594, individual slot control register words +0x14/+0x16.
 #pragma once
 #include <array>
 #include <cstdint>
 
 namespace arcaderecomp::scsp {
+
+class SlotInputMixerControl final {
+    std::array<std::uint16_t,32> value_{};
+    std::array<std::uint16_t,32> known_{};
+    std::uint64_t writes_ = 0;
+
+    static bool decode(unsigned offset,unsigned& slot,unsigned& lane) {
+        if(offset>=0x400u)return false;
+        slot=offset>>5u;
+        const unsigned within=offset&0x1fu;
+        if(within!=0x14u&&within!=0x15u)return false;
+        lane=within-0x14u;return true;
+    }
+public:
+    static constexpr unsigned slots=32u;
+    static constexpr std::uint16_t field_mask=0x007fu;
+
+    void invalidate(){*this=SlotInputMixerControl{};}
+    bool read8(unsigned offset,std::uint8_t& result)const{
+        unsigned slot=0,lane=0;if(!decode(offset,slot,lane))return false;
+        const unsigned shift=lane?0u:8u,requested=0xffu<<shift;
+        if((known_[slot]&requested)!=requested)return false;
+        result=static_cast<std::uint8_t>(value_[slot]>>shift);return true;
+    }
+    bool read16(unsigned offset,std::uint16_t& result)const{
+        unsigned slot=0,lane=0;
+        if(!decode(offset,slot,lane)||lane||known_[slot]!=0xffffu)return false;
+        result=value_[slot];return true;
+    }
+    bool write8(unsigned offset,std::uint8_t value){
+        unsigned slot=0,lane=0;if(!decode(offset,slot,lane)||!lane||(value&0x80u))return false;
+        value_[slot]=static_cast<std::uint16_t>((value_[slot]&~field_mask)|value);
+        known_[slot]|=field_mask;++writes_;return true;
+    }
+    bool write16(unsigned offset,std::uint16_t value){
+        unsigned slot=0,lane=0;
+        if(!decode(offset,slot,lane)||lane||(value&~field_mask))return false;
+        value_[slot]=value;known_[slot]=field_mask;++writes_;return true;
+    }
+    std::uint16_t value(unsigned slot)const{return slot<slots?value_[slot]:0u;}
+    std::uint16_t known_mask(unsigned slot)const{return slot<slots?known_[slot]:0u;}
+    std::uint64_t completed_writes()const{return writes_;}
+};
 
 class SlotMixerControl final {
     std::array<std::uint16_t,32> value_{};

@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Establish the hardware semantics of the SCSP DSP address gap 0x1007c0..0x1007ff that the original clear loop traverses; do not fold it into COEF, MADRS or MPRO without evidence. Independently recover physical reset-vector wiring.",
+      "next": "Implement the manual-defined SCSP per-slot volume/FM words at offsets 0x0c and 0x0e reached by authenticated startup, then continue strict execution. Independently measure the general hardware behavior of the setting-prohibited DSP span and recover physical reset-vector wiring.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1900,6 +1900,24 @@
         "docs/SCSP_DSP_REGISTER_RAM.md"
       ],
       "note": "Added the manual-defined 128x64-bit SCSP MPRO file as 512 exact bus words with per-byte knownness, discarded CLR reads, both byte lanes and strict aperture bounds. GCC/Clang UBSan synthetic-native tests cover every word and the original 256-longword clear shape. Continuous authenticated execution still stops earlier at the undocumented 0x1007c0 gap, and DSP instruction execution, timing and audio remain absent, so audio.scsp remains 0%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.scsp",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "runtime/scsp_prohibited_window.hpp",
+        "runtime/scsp_slot_mixer.hpp",
+        "runtime/m68k_sound_bus.hpp",
+        "tests/test_scsp_prohibited_window_native.py",
+        "tests/test_scsp_slot_mixer_native.py",
+        "tools/experimental/hotdo_sound_signature_explorer.py",
+        "docs/SCSP_DSP_REGISTER_RAM.md",
+        "docs/SCSP_SLOT_MIXER_CONTROL.md"
+      ],
+      "note": "Added a fail-closed contract for the Sega-manual setting-prohibited DSP span: only the authenticated original CLR sequence's discarded aligned reads and zero word writes are accepted, with no value, storage or MADRS-alias claim. Added the documented per-slot ISEL/IMXL word with exact seven-bit reserved-bit handling. All 257 exhaustive startup classes now clear MPRO, perform slot 0's 16 input-mixer writes and advance from 262458..262461 to 283336..283339 instructions before slot offset 0x0c. General prohibited-span behavior, slot synthesis, DSP execution, timing and audio remain unproven, so audio.scsp stays 0%."
     }
   ]
 }
