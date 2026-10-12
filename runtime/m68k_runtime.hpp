@@ -217,8 +217,43 @@ inline bool write_move(CPU& cpu, Bus& bus, std::uint32_t address, unsigned bytes
             return stop(cpu, Stop::data_address);
         }
         bus.write16(address, static_cast<std::uint16_t>(value));
+    } else if (bytes == 4u) {
+        if (address & 1u) {
+            cpu.access_address = address; cpu.access_width = 4; cpu.access_write = true;
+            return stop(cpu, Stop::data_address);
+        }
+        // Ordinary MOVE.L writes the high word at the lower address first.
+        // Predecrement and CLR.L have distinct transaction order and do not use
+        // this helper.
+        bus.write16(address, static_cast<std::uint16_t>(value >> 16u));
+        bus.write16((address + 2u) & 0x00ffffffu,
+                    static_cast<std::uint16_t>(value));
     } else return stop(cpu, Stop::unsupported_instruction);
     return true;
+}
+
+// MOVE (An)+,(Am)+ evaluates source before destination. Each postincrement is
+// committed only after that operand's complete diagnostic bus transfer. Thus a
+// refused destination can retain a completed source increment and accepted bus
+// effects; this is not an MC68000 BERR exception/restart model.
+inline bool move_memory_postincrement(CPU& cpu, Bus& bus, unsigned bytes,
+                                      unsigned source, unsigned destination,
+                                      std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) ||
+        source >= 8u || destination >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    if (!cpu.a_known[source] || !cpu.a_known[destination])
+        return stop(cpu, Stop::undefined_state);
+    const unsigned source_increment = bytes == 1u && source == 7u ? 2u : bytes;
+    const unsigned destination_increment = bytes == 1u && destination == 7u ? 2u : bytes;
+    std::uint32_t value = 0;
+    if (!read_operand(cpu, bus, cpu.a[source], bytes, value)) return false;
+    cpu.a[source] += source_increment;
+    if (!write_move(cpu, bus, cpu.a[destination], bytes, value)) return false;
+    cpu.a[destination] += destination_increment;
+    const std::uint32_t sign = 1u << (bytes * 8u - 1u);
+    logical_flags(cpu, (value & sign) != 0, value == 0);
+    return finish(cpu, next);
 }
 
 inline bool shift_immediate(CPU& cpu, unsigned bytes, unsigned reg, unsigned count,

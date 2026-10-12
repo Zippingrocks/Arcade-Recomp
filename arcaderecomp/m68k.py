@@ -89,6 +89,9 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         size = {1: 1, 2: 4, 3: 2}[op >> 12]
         src_mode, src_reg = (op >> 3) & 7, op & 7
         dst_mode, dst_reg = (op >> 6) & 7, (op >> 9) & 7
+        if src_mode == 3 and dst_mode == 3:
+            return Instruction(pc, 2, "move_memory_postincrement",
+                               (size, src_reg, dst_reg))
         if dst_mode == 0 and (src_mode in (2, 5) or
                               (src_mode == 7 and src_reg in (0, 1))):
             # Memory-source MOVE, without address-register updates or indexing.

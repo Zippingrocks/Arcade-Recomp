@@ -1419,6 +1419,21 @@
         "docs/I960_ADDRL.md"
       ],
       "note": "Specialized fixed CVTIR and LOGBNR register-bank formats at C++ compile time with if constexpr, eliminating unreachable fp[4] code from GPR-destination translations while retaining explicit bounds and exact numeric behavior. Five focused and all 201 i960 tests pass GCC/UBSan; full private 3311/3311 translation passes Windows Clang19 strict O2 syntax and GCC11.4 O2 -Wall -Wextra -Werror, resolving the prior warning and optimizer ICE without suppression or reduced optimization. Fresh O2 probe remains 1910 instructions then refuses unobserved serial status 0x01C0001A. This is a build-correctness repair, not hardware progress; cpu.aot 80%, CPU 55%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_memory_move_native.py",
+        "docs/M68000_MEMORY_MOVE.md"
+      ],
+      "note": "Added Motorola-manual-backed byte/word/long MOVE (An)+,(Am)+ with explicit bus cycles, alias and A7 semantics, strict alignment/knownness, and observable partial faults. Three focused GCC/UBSan tests and all 42 MC68000 tests pass; strict Clang O2 syntax passes on the authenticated generated source. Original 0x60035E is 0x22D8 MOVE.L (A0)+,(A1)+; reset-vector graph grows 88/77 to 90/80 and leaves ten unsupported sites. Continuous probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no RAM/device behavior invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }
