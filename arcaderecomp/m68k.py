@@ -64,6 +64,14 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
             immediate, length = immediate << 16 | word(4), 6
         immediate &= (1 << (size * 8)) - 1
         return Instruction(pc, length, "addi_d", (size, op & 7, immediate))
+    if (op & 0xff00 == 0x0400 and ((op >> 6) & 3) != 3 and
+            (op >> 3) & 7 == 0):
+        size = (1, 2, 4)[(op >> 6) & 3]
+        immediate, length = word(2), 4
+        if size == 4:
+            immediate, length = immediate << 16 | word(4), 6
+        immediate &= (1 << (size * 8)) - 1
+        return Instruction(pc, length, "subi_d", (size, op & 7, immediate))
     if op & 0xff00 == 0x0c00 and ((op >> 6) & 3) != 3:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         # Non-updating destinations only. CMPI PC-relative is NOT MC68000.
@@ -271,6 +279,17 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         return Instruction(pc, 2, "sub_d",
                            ((1, 2, 4)[(op >> 6) & 3], op & 7,
                             (op >> 9) & 7))
+    if op & 0xf100 == 0xd000 and ((op >> 6) & 3) != 3:
+        size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
+        if mode in (2, 5) or (mode == 7 and reg in (0, 1)):
+            displacement, length = 0, 2
+            if mode == 5 or (mode, reg) == (7, 0):
+                displacement, length = _signed(word(2), 16), 4
+            elif (mode, reg) == (7, 1):
+                displacement, length = word(2) << 16 | word(4), 6
+            return Instruction(pc, length, "add_memory_to_d",
+                               (size, mode, reg, displacement,
+                                (op >> 9) & 7))
     if op & 0xf100 == 0x8000 and ((op >> 6) & 3) != 3:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         if mode in (2, 5) or (mode == 7 and reg in (0, 1)):
@@ -298,11 +317,19 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         size = (1, 2, 4)[(op >> 6) & 3]
         return Instruction(pc, 2, "addq_d",
                            (size, op & 7, ((op >> 9) & 7) or 8))
-    if (op & 0xf100 == 0x5100 and ((op >> 6) & 3) != 3 and
-            (op >> 3) & 7 == 0):
-        size = (1, 2, 4)[(op >> 6) & 3]
-        return Instruction(pc, 2, "subq_d",
-                           (size, op & 7, ((op >> 9) & 7) or 8))
+    if op & 0xf100 == 0x5100 and ((op >> 6) & 3) != 3:
+        size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
+        immediate = ((op >> 9) & 7) or 8
+        if mode == 0:
+            return Instruction(pc, 2, "subq_d", (size, reg, immediate))
+        if mode in (2, 5) or (mode == 7 and reg in (0, 1)):
+            displacement, length = 0, 2
+            if mode == 5 or (mode, reg) == (7, 0):
+                displacement, length = _signed(word(2), 16), 4
+            elif (mode, reg) == (7, 1):
+                displacement, length = word(2) << 16 | word(4), 6
+            return Instruction(pc, length, "subq_memory",
+                               (size, mode, reg, displacement, immediate))
     if op & 0xf0f8 == 0x50c8:
         displacement = _signed(word(2), 16)
         return Instruction(pc, 4, "dbcc", ((op >> 8) & 15, op & 7),
