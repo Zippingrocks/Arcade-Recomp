@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Generalize documented privileged MC68000 MOVE immediate to SR beyond the earlier 0x27xx initializer subset, beginning with the authentic 0x2200 interrupt-mask write at PC 0x600216c, then continue strict startup. Independently recover physical reset-vector wiring.",
+      "next": "Couple proven SCSP pending/enable/level state to bounded MC68000 interrupt sampling and autovector exception entry after MOVE #$2200,SR, without ignoring unknown asynchronous requests. Independently recover physical reset-vector wiring.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1978,6 +1978,20 @@
         "docs/SCSP_INTERRUPT_CONTROL.md"
       ],
       "note": "Implemented the manual-defined SCSP sound/main interrupt enable, pending/reset and three-plane sound-level words with exact factor masks, knownness, manual bit-5 commands and explicit Timer A/B/C request integration. Focused exhaustive native tests pass; the full suite is 757/757. All 257 authenticated startup classes perform seven interrupt-control writes and advance from 285119..285122 to 287063..287066 instructions, reaching documented privileged MOVE #$2200,SR at 0x600216c. CPU interrupt delivery, continuous scheduling, synthesis and audio remain absent, so audio.scsp stays 0%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_move_sr_native.py",
+        "tests/test_m68k_bootstrap_native.py",
+        "docs/M68000_MOVE_SR.md"
+      ],
+      "note": "Generalized privileged MOVE immediate to SR from the prior 0x27xx-only subset to every reserved-bit-clean CCR/interrupt-mask value that remains supervisor with trace clear. Exhaustive native tests cover all 65536 immediates, privilege/knownness and the authentic 0x2200 instruction; the full suite is 759/759. All 257 startup classes complete one more instruction, from 287063..287066 to 287064..287067, then correctly refuse continued execution with interrupt mask 2 because asynchronous SCSP interrupt sampling/autovector entry is not yet coupled. Sound CPU stays 5%; ignoring possible pending interrupts is not accepted."
     }
   ]
 }

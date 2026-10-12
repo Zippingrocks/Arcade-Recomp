@@ -790,7 +790,11 @@ inline bool swap_data(CPU& cpu, unsigned reg, std::uint32_t next) {
 inline bool move_sr(CPU& cpu, std::uint16_t value, std::uint32_t next) {
     if (!(cpu.sr_known & 0x2000u)) return stop(cpu, Stop::undefined_state);
     if (!(cpu.sr & 0x2000u)) return stop(cpu, Stop::privilege);
-    if ((value & 0xffe0u) != 0x2700u) return stop(cpu, Stop::unsupported_control);
+    // This runtime has no trace exception or USP/SSP bank transition yet.
+    // Accept every architected CCR/interrupt-mask value while remaining in
+    // supervisor mode with trace clear; reserved bits still fail closed.
+    if (!(value & 0x2000u) || (value & ~0x271fu))
+        return stop(cpu, Stop::unsupported_control);
     cpu.sr = value; cpu.sr_known = 0xffffu;
     return finish(cpu, next);
 }
