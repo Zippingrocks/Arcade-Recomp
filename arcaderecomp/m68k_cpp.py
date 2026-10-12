@@ -28,6 +28,10 @@ def _emit(ins):
         reg, value = args
         return (f"cpu.d[{reg}] = {_u(value)}; cpu.d_known[{reg}] = 0xffffffffu; "
                 f"logical_flags(cpu, {'true' if value < 0 else 'false'}, {'true' if value == 0 else 'false'}); {done}")
+    if op == "logic_immediate_d":
+        size, kind, reg, immediate = args
+        return (f"return logic_immediate_d(cpu, {size}u, {kind}u, {reg}u, "
+                f"{_u(immediate)}, {next_pc});")
     if op == "cmpi":
         size, immediate, mode, reg, displacement = args
         mask = _u((1 << (size * 8)) - 1)

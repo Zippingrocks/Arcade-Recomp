@@ -79,6 +79,36 @@ inline void logical_flags(CPU& cpu, bool negative, bool zero) {
     cpu.sr_known |= 15u;  // X's value AND definedness are preserved.
 }
 
+// Motorola PRM ANDI/ORI/EORI: Dn byte/word writes preserve upper bits, X is
+// unchanged, NZ reflect the result and VC clear. Knownness is diagnostic
+// metadata, not physical CPU state: masked-away unknown bits need no guess.
+// kind: 0 = ORI, 1 = ANDI, 2 = EORI.
+inline bool logic_immediate_d(CPU& cpu, unsigned bytes, unsigned kind, unsigned reg,
+                              std::uint32_t immediate, std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) || kind > 2u || reg >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu : (1u << (bytes * 8u)) - 1u;
+    const std::uint32_t sign = 1u << (bytes * 8u - 1u);
+    immediate &= mask;
+    std::uint32_t value = cpu.d[reg] & mask, known = cpu.d_known[reg] & mask;
+    if (kind == 0u) { value |= immediate; known |= immediate; }
+    else if (kind == 1u) { value &= immediate; known |= ~immediate & mask; }
+    else value ^= immediate;
+    cpu.d[reg] = (cpu.d[reg] & ~mask) | value;
+    cpu.d_known[reg] = (cpu.d_known[reg] & ~mask) | known;
+    // Unknown flag payload bits are cleared deterministically, never marked
+    // known. Z is already false if any known result bit is one.
+    const bool negative_known = (known & sign) != 0;
+    const bool known_one = (value & known) != 0;
+    const bool zero_known = known_one || known == mask;
+    cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~15u) |
+        (negative_known && (value & sign) ? 8u : 0u) |
+        (zero_known && !known_one ? 4u : 0u));
+    cpu.sr_known = static_cast<std::uint16_t>((cpu.sr_known & ~15u) | 3u |
+        (negative_known ? 8u : 0u) | (zero_known ? 4u : 0u));
+    return finish(cpu, next);
+}
+
 // MC68000 non-updating data operand read. A long uses two word transactions,
 // high word first; each address reaches the physical 24-bit bus independently.
 // Do not roll back a successful first read if the second read is rejected.

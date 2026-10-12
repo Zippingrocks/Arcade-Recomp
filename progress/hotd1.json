@@ -1348,6 +1348,32 @@
         "tools/hotd1_strict_boot_probe.cpp"
       ],
       "note": "Expanded the pending batch after the user's follow-up with exact SQRTR and source-backed CLR memory operations, retaining all prior limitations. Full final local WSL suite passes 615 tests without skips in 145.826 seconds; new and repaired harnesses also pass strict Clang 19 syntax checks, pending actual fresh CI execution. Parent reran authenticated SQRTR and CLR isolated checks and freshly rebuilt continuous probes: main remains 1910 instructions/318 mapped writes/two TX before refused serial status0x01C0001A; optional sound remains18 before refused boardwrite0x400001. Source research and synthetic-state original instruction loops are not cabinet captures. CPU55%, Model2C20%, audio0%, overallHOTD1 10%; Gates A/B/C remain open."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "tests/test_m68k_logic_immediate_native.py",
+        "docs/M68000_IMMEDIATE_LOGIC.md",
+        "docs/SOUND_CONTROL_REFERENCE_AUDIT.md"
+      ],
+      "note": "Added Motorola-manual-backed ANDI/ORI/EORI B/W/L to Dn with precise partial-bit knownness, upper-register and X preservation, and no memory/device acceptance. Five GCC/UBSan tests and strict Clang syntax checks pass; exhaustive byte truth tables and all 6561 ternary byte states verify concrete-completion knownness. Authenticated original ANDI site passes 16384 supplied-state checks; isolated original loop completes 57351 instructions over synthetic memory then refuses board write value08 at0x6001AA. Static graph48/47 next0x6001BE. Optional continuous sound probe stays18 at0x60014C. No physical reset, board effects, timed audio or cabinet proof; audio.m68k5%, audio0%, HOTD1 overall10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "hotd1",
+      "percent_before": 10,
+      "percent_after": 10,
+      "evidence": [
+        "docs/M68000_IMMEDIATE_LOGIC.md",
+        "tests/test_m68k_logic_immediate_native.py",
+        "tools/hotd1_strict_boot_probe.cpp"
+      ],
+      "note": "Reviewed original sound instruction progress separately from platform fidelity. Full initial WSL suite620 passed; final six focused immediate-logic tests pass GCC/UBSan and strict Clang19 syntax checks, including every single unknown word/long bit. Final full suite is being rerun. Fresh sound probes remain17 strict atSCSPread0x100401 or18 optional atboardwrite0x400001; unchanged main-CPU binary rerun remains1910 instructions/318 mapped writes/two TX before unobserved0x01C0001A. Isolated original-byte synthetic-state checks are not cabinet observations. AudioCPU5%, audio0%, CPU55%, Model2C20%, overallHOTD1 10%; GatesA/B/C open."
     }
   ]
 }
