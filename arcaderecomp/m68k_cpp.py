@@ -56,13 +56,17 @@ def _emit(ins):
         size, mode, source, displacement, dest = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
         fetch = ""
-        if mode in (2, 5):
+        if mode in (2, 3, 5):
             fetch = f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state); "
             address = f"cpu.a[{source}] + {_u(displacement)}"
         else:
             address = _u(displacement)
+        update = ""
+        if mode == 3:
+            increment = 2 if size == 1 and source == 7 else size
+            update = f"cpu.a[{source}] += {increment}u; "
         return (fetch + f"std::uint32_t value = 0; "
-                f"if (!read_operand(cpu, bus, {address}, {size}u, value)) return false; "
+                f"if (!read_operand(cpu, bus, {address}, {size}u, value)) return false; " + update +
                 f"cpu.d[{dest}] = (cpu.d[{dest}] & ~{mask}) | value; cpu.d_known[{dest}] |= {mask}; "
                 f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
     if op == "move_memory_postincrement":

@@ -23,8 +23,8 @@ class M68kMemoryLoadTests(unittest.TestCase):
                         for end in range(2, len(data)):
                             with self.assertRaises(ValueError):
                                 decode(data[:end], 0)
-            # Updating/indexed/PC-relative forms remain outside this extension.
-            for mode, source in ((3, 0), (4, 7), (6, 2), (7, 2), (7, 3), (7, 5)):
+            # Predecrement, indexed and PC-relative forms remain outside this extension.
+            for mode, source in ((4, 7), (6, 2), (7, 2), (7, 3), (7, 5)):
                 self.assertEqual(decode(move(size, mode, source, 0, 0, 0, 0), 0).mnemonic,
                                  "unsupported")
             for dest_mode in (1, 2, 3, 4, 5, 6, 7):
