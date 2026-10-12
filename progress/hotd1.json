@@ -1653,6 +1653,21 @@
         "docs/M68000_BTST_IMMEDIATE.md"
       ],
       "note": "Added Motorola-manual-backed immediate BTST for data registers and non-updating indirect, displacement, absolute-short and absolute-long memory, with modulo-32/register and modulo-8/memory bit selection, exact Z-only updates and strict selected-bit/address/read knownness. Three focused GCC/UBSan tests cover every supported form and register, modulo inputs, partial-known values, preserved CCR state, exclusions, truncation and refused reads; all 90 MC68000 tests and the 685-test full suite pass. Authenticated word-swapped original BTST #2,(A6) at 0x601A50 and BTST #0,(A6) at 0x601B2C now translate; graph grows 245/237 to 255/245 and honestly exposes four new downstream stop addresses, so unsupported sites rise eight to ten while the translated frontier gains eight instructions. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no tested memory/device value was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "tests/test_m68k_memory_to_memory_native.py",
+        "tests/test_m68k_memory_load_native.py",
+        "docs/M68000_MEMORY_TO_MEMORY_MOVE.md"
+      ],
+      "note": "Added Motorola-manual-backed byte/word/long MOVE between non-updating indirect, displacement, absolute-short and absolute-long memory with source-before-destination transactions, exact NZVC, 24-bit addressing and high-word-first long reads/writes. Three focused GCC/UBSan tests cover all supported source/destination forms, widths, registers, aliases, extensions, wrap, unknown inputs, alignment and every refused read/write cycle; all 93 MC68000 tests and the 688-test full suite pass. Four authenticated word-swapped MOVE.B 3(A6),$0408(A5) sites at 0x6019DC, 0x601B5E, 0x601B90 and 0x601BB6 now translate; graph grows 255/245 to 295/284 and honestly exposes five deeper stops, so unsupported sites rise ten to eleven while the translated frontier gains 39 instructions. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no source memory/device value was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }

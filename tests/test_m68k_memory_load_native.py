@@ -28,7 +28,12 @@ class M68kMemoryLoadTests(unittest.TestCase):
                 self.assertEqual(decode(move(size, mode, source, 0, 0, 0, 0), 0).mnemonic,
                                  "unsupported")
             for dest_mode in (1, 2, 3, 4, 5, 6, 7):
-                expected = "movea" if size != 1 and dest_mode == 1 else "unsupported"
+                if size != 1 and dest_mode == 1:
+                    expected = "movea"
+                elif dest_mode in (2, 5, 7):
+                    expected = "move_memory_to_memory"
+                else:
+                    expected = "unsupported"
                 self.assertEqual(decode(move(size, 2, 0, dest_mode, 0, 0, 0), 0).mnemonic,
                                  expected)
         for reg in range(8):

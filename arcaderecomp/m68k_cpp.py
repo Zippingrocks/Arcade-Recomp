@@ -93,6 +93,29 @@ def _emit(ins):
                 f"if (!read_operand(cpu, bus, {address}, {size}u, value)) return false; " + update +
                 f"cpu.d[{dest}] = (cpu.d[{dest}] & ~{mask}) | value; cpu.d_known[{dest}] |= {mask}; "
                 f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
+    if op == "move_memory_to_memory":
+        (size, source_mode, source, source_displacement, destination_mode,
+         destination, destination_displacement) = args
+        sign = _u(1 << (size * 8 - 1))
+        statements = []
+        if source_mode in (2, 5):
+            statements.append(f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state);")
+            source_address = f"cpu.a[{source}] + {_u(source_displacement)}"
+        else:
+            source_address = _u(source_displacement)
+        if destination_mode in (2, 5):
+            statements.append(f"if (!cpu.a_known[{destination}]) return stop(cpu, Stop::undefined_state);")
+            destination_address = f"cpu.a[{destination}] + {_u(destination_displacement)}"
+        else:
+            destination_address = _u(destination_displacement)
+        statements.append(
+            f"std::uint32_t value = 0; if (!read_operand(cpu, bus, "
+            f"{source_address}, {size}u, value)) return false;")
+        statements.append(
+            f"if (!write_move(cpu, bus, {destination_address}, {size}u, "
+            f"value)) return false;")
+        statements += [f"logical_flags(cpu, (value & {sign}) != 0, value == 0);", done]
+        return " ".join(statements)
     if op == "move_memory_postincrement":
         size, source, dest = args
         return (f"return move_memory_postincrement(cpu, bus, {size}u, {source}u, "
