@@ -109,6 +109,18 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         if size in (2, 4) and src_mode == 1 and dst_mode == 0:
             return Instruction(pc, 2, "move_address_to_d",
                                (size, src_reg, dst_reg))
+        if (size in (2, 4) and src_mode == 1 and
+                (dst_mode in (2, 5) or
+                 (dst_mode == 7 and dst_reg in (0, 1)))):
+            # Address-register direct is a legal word/long MOVE source. Keep
+            # destination updates and indexed forms outside this bounded step.
+            displacement, length = 0, 2
+            if dst_mode == 5 or (dst_mode, dst_reg) == (7, 0):
+                displacement, length = _signed(word(2), 16), 4
+            elif (dst_mode, dst_reg) == (7, 1):
+                displacement, length = word(2) << 16 | word(4), 6
+            return Instruction(pc, length, "move_address_to_memory",
+                               (size, src_reg, dst_mode, dst_reg, displacement))
         if src_mode == 3 and dst_mode == 3:
             return Instruction(pc, 2, "move_memory_postincrement",
                                (size, src_reg, dst_reg))
