@@ -71,7 +71,7 @@ struct Reads:Bus{unsigned count=0,address[2]{},value=0,bytes=0;
  void write8(std::uint32_t,std::uint8_t)override{throw std::runtime_error("write");}
  void write16(std::uint32_t,std::uint16_t)override{throw std::runtime_error("write");}};
 int main(){const unsigned values[]={0u,1u,0x7fu,0x80u,0xffu,0x7fffu,0x8000u,0xffffu,0x7fffffffu,0x80000000u,0xffffffffu};
- for(const auto&row:rows)for(unsigned dv:values)for(unsigned sv:values)for(unsigned x=0;x<2;++x)for(unsigned kx=0;kx<2;++kx){
+ for(const auto&row:rows){for(unsigned dv:values){for(unsigned sv:values){for(unsigned x=0;x<2;++x){for(unsigned kx=0;kx<2;++kx){
   const unsigned mask=row[1]==4?0xffffffffu:(1u<<(row[1]*8u))-1u,sign=1u<<(row[1]*8u-1u),d=dv&mask,s=sv&mask,result=(d-s)&mask;
   CPU cpu;reset_from_vectors(cpu,0x2000,row[0]);for(unsigned i=0;i<8;++i){cpu.a[i]=0x12001000u+i*4u;cpu.a_known[i]=true;cpu.d[i]=0xa5a55a5au+i;cpu.d_known[i]=0;}
   cpu.d[row[2]]=(cpu.d[row[2]]&~mask)|d;cpu.d_known[row[2]]=mask;cpu.sr=static_cast<std::uint16_t>(0x270fu|(x<<4));cpu.sr_known=static_cast<std::uint16_t>(kx?0xffffu:0xffefu);
@@ -81,7 +81,8 @@ int main(){const unsigned values[]={0u,1u,0x7fu,0x80u,0xffu,0x7fffu,0x8000u,0xff
   const bool overflow=((d^s)&(d^result)&sign)!=0;const unsigned flags=(result&sign?8u:0u)|(result==0?4u:0u)|(overflow?2u:0u)|(d<s?1u:0u);
   if(cpu.sr!=(0x2700u|(x<<4)|flags)||cpu.sr_known!=(kx?0xffffu:0xffefu))return 3;
   if(cpu.d!=before.d||cpu.d_known!=before.d_known||cpu.a!=before.a||cpu.a_known!=before.a_known)return 4;
- }return 0;}
+ }}}}}
+ return 0;}
 ''')
 
     def test_unknown_alignment_and_read_refusals_are_uncommitted(self):
