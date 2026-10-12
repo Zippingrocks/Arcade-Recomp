@@ -21,6 +21,9 @@ class SoundROMBus final : public Bus {
     bool hotd_sound_control_enabled_ = false;
     arcaderecomp::scsp::CommonControl common_control_;
     arcaderecomp::scsp::DspMemoryControl dsp_memory_control_;
+    arcaderecomp::scsp::SlotEnvelopeReleaseControl slot_envelope_release_control_;
+    arcaderecomp::scsp::SlotLfoControl slot_lfo_control_;
+    arcaderecomp::scsp::SlotVolumeModulationControl slot_volume_modulation_control_;
     arcaderecomp::scsp::SlotInputMixerControl slot_input_mixer_control_;
     arcaderecomp::scsp::SlotMixerControl slot_mixer_control_;
     arcaderecomp::scsp::DspCoefficients dsp_coefficients_;
@@ -40,6 +43,12 @@ public:
             return value;
         if (address >= 0x600000u && address < 0x680000u) return rom_[address - 0x600000u];
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_envelope_release_control_.read8(address - 0x100000u, value)) return value;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_lfo_control_.read8(address - 0x100000u, value)) return value;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_volume_modulation_control_.read8(address - 0x100000u, value)) return value;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_input_mixer_control_.read8(address - 0x100000u, value)) return value;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_mixer_control_.read8(address - 0x100000u, value)) return value;
@@ -57,6 +66,12 @@ public:
         address &= 0xffffffu;
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.read8_discard(address)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_lfo_control_.read8_discard(address - 0x100000u)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_input_mixer_control_.read8_discard(address - 0x100000u)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_volume_modulation_control_.read8_discard(address - 0x100000u)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_mixer_control_.read8_discard(address - 0x100000u)) return;
         if (dsp_registers_enabled_ && address >= 0x100700u && address < 0x100780u &&
                 dsp_coefficients_.read8_discard(address - 0x100700u)) return;
@@ -73,6 +88,12 @@ public:
         std::uint16_t value = 0;
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.read16(address, value))
             return value;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_envelope_release_control_.read16(address - 0x100000u, value)) return value;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_lfo_control_.read16(address - 0x100000u, value)) return value;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_volume_modulation_control_.read16(address - 0x100000u, value)) return value;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_input_mixer_control_.read16(address - 0x100000u, value)) return value;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
@@ -93,6 +114,12 @@ public:
         address &= 0xffffffu;
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.read16_discard(address)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_lfo_control_.read16_discard(address - 0x100000u)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_input_mixer_control_.read16_discard(address - 0x100000u)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_volume_modulation_control_.read16_discard(address - 0x100000u)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_mixer_control_.read16_discard(address - 0x100000u)) return;
         if (dsp_registers_enabled_ && address >= 0x100700u && address < 0x100780u &&
                 dsp_coefficients_.read16_discard(address - 0x100700u)) return;
@@ -107,6 +134,12 @@ public:
     void write8(std::uint32_t address, std::uint8_t value) override {
         address &= 0xffffffu;
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.write8(address, value)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_envelope_release_control_.write8(address - 0x100000u, value)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_lfo_control_.write8(address - 0x100000u, value)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_volume_modulation_control_.write8(address - 0x100000u, value)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_input_mixer_control_.write8(address - 0x100000u, value)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
@@ -128,6 +161,12 @@ public:
     void write16(std::uint32_t address, std::uint16_t value) override {
         address &= 0xffffffu;
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.write16(address, value)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_envelope_release_control_.write16(address - 0x100000u, value)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_lfo_control_.write16(address - 0x100000u, value)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_volume_modulation_control_.write16(address - 0x100000u, value)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_input_mixer_control_.write16(address - 0x100000u, value)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
@@ -173,6 +212,15 @@ public:
     }
     const arcaderecomp::scsp::SlotInputMixerControl& slot_input_mixer_control() const {
         return slot_input_mixer_control_;
+    }
+    const arcaderecomp::scsp::SlotVolumeModulationControl& slot_volume_modulation_control() const {
+        return slot_volume_modulation_control_;
+    }
+    const arcaderecomp::scsp::SlotLfoControl& slot_lfo_control() const {
+        return slot_lfo_control_;
+    }
+    const arcaderecomp::scsp::SlotEnvelopeReleaseControl& slot_envelope_release_control() const {
+        return slot_envelope_release_control_;
     }
     const arcaderecomp::scsp::DspCoefficients& dsp_coefficients() const {
         return dsp_coefficients_;

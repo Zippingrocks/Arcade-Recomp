@@ -6,6 +6,128 @@ from test_m68k_bootstrap_native import native, words
 
 
 class SCSPSlotMixerTests(unittest.TestCase):
+    def test_envelope_release_word_fields_and_original_byte_write(self):
+        native('#include "scsp_slot_mixer.hpp"\n', r'''
+using arcaderecomp::scsp::SlotEnvelopeReleaseControl;
+int main(){std::uint8_t b=0xa5;std::uint16_t w=0xa55a;
+ for(unsigned value=0;value<65536u;++value){SlotEnvelopeReleaseControl e;
+  const bool ok=e.write16(0x0au,static_cast<std::uint16_t>(value));
+  if(ok!=(value<=0x7fffu)||e.known_mask(0)!=(ok?0x7fffu:0u))return 1;
+  if(e.read16(0x0au,w))return 2;
+ }
+ for(unsigned value=0;value<256u;++value){SlotEnvelopeReleaseControl e;
+  if(e.write8(0x0au,static_cast<std::uint8_t>(value))!=(value<=0x7fu)||
+     !e.write8(0x0bu,static_cast<std::uint8_t>(value)))return 3;
+ }
+ SlotEnvelopeReleaseControl e;
+ for(unsigned slot=0;slot<32u;++slot){const unsigned o=slot*0x20u+0x0bu;
+  if(!e.write8(o,0xffu)||e.value(slot)!=0xffu||e.known_mask(slot)!=0x00ffu||
+     !e.read8(o,b)||b!=0xffu)return 4;
+ }
+ for(unsigned o:{0x09u,0x0cu,0x3e9u,0x3ecu,0x400u})
+  if(e.write8(o,0)||e.write16(o,0)||e.read8(o,b)||e.read16(o,w))return 5;
+ e.invalidate();if(e.completed_writes()||e.known_mask(0))return 6;
+ return 0;}
+''')
+        source,report=emit_cpp(words(0x72ff,0x1141,0x000b,0xffff),0)
+        self.assertEqual(report.translated,2)
+        native(source,r'''
+#include "m68k_sound_bus.hpp"
+using namespace arcaderecomp_m68k_generated;
+int main(){CPU cpu;reset_from_vectors(cpu,0x2000u,0);cpu.a[0]=0x100000u;cpu.a_known[0]=true;
+ SoundROMBus bus(std::vector<std::uint8_t>(0x80000u,0));bus.enable_slot_mixer_research(true);
+ while(cpu.completed<4u&&step(cpu,bus)){}
+ const auto& e=bus.slot_envelope_release_control();
+ if(cpu.completed!=2u||e.completed_writes()!=1u||e.value(0)!=0xffu||
+    e.known_mask(0)!=0x00ffu)return 1;
+ return 0;}
+''')
+
+    def test_lfo_word_and_long_clear_into_input_mixer(self):
+        native('#include "scsp_slot_mixer.hpp"\n', r'''
+using arcaderecomp::scsp::SlotLfoControl;
+int main(){SlotLfoControl l;std::uint8_t b=0xa5;std::uint16_t w=0xa55a;
+ for(unsigned slot=0;slot<32u;++slot){const unsigned o=slot*0x20u+0x12u;
+  if(l.read8(o,b)||l.read16(o,w)||!l.read16_discard(o)||
+     !l.write16(o,static_cast<std::uint16_t>(slot*0x8421u))||
+     !l.read16(o,w)||w!=static_cast<std::uint16_t>(slot*0x8421u))return 1;
+ }
+ for(unsigned value=0;value<65536u;++value){SlotLfoControl x;
+  if(!x.write16(0x12u,static_cast<std::uint16_t>(value))||
+     !x.read16(0x12u,w)||w!=value)return 2;
+ }
+ SlotLfoControl lanes;if(!lanes.write8(0x12u,0x12u)||lanes.read16(0x12u,w)||
+   !lanes.write8(0x13u,0x34u)||!lanes.read16(0x12u,w)||w!=0x1234u)return 3;
+ for(unsigned o:{0x11u,0x14u,0x3f1u,0x3f4u,0x400u})
+  if(l.read8(o,b)||l.read8_discard(o)||l.write8(o,0)||
+     l.read16(o,w)||l.read16_discard(o)||l.write16(o,0))return 4;
+ if(l.completed_discarded_reads()!=32u||l.completed_writes()!=32u)return 5;
+ l.invalidate();if(l.completed_discarded_reads()||l.completed_writes())return 6;
+ return 0;}
+''')
+        source,report=emit_cpp(words(0x42a8,0x0012,0xffff),0)
+        self.assertEqual(report.translated,1)
+        native(source,r'''
+#include "m68k_sound_bus.hpp"
+using namespace arcaderecomp_m68k_generated;
+int main(){CPU cpu;reset_from_vectors(cpu,0x2000u,0);cpu.a[0]=0x100000u;cpu.a_known[0]=true;
+ SoundROMBus bus(std::vector<std::uint8_t>(0x80000u,0));bus.enable_slot_mixer_research(true);
+ if(!step(cpu,bus)||cpu.completed!=1u)return 1;
+ if(bus.slot_lfo_control().completed_discarded_reads()!=1u||
+    bus.slot_lfo_control().completed_writes()!=1u||bus.slot_lfo_control().value(0)!=0u||
+    bus.slot_lfo_control().known_mask(0)!=0xffffu)return 2;
+ if(bus.slot_input_mixer_control().completed_discarded_reads()!=1u||
+    bus.slot_input_mixer_control().completed_writes()!=1u||
+    bus.slot_input_mixer_control().known_mask(0)!=0x007fu)return 3;
+ return 0;}
+''')
+
+    def test_volume_modulation_words_fields_lanes_and_original_clear(self):
+        native('#include "scsp_slot_mixer.hpp"\n', r'''
+using arcaderecomp::scsp::SlotVolumeModulationControl;
+int main(){std::uint8_t b=0xa5;std::uint16_t w=0xa55a;
+ for(unsigned value=0;value<65536u;++value){SlotVolumeModulationControl m;
+  const bool ok=m.write16(0x0cu,static_cast<std::uint16_t>(value));
+  if(ok!=(value<=0x03ffu)||m.known_mask(0,0)!=(ok?0x03ffu:0u))return 1;
+  if(!m.write16(0x0eu,static_cast<std::uint16_t>(value))||
+     !m.read16(0x0eu,w)||w!=value)return 2;
+ }
+ for(unsigned value=0;value<256u;++value){SlotVolumeModulationControl m;
+  if(m.write8(0x0cu,static_cast<std::uint8_t>(value))!=(value<=3u))return 3;
+  if(!m.write8(0x0du,static_cast<std::uint8_t>(value))||
+     !m.write8(0x0eu,static_cast<std::uint8_t>(value))||
+     !m.write8(0x0fu,static_cast<std::uint8_t>(value)))return 4;
+ }
+ SlotVolumeModulationControl m;
+ for(unsigned slot=0;slot<32u;++slot){const unsigned base=slot*0x20u+0x0cu;
+  if(!m.read16_discard(base)||!m.write16(base,slot)||
+     !m.read16_discard(base+2u)||!m.write16(base+2u,static_cast<std::uint16_t>(~slot)))return 5;
+  if(m.value(slot,0)!=slot||m.known_mask(slot,0)!=0x03ffu||
+     m.value(slot,1)!=static_cast<std::uint16_t>(~slot)||m.known_mask(slot,1)!=0xffffu)return 6;
+ }
+ if(m.completed_discarded_reads()!=64u||m.completed_writes()!=64u)return 7;
+ for(unsigned o:{0x0bu,0x10u,0x3ebu,0x3f0u,0x400u})
+  if(m.read8(o,b)||m.read8_discard(o)||m.write8(o,0)||
+     m.read16(o,w)||m.read16_discard(o)||m.write16(o,0))return 8;
+ m.invalidate();if(m.completed_writes()||m.completed_discarded_reads())return 9;
+ return 0;}
+''')
+
+        source,report=emit_cpp(words(0x72ff,0x42a8,0x000c,0x1141,0x000d,0xffff),0)
+        self.assertEqual(report.translated,3)
+        native(source,r'''
+#include "m68k_sound_bus.hpp"
+using namespace arcaderecomp_m68k_generated;
+int main(){CPU cpu;reset_from_vectors(cpu,0x2000u,0);cpu.a[0]=0x100000u;cpu.a_known[0]=true;
+ SoundROMBus bus(std::vector<std::uint8_t>(0x80000u,0));bus.enable_slot_mixer_research(true);
+ while(cpu.completed<10u&&step(cpu,bus)){}
+ const auto& v=bus.slot_volume_modulation_control();
+ if(cpu.completed!=3u||v.completed_discarded_reads()!=2u||v.completed_writes()!=3u||
+    v.value(0,0)!=0x00ffu||v.known_mask(0,0)!=0x03ffu||
+    v.value(0,1)!=0u||v.known_mask(0,1)!=0xffffu)return 1;
+ return 0;}
+''')
+
     def test_input_mixer_fields_all_values_slots_and_reserved_bits(self):
         native('#include "scsp_slot_mixer.hpp"\n', r'''
 using arcaderecomp::scsp::SlotInputMixerControl;
@@ -83,7 +205,7 @@ int main() {
   bus.write8(0x100015u,0x3fu);
   if(bus.slot_input_mixer_control().value(0)!=0x3fu||
      bus.slot_input_mixer_control().known_mask(0)!=0x7fu)return 6;
-  for(unsigned address:{0x100013u,0x100018u,0x1003f3u,0x1003f8u,0x100400u}) {
+  for(unsigned address:{0x100011u,0x100018u,0x1003f1u,0x1003f8u,0x100400u}) {
     try{bus.write8(address,0);return 7;}catch(const BusFault&){}
   }
   try{bus.write16(0x100017u,0);return 8;}catch(const BusFault& e){if(!e.write||e.width!=2u)return 9;}
