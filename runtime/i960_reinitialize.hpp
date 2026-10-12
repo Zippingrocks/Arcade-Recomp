@@ -35,6 +35,10 @@ static inline bool perform_iac_93_reinitialize(CPU& cpu, const Bus& bus) {
     if (!cpu.pending_iac_valid ||
         (cpu.pending_iac[0] >> 24) != 0x93u)
         return stop(cpu, StopCode::iac_bad_message);
+    // Enforce the research opt-in at this entry point too: diagnostic
+    // callers can invoke the helper without passing through SYNMOVQ.
+    if (!cpu.allow_iac_93_reinitialize)
+        return stop(cpu, StopCode::iac_reinitialize_pending);
     if (!bus.read32)
         return stop(cpu, StopCode::missing_bus);
 

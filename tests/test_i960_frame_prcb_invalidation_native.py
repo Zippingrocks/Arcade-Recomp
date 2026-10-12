@@ -66,6 +66,47 @@ def native(body):
                                      +": "+run.stdout+run.stderr)
 
 class NativeFramePRCBResetTests(unittest.TestCase):
+    def test_direct_iac_helper_requires_opt_in_before_bus_or_reset(self):
+        native(r"""
+int main() {
+    TestRAM ram{};
+    put_prcb(ram,0x00510e00u,0x00510800u,0x00510400u,0x210u);
+    CPU cpu{};
+    if(!frame_init(cpu,0x00510200u,0x80u))return 1;
+    cpu.prcb_loaded=true;cpu.prcb_address=0x00511e00u;
+    cpu.process_controls_priority_known=true;
+    cpu.known_process_controls=0x001f2002u;
+    cpu.fp_defined[0]=true;cpu.fp[0].low=0x12345678u;
+    request_iac(cpu,0u,0x00510e00u,0x40u);
+    // A denied request must stop before even requiring a bus reader.
+    Bus absent{};
+    if(perform_iac_93_reinitialize(cpu,absent) ||
+       cpu.stop_code!=StopCode::iac_reinitialize_pending)return 2;
+    // A throwing reader proves that a present bus is not consulted either.
+    Bus denied{};
+    denied.read32=+[](void*,std::uint32_t)->std::uint32_t { throw 1; };
+    try {
+        if(perform_iac_93_reinitialize(cpu,denied))return 3;
+    } catch(...) { return 4; }
+    if(cpu.ip!=0x80u || cpu.r[31]!=0x00510200u ||
+       !cpu.prcb_loaded || cpu.prcb_address!=0x00511e00u ||
+       !cpu.process_controls_priority_known ||
+       cpu.known_process_controls!=0x001f2002u ||
+       !cpu.fp_defined[0] || cpu.fp[0].low!=0x12345678u ||
+       !cpu.pending_iac_valid || cpu.pending_iac[2]!=0x00510e00u ||
+       cpu.reinitialize_count!=0u || cpu.allow_iac_93_reinitialize)
+       return 5;
+    // Explicit opt-in may resume exactly the preserved pending request.
+    Bus allowed{};allowed.ctx=&ram;allowed.read32=&rd;
+    cpu.allow_iac_93_reinitialize=true;
+    if(!perform_iac_93_reinitialize(cpu,allowed) ||
+       cpu.ip!=0x40u || cpu.prcb_address!=0x00510e00u ||
+       cpu.reinitialize_count!=1u || cpu.pending_iac_valid ||
+       cpu.stop_code!=StopCode::none)return 6;
+    return 0;
+}
+""")
+
     def test_new_root_frame_invalidates_stale_hardware_metadata(self):
         native(r"""
 int main() {
