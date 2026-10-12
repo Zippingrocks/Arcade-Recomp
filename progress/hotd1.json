@@ -2041,6 +2041,22 @@
         "docs/M68000_INDIRECT_JUMP_TABLE.md"
       ],
       "note": "Implemented fail-closed JMP (An) plus explicit AOT roots, the exact eight-entry authenticated jump-table proof, MOVE d8(An,Xn),(Am)+, and register OR.B/W/L. GCC/Clang UBSan coverage and the full 769/769 suite pass in 212.390s. All 257 authenticated startup classes advance from 308040..308043 to 313591..313594 instructions; the graph is 795/795 with zero unsupported opcodes and reaches an exact 16-bit read from the documented banked sample-ROM window at 0xa9d9f4. The required private MPR sample chips are absent, so no data is invented and audio.m68k remains 5%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.rom",
+      "percent_before": 10,
+      "percent_after": 10,
+      "evidence": [
+        "runtime/m68k_sound_bus.hpp",
+        "tests/test_m68k_sample_rom_native.py",
+        "tests/test_hotdo_sound_signature_explorer.py",
+        "tools/experimental/hotdo_sound_signature_explorer.py",
+        "docs/M68000_INDIRECT_JUMP_TABLE.md",
+        "https://github.com/mamedev/mame/blob/master/src/mame/sega/model2.cpp#L2292-L2305"
+      ],
+      "note": "Implemented the public Model 2 sound CPU's immutable direct and banked 8 MiB sample-ROM map and an optional private explorer input that accepts only both exact manifest chips by size/SHA-1, applies declared word swapping, and reports authentication. The 770-test full suite passes in 212.541s and two additional ROM-free chip-identity/lane tests pass. Without the absent MPR-19721.32/MPR-19722.34 evidence, authenticated startup still fails closed on the known 0xa9d9f4 word read; no sample bytes or playback are invented, so audio.rom remains 10%."
     }
   ]
 }
