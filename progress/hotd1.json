@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Extend the bounded 68000 AOT bootstrap and establish Model 2C sound reset-vector wiring; implement independently specified SCSP behavior beyond the refused 0x00100401 read, then validate timed commands/audio.",
+      "next": "Establish Model 2C sound reset-vector wiring and the unknown 0x00400001 board-control write exposed by the optional SCSP common-control probe; extend 68000 instructions, SCSP, RAM, interrupts and timed commands/audio without guessed device replies.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1085,6 +1085,78 @@
         "tools/experimental/hotdo_sound_bootstrap_probe.py"
       ],
       "note": "Reviewed CPU control-state and sound-bootstrap foundations separately from end-to-end completion. Authenticated original main-CPU regression still executes 1910 native instructions with documented TX, 318 mapped writes and two serial transmissions, then refuses the unobserved 0x01C0001A read at IP 0xA372C. No authentic serial replies, sound output, graphics or original-cabinet validation added. CPU 55%, Model2C 20%, audio 0%, overall original HOTD1 10%; Gates A/B/C all remain open."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.floating",
+      "percent_before": 40,
+      "percent_after": 40,
+      "evidence": [
+        "runtime/i960_fp_real_move.hpp",
+        "tests/test_i960_movr_native.py",
+        "docs/I960_MOVR.md"
+      ],
+      "note": "Implemented native MOVR 6C9h for canonical finite normals and signed zero, exact binary32/extended80 conversion, aliases and explicit FP knownness. Five ROM-free GCC/UBSan tests cover 3058 rational-oracle vectors across three AC profiles; authenticated original sites 0x11FC and 0x1394 pass 18348 isolated synthetic-state checks. Static graph now discovers 3201 sites, translates 3199 and stops at MULRL/CVTZRIL; this is not continuous execution. Inexact/special values and architected FP faults remain unsupported; disputed MOVRE encoding is intentionally unchanged. Floating 40%, CPU 55%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_moves_shifts_native.py",
+        "docs/M68000_SOUND_BOOTSTRAP.md"
+      ],
+      "note": "Added bounded MOVE byte/word/long register/immediate forms, byte/word stores and immediate LSL/LSR/ROL/ROR. Twelve combined sound CPU tests pass GCC/UBSan with width, alignment, flags, knownness, aliases and independent shift oracle coverage. Authenticated original delay-loop entry 0x600154 executes 32771 native instructions with explicitly supplied D1/A5 state, then refuses the 0x100400 word write. This isolated loop is not continuous startup or timing proof. Most CPU behavior and physical sound reset remain unimplemented; audio.m68k 5%, sound-ROM execution 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "audio.scsp",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "runtime/scsp_common_control.hpp",
+        "runtime/m68k_sound_bus.hpp",
+        "tools/experimental/hotdo_sound_bootstrap_probe.py",
+        "tests/test_scsp_common_control_native.py",
+        "docs/SCSP_COMMON_CONTROL.md"
+      ],
+      "note": "Added optional Sega-manual-derived first SCSP control-word state with writable MVOL/DAC18B/MEM4MB fields, explicit unknown version/reserved bits and write-only zero readback. CLR's documented discarded read is represented without inventing data or skipping its transaction. Three synthetic GCC/UBSan tests exhaust all word writes and byte lanes, version values, invalidation, strict boundaries and atomic rejection. Authenticated original sound probe advances 17 to 18 instructions only with this opt-in model, then refuses unknown 0x400001 write at PC 0x60014C; default strict boundary stays unchanged. No waveform, timing, physical reset or audio output is implemented: SCSP 0%, audio 0%, overall 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "gun.lut",
+      "percent_before": 40,
+      "percent_after": 40,
+      "evidence": [
+        "arcaderecomp/flex8000_legacy_audit.py",
+        "arcaderecomp/flex8000_sram.py",
+        "tests/test_flex8000_legacy_audit.py",
+        "docs/EPF8282_LEGACY_REFERENCE_HOLDOUTS.md"
+      ],
+      "note": "Reproducible hash-pinned audit verifies unchanged serialization against public non-Sega DIV_10 and RCV_TRIG legacy EPF8282LC84 pairs: each matches 37524 configuration bits, all 212 framing/polynomial checks and exact roundtrip. Twelve synthetic tests enforce identities, strict default A-series parsing and explicit legacy opt-in. Fixed candidate LUT coordinates were not refitted; missing fitted equations, an unused-bank-only second observation and non-A/A transfer uncertainty prevent held-out logic proof. No circuit, Sega response or cabinet behavior is recovered; gun.lut 40%, gun 5%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "hotd1",
+      "percent_before": 10,
+      "percent_after": 10,
+      "evidence": [
+        "tools/hotd1_strict_boot_probe.cpp",
+        "docs/I960_MOVR.md",
+        "docs/M68000_SOUND_BOOTSTRAP.md",
+        "docs/SCSP_COMMON_CONTROL.md",
+        "docs/EPF8282_LEGACY_REFERENCE_HOLDOUTS.md"
+      ],
+      "note": "Reviewed bounded CPU, sound-control and archival FPGA improvements separately from platform completion. Fresh private native main-CPU regression remains exactly 1910 instructions, 318 mapped writes and two documented TX writes, then refuses unobserved serial status at 0x01C0001A. Isolated original sound and MOVR checks use explicitly supplied state, not cabinet reference captures. Authentic serial startup, sound-board control/reset, geometry/video, timed audio and gameplay remain unresolved. CPU 55%, Model2C 20%, audio 0%, overall original HOTD1 10%; Gates A/B/C remain open."
     }
   ]
 }

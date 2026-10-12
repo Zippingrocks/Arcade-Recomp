@@ -82,6 +82,7 @@ REGISTER = {
     0x677: ("scaler", "sss"),
     0x68a: ("logbnr", "sd"),
     0x6c2: ("cvtzri", "sd"),
+    0x6c9: ("movr", "sd"),
     0x6d9: ("movrl", "sd"),
     0x6e1: ("movre", "sd"),
     0x6e2: ("cpysre", "sss"),
@@ -251,13 +252,15 @@ def decode(image: bytes, pc: int) -> Instruction:
             a = f"fp{src}" if word & 0x20 else reg(src)
             d = f"fp{dst}" if word & 0x2000 else reg(dst)
             return Instruction(pc, word, 4, "REG", name, (a, d))
-        if name == "movrl":
+        if name in ("movr", "movrl"):
             # M1=0 and S1=1 select fp0..fp3; M3 selects FP destination.
-            # Actual 64-bit real values live in an even-aligned GPR pair.
+            # MOVR uses one GPR; MOVRL uses an even-aligned GPR pair.
+            if name == "movr" and word & 0x800:
+                return _unknown(pc, word, "MOVR floating literal unsupported")
             src = word & 31
             dst = (word >> 19) & 31
             if (word & 0x20 and src >= 4) or (word & 0x2000 and dst >= 4):
-                return _unknown(pc, word, "MOVRL FP register outside fp0..fp3")
+                return _unknown(pc, word, f"{name.upper()} FP register outside fp0..fp3")
             a = f"fp{src}" if word & 0x20 else reg(src)
             d = f"fp{dst}" if word & 0x2000 else reg(dst)
             return Instruction(pc, word, 4, "REG", name, (a, d))

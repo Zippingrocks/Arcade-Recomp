@@ -119,8 +119,15 @@ def rcs_binary_head(data: bytes) -> tuple[str, bytes]:
     return head[1].decode('ascii'), found
 
 
-def parse_sof(data: bytes) -> dict:
-    """Inspect the observed SOF v0 TLV envelope; no checksum semantics claimed."""
+def parse_sof(data: bytes, *, allow_legacy_epf8282: bool = False) -> dict:
+    """Inspect the observed SOF v0 TLV envelope; no checksum semantics claimed.
+
+    The older EPF8282LC84 has the same measured data-packet shape in two
+    additional pinned references. It requires an explicit opt-in: shared
+    serialization does not establish identical A/non-A logic or routing.
+    """
+    if type(allow_legacy_epf8282) is not bool:
+        raise ValueError('Invalid legacy EPF8282 profile setting')
     if not isinstance(data, bytes) or not 12 <= len(data) <= MAX_FILE or data[:4] != b'SOF\0':
         raise ValueError('Invalid SOF signature/size')
     version, count = struct.unpack_from('<II', data, 4)
@@ -144,7 +151,9 @@ def parse_sof(data: bytes) -> dict:
     if not 2 <= len(device_bytes) <= 80 or not device_bytes.endswith(b'\0'):
         raise ValueError('Invalid SOF device field')
     device = device_bytes[:-1].decode('ascii')
-    if not re.fullmatch(r'EPF8282A(?:LC84|TC100)-[234]', device):
+    legacy = device == 'EPF8282LC84'
+    if not re.fullmatch(r'EPF8282A(?:LC84|TC100)-[234]', device) \
+            and not (allow_legacy_epf8282 and legacy):
         raise ValueError('SOF target is outside the observed EPF8282A profile')
     body = packets[17]
     if len(body) != 12 + PACKED_BYTES:

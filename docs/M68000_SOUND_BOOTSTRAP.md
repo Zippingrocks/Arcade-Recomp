@@ -49,8 +49,10 @@ initialization and an address load. It stops at PC **`0x00600148`** while
 attempting the read portion of CLR.B at **`0x00100401`**, within the published
 SCSP aperture. The final SR is `0x2704`, SSP is `0x2000`, and A5 is `0x100000`.
 There are 17 completed instructions and **no accepted SCSP read or write**.
-Static traversal finds 19 sites: 18 translated and one unsupported at
-`0x0060014c`. These counts are neither sound coverage nor board fidelity.
+The initial implementation's static traversal found 19 sites: 18 translated
+and one unsupported at `0x0060014c`. The MOVE/shift extension described below
+finds 30 sites: 29 translated and the next unsupported instruction at
+`0x00600174`. These counts are neither sound coverage nor board fidelity.
 
 This result starts from the authenticated ROM's vector contents supplied by
 the caller. The actual board's vector availability at address zero and reset
@@ -100,3 +102,51 @@ behavior at the observed boundary, followed by more sound-program instructions,
 RAM/command transport, interrupts and timed audio. MB86235 geometry still needs
 its own independent instruction specification and authentic uploaded program;
 this separate Motorola translator supplies no missing geometry semantics.
+
+## MOVE and immediate shift/rotate extension (2026-10-11)
+
+The translator now supports MOVE byte/word/long from an immediate or data
+register into a data register, and byte/word stores from those sources to
+`(d16,An)`, absolute-short and absolute-long destinations. Source values are
+captured before destination updates, partial data-register writes preserve
+upper bits and their definedness, and absolute-short addresses are
+sign-extended. Memory words use a distinct word bus callback: they are not
+silently expanded into byte accesses with potentially different device side
+effects. Odd word addresses stop before a device callback. Long memory moves,
+memory-source MOVE, predecrement/postincrement and indexed forms remain
+unsupported.
+
+Immediate LSL/LSR and ROL/ROR support byte, word and long register operands
+with counts 1 through 8. Logical shifts update X; rotations preserve its value
+and definedness. The native regression uses an independent wide-integer oracle
+for all size/register/count/direction/operation fields, all byte operands and
+word/long bit patterns, including byte rotation by eight. MOVE tests exercise
+aliases, operand masks, immediate extension order, sign-extended destinations,
+alignment, bus width and denied-write state.
+
+CLR now requests an explicit `read8_discard` bus transaction. Its default
+implementation calls the normal `read8`, preserving the strict fault and
+existing read observers. A board provider may override it only when it can
+implement the documented transaction and its side effects without producing
+unused unknown data. This does not authorize bypassing an unknown device
+read. Public tests distinguish ordinary-read refusal from a synthetic
+discarded-read transaction and ensure a rejected address prevents the write.
+
+Authenticated original-code metadata identifies the newly supported first
+MOVE at `0x0060014c` as a byte write of zero to `0x00400001`. The subsequent
+register-only delay loop starts at `0x00600154`; its next device instruction
+at `0x0060015e` attempts a word write to `0x00100400`. With explicit synthetic
+register inputs (D1 known zero, A5 known `0x00100000`) a private native test
+executes **32,771 original instructions** from that isolated loop entry and
+then refuses the word write. No device transaction was accepted in this
+experiment, and it is not continuous sound startup. The default strict
+bootstrap remains at its original 17-instruction SCSP boundary.
+
+These extensions use the same Motorola programmer's manual, printed pages
+4-113 through 4-118 (logical shifts and MOVE), 4-160 through 4-162 (rotate),
+and 2-18 through 2-19 (absolute and immediate addressing). No third-party CPU
+implementation is used. Run all sound CPU regressions with:
+
+```sh
+python -m unittest discover -s tests -p 'test_m68k*_native.py' -v
+```
