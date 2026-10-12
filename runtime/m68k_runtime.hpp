@@ -315,6 +315,28 @@ inline bool move_memory_postincrement(CPU& cpu, Bus& bus, unsigned bytes,
     return finish(cpu, next);
 }
 
+// MOVE evaluates and reads its source before evaluating the destination. If
+// an address register participates in both operands, the indexed destination
+// therefore observes the completed source postincrement.
+inline bool move_postincrement_to_indexed(CPU& cpu, Bus& bus, unsigned bytes,
+                                          unsigned source, unsigned base,
+                                          std::uint16_t extension,
+                                          std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) ||
+        source >= 8u || base >= 8u || (extension & 0x0700u))
+        return stop(cpu, Stop::unsupported_instruction);
+    if (!cpu.a_known[source]) return stop(cpu, Stop::undefined_state);
+    std::uint32_t value = 0;
+    if (!read_operand(cpu, bus, cpu.a[source], bytes, value)) return false;
+    cpu.a[source] += bytes == 1u && source == 7u ? 2u : bytes;
+    std::uint32_t address = 0;
+    if (!indexed_address(cpu, base, extension, address)) return false;
+    if (!write_move(cpu, bus, address, bytes, value)) return false;
+    const std::uint32_t sign = 1u << (bytes * 8u - 1u);
+    logical_flags(cpu, (value & sign) != 0u, value == 0u);
+    return finish(cpu, next);
+}
+
 inline bool shift_immediate(CPU& cpu, unsigned bytes, unsigned reg, unsigned count,
                             bool left, bool rotate, std::uint32_t next) {
     if ((bytes != 1u && bytes != 2u && bytes != 4u) || reg >= 8u || count < 1u || count > 8u)

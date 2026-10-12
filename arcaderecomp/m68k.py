@@ -126,7 +126,7 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
             return Instruction(pc, length, "clr_memory", (size, mode, reg, displacement))
     if op & 0xff00 == 0x4a00 and ((op >> 6) & 3) != 3:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
-        if mode in (0, 2, 5) or (mode == 7 and reg in (0, 1)):
+        if mode in (0, 2, 3, 5) or (mode == 7 and reg in (0, 1)):
             displacement, length = 0, 2
             if mode == 5 or (mode, reg) == (7, 0):
                 displacement, length = _signed(word(2), 16), 4
@@ -199,6 +199,12 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         if src_mode == 3 and dst_mode == 3:
             return Instruction(pc, 2, "move_memory_postincrement",
                                (size, src_reg, dst_reg))
+        if src_mode == 3 and dst_mode == 6:
+            extension = word(2)
+            if not extension & 0x0700:
+                return Instruction(pc, 4,
+                                   "move_postincrement_to_indexed",
+                                   (size, src_reg, dst_reg, extension))
         if (src_mode == 3 and
                 (dst_mode in (2, 5) or
                  (dst_mode == 7 and dst_reg in (0, 1)))):

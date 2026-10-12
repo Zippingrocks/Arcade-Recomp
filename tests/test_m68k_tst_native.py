@@ -19,6 +19,7 @@ def table(name, rows):
 class M68kTestOperandTests(unittest.TestCase):
     def test_decoder_widths_modes_extensions_truncation_and_exclusions(self):
         cases = ((0, 3, (), 0, 2), (2, 4, (), 0, 2),
+                 (3, 5, (), 0, 2),
                  (5, 6, (0xfffe,), -2, 4),
                  (7, 0, (0x8000,), -32768, 4),
                  (7, 1, (0x1234, 0x5678), 0x12345678, 6))
@@ -28,7 +29,7 @@ class M68kTestOperandTests(unittest.TestCase):
                 self.assertEqual((ins.size, ins.mnemonic, ins.operands),
                                  (length, "tst", (size, mode, reg,
                                                   displacement)))
-            for mode, reg in ((1, 0), (3, 0), (4, 0), (6, 0),
+            for mode, reg in ((1, 0), (4, 0), (6, 0),
                               (7, 2), (7, 3), (7, 4)):
                 self.assertNotEqual(decode(tst(size, mode, reg), 0).mnemonic,
                                     "tst")
@@ -40,7 +41,7 @@ class M68kTestOperandTests(unittest.TestCase):
     def test_native_register_and_memory_values_addresses_flags_and_no_writes(self):
         image, rows = bytearray(), []
         for size in (1, 2, 4):
-            for mode in (0, 2, 5):
+            for mode in (0, 2, 3, 5):
                 for reg in range(8):
                     displacement = -2 if mode == 5 else 0
                     length = 4 if mode == 5 else 2
@@ -93,8 +94,11 @@ int main() {
         }
         const unsigned flags=(value&sign?8u:0u)|(value==0?4u:0u);
         if(cpu.sr!=(0x2700u|(x<<4)|flags)||cpu.sr_known!=(known_x?0xffffu:0xffefu))return 5;
-        if(cpu.d!=before.d||cpu.d_known!=before.d_known||cpu.a!=before.a||
+        if(cpu.d!=before.d||cpu.d_known!=before.d_known||
            cpu.a_known!=before.a_known)return 6;
+        for(unsigned reg=0;reg<8u;++reg){const unsigned increment=
+          row[2]==3u&&reg==row[3]?(row[1]==1u&&reg==7u?2u:row[1]):0u;
+          if(cpu.a[reg]!=before.a[reg]+increment)return 7;}
       }
     return 0;
 }

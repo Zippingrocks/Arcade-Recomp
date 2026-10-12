@@ -167,6 +167,10 @@ def _emit(ins):
         statements += [
             f"logical_flags(cpu, (value & {sign}) != 0, value == 0);", done]
         return " ".join(statements)
+    if op == "move_postincrement_to_indexed":
+        size, source, base, extension = args
+        return (f"return move_postincrement_to_indexed(cpu, bus, {size}u, "
+                f"{source}u, {base}u, {extension}u, {next_pc});")
     if op == "move_address_to_d":
         size, source, dest = args
         mask, sign = _u((1 << (size * 8)) - 1), _u(1 << (size * 8 - 1))
@@ -243,12 +247,15 @@ def _emit(ins):
                     f"const std::uint32_t value = cpu.d[{reg}] & {mask}; "
                     f"logical_flags(cpu, (value & {sign}) != 0, value == 0); {done}")
         statements = []
-        if mode in (2, 5):
+        if mode in (2, 3, 5):
             statements.append(f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state);")
             address = f"cpu.a[{reg}] + {_u(displacement)}"
         else:
             address = _u(displacement)
         statements.append(f"std::uint32_t value = 0; if (!read_operand(cpu, bus, {address}, {size}u, value)) return false;")
+        if mode == 3:
+            increment = 2 if size == 1 and reg == 7 else size
+            statements.append(f"cpu.a[{reg}] += {increment}u;")
         statements += [f"logical_flags(cpu, (value & {sign}) != 0, value == 0);", done]
         return " ".join(statements)
     if op == "negx_d":
