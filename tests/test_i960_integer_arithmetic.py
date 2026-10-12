@@ -174,6 +174,7 @@ int main(){CPU cpu{};establish_integer_controls(cpu,0x1100u);
 #include "i960_reinitialize.hpp"
 int main(){CPU cpu{};Bus bus{};establish_integer_controls(cpu,0x1100u);
  cpu.pending_integer_overflow={true,100,104};cpu.pending_iac_valid=true;
+ cpu.allow_iac_93_reinitialize=true;
  cpu.pending_iac[0]=0x93000000u;cpu.pending_iac[1]=0;cpu.pending_iac[2]=0x2000;cpu.pending_iac[3]=0;
  bus.read32=[](void*,std::uint32_t a)->std::uint32_t {
    switch(a){case 0x2004:return 12;case 0x2014:return 0x3000;case 0x2018:return 0x4000;

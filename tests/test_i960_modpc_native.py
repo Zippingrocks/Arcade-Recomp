@@ -198,6 +198,7 @@ int main() {
     m.w[P+36u]=0x27fu;m.w[P+40u]=0x210u;m.w[P+44u]=0u;
     Bus b{};b.ctx=&m;b.read32=&rd;
     cpu.pending_iac_valid=true;
+    cpu.allow_iac_93_reinitialize=true;
     cpu.pending_iac[0]=0x93000000u;
     cpu.pending_iac[1]=0u;cpu.pending_iac[2]=P;
     cpu.pending_iac[3]=0x40u;

@@ -61,6 +61,7 @@ int main() {
     Memory mem=make_memory();
     Bus bus{};bus.ctx=&mem;bus.read32=&read32;
     cpu.pending_iac_valid=true;
+    cpu.allow_iac_93_reinitialize=true;
     cpu.pending_iac[0]=0x93000000u;
     cpu.pending_iac[1]=0u;
     cpu.pending_iac[2]=0x00510e00u;

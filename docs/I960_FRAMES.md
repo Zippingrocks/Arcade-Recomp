@@ -69,3 +69,10 @@ FP/IP refusing without partial metadata changes. This is native
 diagnostic-state correctness, not original-cabinet timing or architected
 Intel interrupt acceptance. CPU reset remains estimated at 50% and
 original HOTD1 overall at 10%.
+
+The IAC `0x93` helper also enforces `allow_iac_93_reinitialize` itself.
+Direct diagnostic calls cannot bypass the SYNMOVQ opt-in check: a valid
+pending request without opt-in stops as `iac_reinitialize_pending` before
+requiring or reading a bus, preserving reset state and the pending message
+for an explicit opt-in retry. This is a host research-policy guard, not a
+newly inferred Intel instruction or Sega hardware restriction.

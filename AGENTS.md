@@ -73,6 +73,13 @@ reviewed replacement), clearly labeled as estimates.
 
 ## After each task
 
+Standing user instruction (2026-10-11): publish and push all completed work
+to this repository's `main` after every completed work session. This is
+ongoing authorization; do not ask again for routine publication. Run the
+required local checks, publish a branch/PR, confirm GitHub Actions passes,
+and merge to `main`. If checks fail or publication is blocked, resolve the
+failure where possible and report any remaining blocker explicitly.
+
 Report the relevant subsystem's **previous → current estimated percentage**,
 the overall original HOTD1 percentage separately, proof level
 (synthetic/original-byte/arcade-reference), exact commit and CI status,

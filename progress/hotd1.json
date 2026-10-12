@@ -947,6 +947,19 @@
         "docs/I960_FRAMES.md"
       ],
       "note": "Corrected actual native i960KB frame_init reset boundary: a new root frame clears stale SAT, PRCB, interrupt/fault-table pointers, PRCB-loaded and pending IAC validity; validated opt-in IAC 0x93 installs newly captured PRCB after reset. Preserves cumulative reinitialize audit count and opt-in policy; invalid FP/IP checks do not partially reset. ROM-free GCC/Clang UBSan tests cover consecutive synthetic IACs and stale metadata refusal; no physical Model2C IRQ semantics or HOTD1 startup gain. cpu.reset remains 50%, CPU 55%, Model2C 20%, original HOTD1 10%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "cpu.reset",
+      "percent_before": 50,
+      "percent_after": 50,
+      "evidence": [
+        "runtime/i960_reinitialize.hpp",
+        "tests/test_i960_frame_prcb_invalidation_native.py",
+        "docs/I960_FRAMES.md"
+      ],
+      "note": "Enforced caller-owned IAC 0x93 research opt-in inside the native helper as well as SYNMOVQ. Direct denied calls stop before bus access or reset mutation and preserve the request for explicit opt-in retry; synthetic native UBSan regression covers absent and throwing readers plus retry. No cabinet reset/timing proof or original boot gain; reset 50%, CPU 55%, Model2C 20%, original HOTD1 10% unchanged."
     }
   ]
 }
