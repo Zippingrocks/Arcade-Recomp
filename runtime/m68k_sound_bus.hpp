@@ -5,6 +5,7 @@
 #include "scsp_common_control.hpp"
 #include "scsp_dsp_coefficients.hpp"
 #include "scsp_prohibited_window.hpp"
+#include "scsp_slot_key.hpp"
 #include "scsp_slot_mixer.hpp"
 #include <utility>
 #include <vector>
@@ -21,6 +22,7 @@ class SoundROMBus final : public Bus {
     bool hotd_sound_control_enabled_ = false;
     arcaderecomp::scsp::CommonControl common_control_;
     arcaderecomp::scsp::DspMemoryControl dsp_memory_control_;
+    arcaderecomp::scsp::SlotLoopKeyControl slot_loop_key_control_;
     arcaderecomp::scsp::SlotEnvelopeReleaseControl slot_envelope_release_control_;
     arcaderecomp::scsp::SlotLfoControl slot_lfo_control_;
     arcaderecomp::scsp::SlotVolumeModulationControl slot_volume_modulation_control_;
@@ -42,6 +44,8 @@ public:
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.read8(address, value))
             return value;
         if (address >= 0x600000u && address < 0x680000u) return rom_[address - 0x600000u];
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_loop_key_control_.read8(address - 0x100000u, value)) return value;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_envelope_release_control_.read8(address - 0x100000u, value)) return value;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
@@ -89,6 +93,8 @@ public:
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.read16(address, value))
             return value;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_loop_key_control_.read16(address - 0x100000u, value)) return value;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_envelope_release_control_.read16(address - 0x100000u, value)) return value;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_lfo_control_.read16(address - 0x100000u, value)) return value;
@@ -135,6 +141,8 @@ public:
         address &= 0xffffffu;
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.write8(address, value)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_loop_key_control_.write8(address - 0x100000u, value)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_envelope_release_control_.write8(address - 0x100000u, value)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_lfo_control_.write8(address - 0x100000u, value)) return;
@@ -161,6 +169,8 @@ public:
     void write16(std::uint32_t address, std::uint16_t value) override {
         address &= 0xffffffu;
         if (sound_ram_enabled_ && address < SoundRAM::size && sound_ram_.write16(address, value)) return;
+        if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
+                slot_loop_key_control_.write16(address - 0x100000u, value)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
                 slot_envelope_release_control_.write16(address - 0x100000u, value)) return;
         if (slot_mixer_enabled_ && address >= 0x100000u && address < 0x100400u &&
@@ -207,6 +217,9 @@ public:
         return hotd_sound_control_;
     }
     const SoundRAM& sound_ram() const { return sound_ram_; }
+    const arcaderecomp::scsp::SlotLoopKeyControl& slot_loop_key_control() const {
+        return slot_loop_key_control_;
+    }
     const arcaderecomp::scsp::SlotMixerControl& slot_mixer_control() const {
         return slot_mixer_control_;
     }
