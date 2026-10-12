@@ -56,6 +56,14 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         immediate &= (1 << (size * 8)) - 1
         kind = {0x0000: 0, 0x0200: 1, 0x0a00: 2}[op & 0xff00]
         return Instruction(pc, length, "logic_immediate_d", (size, kind, op & 7, immediate))
+    if (op & 0xff00 == 0x0600 and ((op >> 6) & 3) != 3 and
+            (op >> 3) & 7 == 0):
+        size = (1, 2, 4)[(op >> 6) & 3]
+        immediate, length = word(2), 4
+        if size == 4:
+            immediate, length = immediate << 16 | word(4), 6
+        immediate &= (1 << (size * 8)) - 1
+        return Instruction(pc, length, "addi_d", (size, op & 7, immediate))
     if op & 0xff00 == 0x0c00 and ((op >> 6) & 3) != 3:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         # Non-updating destinations only. CMPI PC-relative is NOT MC68000.
@@ -83,6 +91,10 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
             elif (mode, reg) == (7, 1):
                 displacement, length = word(2) << 16 | word(4), 6
             return Instruction(pc, length, "clr_memory", (size, mode, reg, displacement))
+    if (op & 0xff00 == 0x4000 and ((op >> 6) & 3) != 3 and
+            (op >> 3) & 7 == 0):
+        return Instruction(pc, 2, "negx_d",
+                           ((1, 2, 4)[(op >> 6) & 3], op & 7))
     if op & 0xf1c0 in (0x2040, 0x3040):
         size, mode, reg, dest = (2 if op & 0x1000 else 4), (op >> 3) & 7, op & 7, (op >> 9) & 7
         if mode in (0, 1, 2):

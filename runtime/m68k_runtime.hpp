@@ -306,6 +306,29 @@ inline bool add_quick_data(CPU& cpu, unsigned bytes, unsigned reg,
     return finish(cpu, next);
 }
 
+inline bool add_immediate_data(CPU& cpu, unsigned bytes, unsigned reg,
+                               std::uint32_t immediate, std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) || reg >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const unsigned bits = bytes * 8u;
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu : (1u << bits) - 1u;
+    if ((cpu.d_known[reg] & mask) != mask)
+        return stop(cpu, Stop::undefined_state);
+    immediate &= mask;
+    const std::uint32_t value = cpu.d[reg] & mask;
+    const std::uint32_t result = (value + immediate) & mask;
+    const std::uint32_t sign = 1u << (bits - 1u);
+    const bool carry = static_cast<std::uint64_t>(value) + immediate > mask;
+    const bool overflow = (~(value ^ immediate) & (value ^ result) & sign) != 0u;
+    cpu.d[reg] = (cpu.d[reg] & ~mask) | result;
+    cpu.d_known[reg] |= mask;
+    cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~31u) |
+        (carry ? 17u : 0u) | (result & sign ? 8u : 0u) |
+        (result == 0u ? 4u : 0u) | (overflow ? 2u : 0u));
+    cpu.sr_known |= 31u;
+    return finish(cpu, next);
+}
+
 // Motorola SUB Dn,Dn: the sized destination minus source sets all five
 // arithmetic condition codes. C and X both represent unsigned borrow.
 inline bool subtract_data(CPU& cpu, unsigned bytes, unsigned source,
@@ -355,6 +378,35 @@ inline bool subtract_quick_data(CPU& cpu, unsigned bytes, unsigned destination,
         (borrow ? 17u : 0u) | (result & sign ? 8u : 0u) |
         (result == 0u ? 4u : 0u) | (overflow ? 2u : 0u));
     cpu.sr_known |= 31u;
+    return finish(cpu, next);
+}
+
+// Motorola NEGX supports multi-precision negation: X is an input and C/X
+// report the borrow. Z is cumulative, remaining set only when it was already
+// set and this sized result is zero. An unknown retained Z remains unknown.
+inline bool negate_extend_data(CPU& cpu, unsigned bytes, unsigned reg,
+                               std::uint32_t next) {
+    if ((bytes != 1u && bytes != 2u && bytes != 4u) || reg >= 8u)
+        return stop(cpu, Stop::unsupported_instruction);
+    const unsigned bits = bytes * 8u;
+    const std::uint32_t mask = bytes == 4u ? 0xffffffffu : (1u << bits) - 1u;
+    if ((cpu.d_known[reg] & mask) != mask || !(cpu.sr_known & 16u))
+        return stop(cpu, Stop::undefined_state);
+    const std::uint32_t value = cpu.d[reg] & mask;
+    const std::uint32_t extend = (cpu.sr & 16u) ? 1u : 0u;
+    const std::uint32_t result = (0u - value - extend) & mask;
+    const std::uint32_t sign = 1u << (bits - 1u);
+    const bool borrow = value != 0u || extend != 0u;
+    const bool overflow = (value & sign) != 0u && (result & sign) != 0u;
+    const bool zero = result == 0u && (cpu.sr & 4u) != 0u;
+    const bool zero_known = result != 0u || (cpu.sr_known & 4u) != 0u;
+    cpu.d[reg] = (cpu.d[reg] & ~mask) | result;
+    cpu.d_known[reg] |= mask;
+    cpu.sr = static_cast<std::uint16_t>((cpu.sr & ~31u) |
+        (borrow ? 17u : 0u) | (result & sign ? 8u : 0u) |
+        (zero ? 4u : 0u) | (overflow ? 2u : 0u));
+    cpu.sr_known = static_cast<std::uint16_t>((cpu.sr_known & ~31u) | 27u |
+        (zero_known ? 4u : 0u));
     return finish(cpu, next);
 }
 
