@@ -51,9 +51,10 @@ divergent hardware state. All exact-marker cases preserve their respective
 The [Sega SCSP User's Manual](https://antime.kapsi.fi/sega/files/ST-077-R2-052594.pdf)
 maps `0x100000..0x100017` to slot 0. Word offset `0x16` contains DISDL/DIPAN and
 EFSDL/EFPAN; the observed odd-byte CLR targets its low EFSDL/EFPAN lane. The
-next implementation must model the documented 32-slot register file and the
-MC68000 read-before-clear transaction. It must not infer synthesis, reset
-values, key state, timing or audible output from this access.
+follow-up [slot mixer model](SCSP_SLOT_MIXER_CONTROL.md) now accepts all 18
+observed low-byte clears and exposes the next common boundary at DSP COEF
+address `0x100700`. It does not infer synthesis, reset values, key state,
+timing or audible output from those accesses.
 
 Sound-ROM execution rises from 5% to 10% because the original program now has
 an exhaustive unknown-state bridge and advances roughly eightfold to a common
