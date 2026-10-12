@@ -142,6 +142,16 @@ def _emit(ins):
         return (f"if (!cpu.a_known[{source}]) return stop(cpu, Stop::undefined_state); "
                 f"cpu.a[{dest}] = cpu.a[{source}] + {_u(displacement)}; "
                 f"cpu.a_known[{dest}] = true; {done}")
+    if op == "adda_d":
+        size, source, dest = args
+        mask = "0xffffu" if size == 2 else "0xffffffffu"
+        value = (f"((cpu.d[{source}] & 0x8000u) ? "
+                 f"(cpu.d[{source}] | 0xffff0000u) : "
+                 f"(cpu.d[{source}] & 0xffffu))" if size == 2 else
+                 f"cpu.d[{source}]")
+        return (f"if ((cpu.d_known[{source}] & {mask}) != {mask} || "
+                f"!cpu.a_known[{dest}]) return stop(cpu, Stop::undefined_state); "
+                f"cpu.a[{dest}] += {value}; {done}")
     if op == "addq_d":
         size, dest, immediate = args
         return (f"return add_quick_data(cpu, {size}u, {dest}u, {immediate}u, "
