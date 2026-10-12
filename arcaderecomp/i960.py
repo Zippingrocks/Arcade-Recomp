@@ -83,6 +83,8 @@ REGISTER = {
     0x6c2: ("cvtzri", "sd"),
     0x6d9: ("movrl", "sd"),
     0x6e1: ("movre", "sd"),
+    0x6e2: ("cpysre", "sss"),
+    0x6e3: ("cpyrsre", "sss"),
     0x701: ("mulo", "sss"),
     0x78b: ("divr", "sss"),
     0x78c: ("mulr", "sss"),
@@ -258,6 +260,20 @@ def decode(image: bytes, pc: int) -> Instruction:
             a = f"fp{src}" if word & 0x20 else reg(src)
             d = f"fp{dst}" if word & 0x2000 else reg(dst)
             return Instruction(pc, word, 4, "REG", name, (a, d))
+        if name in ("cpysre", "cpyrsre"):
+            src1, src2, dst = word & 31, (word >> 14) & 31, (word >> 19) & 31
+            if ((word & 0x20 and src1 >= 4) or
+                    (word & 0x40 and src2 >= 4) or
+                    (word & 0x2000 and dst >= 4)):
+                return _unknown(pc, word, "Copy-sign FP register outside fp0..fp3")
+            # Floating literals remain unsupported; never mislabel their
+            # encoding as a general-register source.
+            if word & (0x800 | 0x1000):
+                return _unknown(pc, word, "Copy-sign floating literal unsupported")
+            return Instruction(pc, word, 4, "REG", name, (
+                f"fp{src1}" if word & 0x20 else reg(src1),
+                f"fp{src2}" if word & 0x40 else reg(src2),
+                f"fp{dst}" if word & 0x2000 else reg(dst)))
         if name == "movre":
             # Unlike the integer REG forms, s1/m3 select the four on-chip
             # 80-bit floating-point registers. A later native pass validates
