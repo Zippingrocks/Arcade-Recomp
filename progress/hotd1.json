@@ -1682,6 +1682,17 @@
         "docs/M68000_CMP_MEMORY.md"
       ],
       "note": "Added Motorola-manual-backed byte/word/long CMP from non-updating indirect, displacement, absolute-short and absolute-long memory to Dn, with operand immutability, exact destination-minus-source NZVC, preserved X, alignment, 24-bit wrap and high-word-first reads. Three focused GCC/UBSan tests cover all forms/registers, results, flags, unknown state, exclusions, truncation and every refused read; all 96 MC68000 tests and the 691-test full suite pass. Authenticated word-swapped CMP.B $0EFA.W,D0 at 0x6006D8 and CMP.W (A0),D0 at 0x6023AC now translate; graph grows 295/284 to 302/291 and the two removed stops expose two deeper stops, leaving eleven unsupported sites while the translated frontier gains seven instructions. Probes remain 17 strict at SCSP read 0x100401 or 18 optional at board write 0x400001; no source memory/device value was invented. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "tests/test_m68k_cmp_memory_native.py"
+      ],
+      "note": "Made the new CMP native oracle test portable to CI's Clang -Werror policy by bracing nested iteration explicitly after GCC and the 691-test local suite had accepted the equivalent compact form. The exact focused suite now passes under CXX=clang++; production decoder/emitter semantics, authenticated 302/291 graph result, execution boundaries and estimates are unchanged. Sound CPU 5%, audio 0%, overall HOTD1 10% unchanged."
     }
   ]
 }
