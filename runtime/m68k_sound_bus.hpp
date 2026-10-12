@@ -7,6 +7,7 @@
 #include "scsp_prohibited_window.hpp"
 #include "scsp_slot_key.hpp"
 #include "scsp_slot_mixer.hpp"
+#include "scsp_timers.hpp"
 #include <utility>
 #include <vector>
 
@@ -22,6 +23,7 @@ class SoundROMBus final : public Bus {
     bool hotd_sound_control_enabled_ = false;
     arcaderecomp::scsp::CommonControl common_control_;
     arcaderecomp::scsp::DspMemoryControl dsp_memory_control_;
+    arcaderecomp::scsp::Timers timers_;
     arcaderecomp::scsp::SlotLoopKeyControl slot_loop_key_control_;
     arcaderecomp::scsp::SlotEnvelopeReleaseControl slot_envelope_release_control_;
     arcaderecomp::scsp::SlotLfoControl slot_lfo_control_;
@@ -192,6 +194,8 @@ public:
         if (common_control_enabled_ && address == 0x100400u && common_control_.write16(value)) return;
         if (common_control_enabled_ && address == 0x100402u &&
                 dsp_memory_control_.write16(value)) return;
+        if (common_control_enabled_ && address >= 0x100418u && address <= 0x10041cu &&
+                timers_.write16(address - 0x100400u, value)) return;
         if (hotd_sound_control_enabled_ && address == 0x400000u &&
                 hotd_sound_control_.write16(value)) return;
         throw BusFault(address, true, 2u);
@@ -213,6 +217,8 @@ public:
     const arcaderecomp::scsp::DspMemoryControl& dsp_memory_control() const {
         return dsp_memory_control_;
     }
+    arcaderecomp::scsp::Timers& timers() { return timers_; }
+    const arcaderecomp::scsp::Timers& timers() const { return timers_; }
     const arcaderecomp::model2::HotdSoundControl& hotd_sound_control() const {
         return hotd_sound_control_;
     }
