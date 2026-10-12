@@ -92,6 +92,34 @@ int main() {
 }
 """)
 
+    def test_plain_memory_fast_path_and_count_only_write_mode(self):
+        native('#include "model2c_bus.hpp"', """
+using namespace arcaderecomp_model2c;
+int main() {
+    std::vector<std::uint8_t> program(StrictBus::kProgramSize, 0);
+    program[4] = 0x78u; program[5] = 0x56u;
+    program[6] = 0x34u; program[7] = 0x12u;
+    StrictBus board(std::move(program));
+    auto bus = board.callbacks();
+    if (bus.read32(bus.ctx, 4u) != 0x12345678u) return 1;
+
+    board.enable_write_trace(false);
+    bus.write8(bus.ctx, 0x00500000u, 0xa5u);
+    bus.write16(bus.ctx, 0x00500002u, 0x1234u);
+    bus.write32(bus.ctx, 0x00500004u, 0x89abcdefu);
+    if (bus.read8(bus.ctx, 0x00500000u) != 0xa5u) return 2;
+    if (bus.read16(bus.ctx, 0x00500002u) != 0x1234u) return 3;
+    if (bus.read32(bus.ctx, 0x00500004u) != 0x89abcdefu) return 4;
+    if (!board.writes().empty() || board.completed_write_count() != 3u) return 5;
+
+    try { board.read(0x00500001u, 2u); return 6; }
+    catch (const DeviceAccessFault& error) {
+        if (error.region != Region::work_ram) return 7;
+    }
+    return 0;
+}
+""")
+
     def test_generated_native_store_stops_at_serial_io_device(self):
         # Artificial i960 words: lda IO register,g0; stob g1,(g0).
         stob = (0x82 << 24) | (17 << 19) | (16 << 14) | (4 << 10)

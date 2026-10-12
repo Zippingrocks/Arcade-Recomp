@@ -1003,6 +1003,31 @@
         "docs/I960_COPY_SIGN.md"
       ],
       "note": "Added Intel KB CPYSRE/CPYRSRE decoder and native AOT execution for defined canonical normal extended80 values, aligned GPR triples and FP registers. Source1 magnitude/source2 sign, reverse sign, source capture for aliases, GPR padding and destination definedness verified with synthetic GCC/Clang UBSan tests when available. Literals, wholly GPR forms, nonnormal/special values and ambiguous denormal fault semantics deliberately remain unsupported; no original-ROM instruction-site or cabinet proof. Floating 40%, CPU 55%, Model2C 20%, original HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "tools.rom_audit",
+      "percent_before": 95,
+      "percent_after": 95,
+      "evidence": [
+        "arcaderecomp/roms.py",
+        "tests/test_roms.py"
+      ],
+      "note": "Replaced Python-level adjacent-byte generation with validated slice-based 16-bit swapping; synthetic and private local reconstruction outputs match, and local median reconstruction time improved about 8-9x for swapped audio/sample regions. This is host tooling throughput only and adds no ROM authenticity, board behavior, or gameplay fidelity; tools.rom_audit remains 95% and original HOTD1 remains 10%."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "model2c.map",
+      "percent_before": 50,
+      "percent_after": 50,
+      "evidence": [
+        "runtime/model2c_bus.hpp",
+        "tools/hotd1_strict_boot_probe.cpp",
+        "tests/test_model2c_bus.py"
+      ],
+      "note": "Added exact fast paths for aligned plain ROM/RAM/data accesses and optional count-only completed-write tracking used by the strict native probe. Synthetic MSVC microbenchmarks measured about 1.9x ordinary read throughput, 1.25x traced RAM-write throughput, and 3x count-only write throughput; native semantic checks preserve width, alignment, fault, byte-order, and exact-count behavior. This changes host diagnostic speed, not Model 2C timing or hardware fidelity; model2c.map stays 50%, Model2C 20%, and original HOTD1 10%."
     }
   ]
 }

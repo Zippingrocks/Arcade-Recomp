@@ -13,6 +13,16 @@ class RomError(ValueError):
     pass
 
 
+def _swap16(data):
+    """Swap adjacent bytes without a Python-level loop."""
+    if len(data) & 1:
+        raise RomError("16-bit byte swap requires an even-sized ROM")
+    swapped = bytearray(len(data))
+    swapped[0::2] = data[1::2]
+    swapped[1::2] = data[0::2]
+    return swapped
+
+
 def number(value):
     return int(value, 0) if isinstance(value, str) else int(value)
 
@@ -88,7 +98,7 @@ def reconstruct(region, matches):
     for spec in region["loads"]:
         data = matches[spec["file"]]
         if spec.get("swap16"):
-            data = bytes(b for a, b in zip(data[1::2], data[::2]) for b in (a, b))
+            data = _swap16(data)
         group = number(spec.get("group", 1))
         stride = number(spec.get("stride", group))
         offset = number(spec["offset"])
