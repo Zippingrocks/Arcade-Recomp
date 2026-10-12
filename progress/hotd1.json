@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Implement the manual-defined SCSP DSP register RAM beginning with the observed longword clear at COEF address 0x100700, preserving field widths, read-before-clear and strict bounds; independently recover physical reset-vector wiring.",
+      "next": "Establish the hardware semantics of the SCSP DSP address gap 0x1007c0..0x1007ff that the original clear loop traverses; do not fold it into COEF, MADRS or MPRO without evidence. Independently recover physical reset-vector wiring.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -1873,6 +1873,19 @@
         "docs/SCSP_SLOT_MIXER_CONTROL.md"
       ],
       "note": "Implemented the manual-defined final mixer word across the 32-slot SCSP address space with byte-lane knownness and read-before-clear transactions. All 257 authenticated startup states perform the original loop's exactly 18 discarded reads and writes for slots 0..17, advancing to the DSP COEF clear at 0x100700 after 262398..262401 instructions. Slot synthesis, DSP execution, timing and audible output are absent, so audio.scsp remains 0%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.scsp",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "runtime/scsp_dsp_coefficients.hpp",
+        "tests/test_scsp_dsp_coefficients_native.py",
+        "docs/SCSP_DSP_REGISTER_RAM.md"
+      ],
+      "note": "Implemented the manual-defined 64 COEF[12:0] and 32 MADRS[16:1] R/W words with exact field widths, knownness and read-before-clear transactions. All 257 authenticated startup states clear both files and reach the unassigned 0x1007c0 DSP gap after 262458..262461 instructions. The gap, MPRO, DSP execution, timing and audio remain absent, so audio.scsp remains 0%."
     }
   ]
 }
