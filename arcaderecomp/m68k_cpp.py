@@ -103,13 +103,14 @@ def _emit(ins):
             value = f"cpu.d[{source}] & {mask}"
         else:
             value = _u(source)
-        if mode == 5:
+        if mode in (2, 5):
             statements.append(f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state);")
         statements.append(f"const std::uint32_t value = {value};")
         if mode == 0:
             statements.append(f"cpu.d[{reg}] = (cpu.d[{reg}] & ~{mask}) | value; cpu.d_known[{reg}] |= {mask};")
         else:
-            address = f"cpu.a[{reg}] + {_u(displacement)}" if mode == 5 else _u(displacement)
+            address = (f"cpu.a[{reg}] + {_u(displacement)}"
+                       if mode in (2, 5) else _u(displacement))
             statements.append(f"if (!write_move(cpu, bus, {address}, {size}u, value)) return false;")
         statements += [f"logical_flags(cpu, (value & {sign}) != 0, value == 0);", done]
         return " ".join(statements)

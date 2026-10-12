@@ -34,8 +34,8 @@ class M68kMovesShiftsTests(unittest.TestCase):
                          (1, 0, 2, 7, 0, -32768))
         self.assertEqual(decode(move(4, 7, 4, 0, 7, 0x8765, 0x4321), 0).operands,
                          (4, 1, 0x87654321, 0, 7, 0))
-        for image in (move(4, 0, 0, 7, 1, 0, 0), move(1, 1, 0, 0, 0),
-                      move(2, 4, 0, 0, 0), move(2, 0, 0, 4, 0),
+        for image in (move(1, 1, 0, 0, 0), move(2, 4, 0, 0, 0),
+                      move(2, 0, 0, 4, 0),
                       words(0xe020), words(0xe030), words(0xe0c0), words(0xe2c0),
                       words(0xe2a8), words(0xe018 | 0x20)):
             self.assertEqual(decode(image, 0).mnemonic, "unsupported")
