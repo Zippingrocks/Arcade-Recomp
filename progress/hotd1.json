@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Run the identity-gated sound probe with legally supplied MPR-19721.32 and MPR-19722.34 sample chips to resolve the authenticated 0xA9D9F4 read; then implement MC68000 autovector exception entry and recover physical reset wiring. Never invent sample bytes or suppress pending interrupts.",
+      "next": "Run the identity-gated sound probe with legally supplied MPR-19721.32 and MPR-19722.34 sample chips to resolve the authenticated 0xA9D9F4 read; then recover physical reset wiring and implement RTE, level-7 edge history and continuous interrupt scheduling. Never invent sample bytes or suppress pending interrupts.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -2101,6 +2101,21 @@
         "docs/M68000_INDIRECT_JUMP_TABLE.md"
       ],
       "note": "Corrected the audio area's stale next-step pointer after bounded JMP (An) and the exact eight-root table landed. The current authenticated boundary is the identity-gated sample-ROM read at 0xA9D9F4; after legally supplied MPR-19721/19722 data, MC68000 autovector entry and physical reset wiring remain. Roadmap correction only: audio stays 0%, audio.m68k 5%, audio.rom 10%, overall HOTD1 10%."
+    },
+    {
+      "date": "2026-10-12",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "runtime/m68k_runtime.hpp",
+        "arcaderecomp/m68k_cpp.py",
+        "tests/test_m68k_clr_memory_native.py",
+        "tests/test_m68k_scsp_interrupt_sampling_native.py",
+        "docs/M68000_SCSP_INTERRUPT_SAMPLING.md"
+      ],
+      "note": "Implemented bounded MC68000 level 1..7 autovector entry from known SCSP interrupt levels: exact Motorola AN1012 PC-low/saved-SR/PC-high write order, six-byte frame, vector 24+level fetch, SR transition and a separate successful scheduler boundary. Native tests cover every mask/level, exact bus order, vector selection, unknown state and partial refusal; the full Linux suite passes 773/773 in 213.362s. A strict range/alignment guard on the synthetic CLR test bus also makes its finite address contract explicit and prevents GCC 13 from diagnosing an impossible out-of-range array access while inlining the new generic exception path. Level-7 edge history, IACK electrical timing, RTE and continuous scheduling remain absent; audio.m68k stays 5%, audio 0%, overall HOTD1 10%."
     }
   ]
 }
