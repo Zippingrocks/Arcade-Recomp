@@ -1157,6 +1157,87 @@
         "docs/EPF8282_LEGACY_REFERENCE_HOLDOUTS.md"
       ],
       "note": "Reviewed bounded CPU, sound-control and archival FPGA improvements separately from platform completion. Fresh private native main-CPU regression remains exactly 1910 instructions, 318 mapped writes and two documented TX writes, then refuses unobserved serial status at 0x01C0001A. Isolated original sound and MOVR checks use explicitly supplied state, not cabinet reference captures. Authentic serial startup, sound-board control/reset, geometry/video, timed audio and gameplay remain unresolved. CPU 55%, Model2C 20%, audio 0%, overall original HOTD1 10%; Gates A/B/C remain open."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.floating",
+      "percent_before": 40,
+      "percent_after": 40,
+      "evidence": [
+        "arcaderecomp/i960.py",
+        "arcaderecomp/i960_cpp.py",
+        "tests/test_i960_fp_operand_encoding.py",
+        "docs/I960_FP_OPERAND_ENCODING.md"
+      ],
+      "note": "CORRECTION to earlier FP-source evidence: Intel Appendix B visually confirms M1/M2 select real source registers; bits 5/6 are reserved zero. Previous decoder/emitter and six synthetic builders incorrectly selected FP sources using reserved bits, so their earlier FP-source tests did not prove legal AOT instruction execution. Corrected affected modes/builders/reset fixture, added independently specified all-family reserved-mode regressions, and reran 170 i960 tests under GCC/UBSan. Original GPR-source MOVR evidence is unaffected. Numeric helpers remain bounded; this correction supersedes invalid prior encoding evidence without rewriting history or increasing fidelity estimates. Floating 40%, CPU 55%, overall HOTD1 10% remain unchanged after repair."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "cpu.floating",
+      "percent_before": 40,
+      "percent_after": 40,
+      "evidence": [
+        "runtime/i960_fp_to_long_integer.hpp",
+        "tests/test_i960_cvtzril_native.py",
+        "docs/I960_CVTZRIL.md"
+      ],
+      "note": "Implemented exact CVTZRIL 6C3 real32/extended80 to signed-64 GPR-pair conversion with correct M1 encoding, checked unsigned shifts, aliases, state knownness and atomic refusal. Four ROM-free tests cover 1338 extended and 1535 binary32 vectors across three AC profiles; three authenticated original sites pass 12042 private synthetic-state native checks. Two-root graph now has 3241 candidates and 3240 translations, with MULRL at 0x1200 still unsupported. Fractional values, special formats, architectural faults and original-cabinet execution remain unresolved. Floating 40%, CPU 55%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_cmpi_native.py",
+        "docs/M68000_CMPI.md"
+      ],
+      "note": "Added native CMPI byte/word/long for Dn and bounded non-updating memory modes, exact NZVC with X knownness preservation, alignment guards and ordered high/low word reads with observable partial bus effects. All 17 sound CPU tests pass GCC/UBSan; two authenticated original sites pass 8192 synthetic memory/CCR checks plus branch and strict-refusal scenarios. Static sound graph expands to 35 sites/33 translations but no RAM or board behavior is inferred. Continuous probes remain at 17 strict or 18 optional SCSP-control instructions. audio.m68k 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "audio.rom",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/sound_control_audit.py",
+        "tests/test_sound_control_audit.py",
+        "docs/SOUND_CONTROL_REFERENCE_AUDIT.md"
+      ],
+      "note": "Added metadata-only original sound-control reference audit with authenticated chip input, complete bounded even-offset declared-pattern scan, separately limited supported CFG, unknown register sources and explicit non-execution labels. Original scan finds six direct byte-store candidates at 0x400001, only one in the supported startup graph; six zero-upper-byte address matches plus three masked-only matches do not establish all references. Twelve synthetic tests pass WSL including alias/symlink and atomic output preservation. No unknown register write is accepted or source value guessed. audio.rom 5%, audio 0%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "model2c.authentic_rx",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "docs/SEGA_IO3155649.md"
+      ],
+      "note": "Recorded new first-hand public Daytona serial measurement leads and independent 837-12079/Lost World hardware conversion reports with exact provenance. Daytona electrical timing is not HOTD gun-board RX/status evidence; harness compatibility does not establish protocol. No observed values were imported as native device replies, and the missing matched startup capture remains unresolved. Authentic RX 5%, Model2C 20%, overall HOTD1 10% unchanged."
+    },
+    {
+      "date": "2026-10-11",
+      "kind": "review",
+      "scope": "hotd1",
+      "percent_before": 10,
+      "percent_after": 10,
+      "evidence": [
+        "docs/I960_FP_OPERAND_ENCODING.md",
+        "docs/I960_CVTZRIL.md",
+        "docs/M68000_CMPI.md",
+        "docs/SOUND_CONTROL_REFERENCE_AUDIT.md",
+        "tools/hotd1_strict_boot_probe.cpp"
+      ],
+      "note": "Separately reviewed project scope after correcting flawed synthetic FP source encodings and extending verified instruction subsets. Fresh private strict main-CPU run remains 1910 instructions, 318 mapped writes and two documented TX writes before refused 0x01C0001A status; optional sound probe remains 18 instructions before refused 0x400001 board write. Original-site checks use explicit synthetic state, not independent cabinet traces. No playable boot, audio/video or measured FPS gain. CPU 55%, Model2C 20%, audio 0%, overall original HOTD1 10%; all completion Gates A/B/C stay open."
     }
   ]
 }

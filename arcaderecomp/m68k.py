@@ -44,6 +44,22 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         return Instruction(pc, 4, "move_to_sr", (word(2),))
     if op & 0xf100 == 0x7000:
         return Instruction(pc, 2, "moveq", ((op >> 9) & 7, _signed(op & 255, 8)))
+    if op & 0xff00 == 0x0c00 and ((op >> 6) & 3) != 3:
+        size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
+        # Non-updating destinations only. CMPI PC-relative is NOT MC68000.
+        if mode in (0, 2, 5) or (mode == 7 and reg in (0, 1)):
+            immediate, length = word(2), 4
+            if size == 4:
+                immediate, length = immediate << 16 | word(4), 6
+            immediate &= (1 << (size * 8)) - 1
+            displacement = 0
+            if mode == 5 or (mode, reg) == (7, 0):
+                displacement = _signed(word(length), 16)
+                length += 2
+            elif (mode, reg) == (7, 1):
+                displacement = word(length) << 16 | word(length + 2)
+                length += 4
+            return Instruction(pc, length, "cmpi", (size, immediate, mode, reg, displacement))
     if op & 0xff00 == 0x4200 and ((op >> 6) & 3) != 3:
         size, mode, reg = (1, 2, 4)[(op >> 6) & 3], (op >> 3) & 7, op & 7
         if mode == 0:

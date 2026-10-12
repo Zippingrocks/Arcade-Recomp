@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def movre(src, dst, *, src_fp=False, dst_fp=False, literal=False):
     return (0x6e000080 | 0x1000 |
             src | (dst << 19) |
-            (0x20 if src_fp else 0) |
+            (0x800 if src_fp else 0) |
             (0x2000 if dst_fp else 0) |
             (0x800 if literal else 0))
 
@@ -65,7 +65,7 @@ class MovreNativeTests(unittest.TestCase):
             movre(4, 20, src_fp=True),            # invalid FP source
             movre(16, 4, dst_fp=True),            # invalid FP destination
             movre(16, 1, dst_fp=True, literal=True),
-            movre(16, 1, dst_fp=True) | 0x40,    # src2 special bit
+            movre(16, 1, dst_fp=True) | 0x40,    # reserved bit 6
             movre(16, 1, dst_fp=True) | (1 << 14), # unused src2
             movre(16, 1, dst_fp=True) & ~0x1000, # unused M2 marker
         ):

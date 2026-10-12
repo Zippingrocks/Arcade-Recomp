@@ -191,7 +191,7 @@ int main() {
         # This tests definedness, not a fabricated reset value for the 80-bit
         # physical register contents. All opcodes and bus data are synthetic.
         movre_fp0_to_g4 = (0x6e000080 | 0x1000 |
-                            (20 << 19) | 0x20)
+                            (20 << 19) | 0x800)
         run_cpp(stream(second_entry=movre_fp0_to_g4), r"""
 int main() {
     TestMem memory = make_mem();

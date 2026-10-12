@@ -191,18 +191,22 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         return (f"if (!add_real32_exact(cpu, cpu.r[{first}], "
                 f"cpu.r[{second}], {dst}u)) return false;")
 
-    if ins.form == "REG" and op == "cvtzri":
-        # Intel KB CVTZRI 6C2: round toward zero, independent of AC
+    if ins.form == "REG" and op in ("cvtzri", "cvtzril"):
+        # Intel KB CVTZRI 6C2 / CVTZRIL 6C3: round toward zero, independent of AC
         # rounding mode. Do not manufacture precision/invalid fault flags.
         # Exact integral inputs can be translated without invoking host FP.
         src = word & 31
         dst = (word >> 19) & 31
-        source_fp = bool(word & 0x20)
-        if not (word & 0x1000) or word & (0x40 | 0x800 | 0x2000):
+        source_fp = bool(word & 0x800)
+        if not (word & 0x1000) or word & (0x60 | 0x2000):
             return None
         if (word >> 14) & 31 or (source_fp and src >= 4):
             return None
-        return (f"if (!convert_real_to_integer_exact(cpu, {src}u, "
+        if op == "cvtzril" and dst & 1:
+            return None
+        helper = ("convert_real_to_long_integer_exact" if op == "cvtzril"
+                  else "convert_real_to_integer_exact")
+        return (f"if (!{helper}(cpu, {src}u, "
                 f"{'true' if source_fp else 'false'}, {dst}u)) "
                 "return false;")
 
@@ -213,9 +217,9 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         # floating exception and special-value handling not implemented.
         src = word & 31
         dst = (word >> 19) & 31
-        src_fp = bool(word & 0x20)
+        src_fp = bool(word & 0x800)
         dst_fp = bool(word & 0x2000)
-        if not (word & 0x1000) or word & (0x40 | 0x800):
+        if not (word & 0x1000) or word & 0x60:
             return None
         if (word >> 14) & 31:
             return None
@@ -230,9 +234,9 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         # Only exact canonical normal values and signed zeros are supported.
         src = word & 31
         dst = (word >> 19) & 31
-        src_fp = bool(word & 0x20)
+        src_fp = bool(word & 0x800)
         dst_fp = bool(word & 0x2000)
-        if not (word & 0x1000) or word & (0x40 | 0x800):
+        if not (word & 0x1000) or word & 0x60:
             return None
         if (word >> 14) & 31:
             return None
@@ -248,9 +252,9 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         # conversions; fail closed on subnormals/specials/required rounding.
         src = word & 31
         dst = (word >> 19) & 31
-        src_fp = bool(word & 0x20)
+        src_fp = bool(word & 0x800)
         dst_fp = bool(word & 0x2000)
-        if not (word & 0x1000) or word & (0x40 | 0x800):
+        if not (word & 0x1000) or word & 0x60:
             return None
         if (word >> 14) & 31 or not (src_fp or dst_fp):
             return None
@@ -263,10 +267,10 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
                 f"{'true' if dst_fp else 'false'})) return false;")
 
     if ins.form == "REG" and op in ("cpysre", "cpyrsre"):
-        if word & (0x800 | 0x1000):
+        if word & 0x60:
             return None
         indices = (word & 31, (word >> 14) & 31, (word >> 19) & 31)
-        modes = (bool(word & 0x20), bool(word & 0x40), bool(word & 0x2000))
+        modes = (bool(word & 0x800), bool(word & 0x1000), bool(word & 0x2000))
         if not any(modes):
             return None
         if any(i >= 4 if fp else (i & 3) != 0 for i, fp in zip(indices, modes)):
@@ -283,9 +287,9 @@ def _emit_op(ins: Instruction, image: bytes) -> str | None:
         # Floating literal encodings and GP-to-GP forms remain unsupported.
         src = word & 31
         dst = (word >> 19) & 31
-        src_fp = bool(word & 0x20)
+        src_fp = bool(word & 0x800)
         dst_fp = bool(word & 0x2000)
-        if not (word & 0x1000) or word & (0x40 | 0x800):
+        if not (word & 0x1000) or word & 0x60:
             return None
         if (word >> 14) & 31:  # Unused src2 field must be zero.
             return None
@@ -635,6 +639,7 @@ def emit_cpp(image: bytes, entry: int, max_instructions: int = 256,
 #include "i960_fp_real_move.hpp"
 #include "i960_fp_logb.hpp"
 #include "i960_fp_to_integer.hpp"
+#include "i960_fp_to_long_integer.hpp"
 #include "i960_fp_add_exact.hpp"
 #include "i960_fp_multiply_exact.hpp"
 #include "i960_fp_divide_exact.hpp"

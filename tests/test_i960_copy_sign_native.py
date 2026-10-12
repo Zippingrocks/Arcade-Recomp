@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def opcode(a=0,b=1,d=2,af=True,bf=True,df=True,reverse=False):
     return (0x6e000100 | (0x80 if reverse else 0) | a | (b<<14) | (d<<19) |
-            (0x20 if af else 0) | (0x40 if bf else 0) | (0x2000 if df else 0))
+            (0x800 if af else 0) | (0x1000 if bf else 0) | (0x2000 if df else 0))
 
 
 def native(words,body):
@@ -38,7 +38,8 @@ class CopySignNativeTests(unittest.TestCase):
         self.assertEqual(decode(struct.pack("<I",opcode()),0).operands,("fp0","fp1","fp2"))
         self.assertEqual(decode(struct.pack("<I",opcode(16,1,24,False,True,False,True)),0).mnemonic,"cpyrsre")
         self.assertEqual(decode(struct.pack("<I",opcode(16,1,24,False,True,False)),0).operands,("g0","fp1","g8"))
-        bad=[opcode()|0x800,opcode()|0x1000,opcode(a=4),opcode(b=4),opcode(d=4),
+        bad=[opcode()|0x20,opcode()|0x40,opcode(a=16),opcode(b=22),
+             opcode(a=4),opcode(b=4),opcode(d=4),
              opcode(17,1,2,False),opcode(0,21,2,True,False),opcode(0,1,25,True,True,False),
              opcode(16,20,24,False,False,False)]
         for word in bad:
