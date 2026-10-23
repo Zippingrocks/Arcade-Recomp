@@ -268,6 +268,34 @@ inline bool return_subroutine(CPU& cpu, Bus& bus) {
     return finish(cpu, target);
 }
 
+// Original MC68000 six-byte RTE, remaining in supervisor mode without trace.
+// Motorola PRM 6-84 supplies the architectural operation; Hitachi HD68000
+// Figure 60 (U60 application notes, p.177) shows stack reads SR/PCH/PCL.
+// This models the three data cycles, not subsequent instruction prefetches.
+// CPU state commits after the complete frame is accepted. On a later refusal,
+// earlier read side effects survive; diagnostic state is NOT physical BERR state.
+inline bool return_exception(CPU& cpu, Bus& bus) {
+    if (!(cpu.sr_known & 0x2000u)) return stop(cpu, Stop::undefined_state);
+    if (!(cpu.sr & 0x2000u)) return stop(cpu, Stop::privilege);
+    if (!cpu.a_known[7]) return stop(cpu, Stop::undefined_state);
+    const std::uint32_t stack = cpu.a[7];
+    const std::uint32_t address = stack & 0x00ffffffu;
+    if (address & 1u) {
+        cpu.access_address = address; cpu.access_width = 2u; cpu.access_write = false;
+        return stop(cpu, Stop::data_address);
+    }
+    const std::uint16_t restored_sr = bus.read16(address);
+    // Stop after the observed SR word if continuing would require an unmodeled
+    // USP/SSP switch, trace exception, or reserved SR behavior.
+    if (!(restored_sr & 0x2000u) || (restored_sr & ~0x271fu))
+        return stop(cpu, Stop::unsupported_control);
+    const std::uint32_t high = bus.read16((stack + 2u) & 0x00ffffffu);
+    const std::uint32_t low = bus.read16((stack + 4u) & 0x00ffffffu);
+    cpu.a[7] = stack + 6u;
+    cpu.sr = restored_sr; cpu.sr_known = 0xffffu;
+    return finish(cpu, (high << 16u) | low);
+}
+
 inline bool compare_immediate(CPU& cpu, unsigned bytes, std::uint32_t destination,
                               std::uint32_t immediate, std::uint32_t next) {
     if (bytes != 1u && bytes != 2u && bytes != 4u)

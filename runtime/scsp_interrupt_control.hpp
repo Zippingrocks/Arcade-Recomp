@@ -50,6 +50,13 @@ public:
         const auto bit=static_cast<std::uint16_t>(1u<<factor);
         for(unsigned target=0;target<2u;++target){pending_[target]|=bit;pending_known_[target]|=bit;}
     }
+    // The MIDI-input request releases automatically when its FIFO is empty.
+    void release_midi_input(){
+        for(unsigned target=0;target<2u;++target){
+            pending_[target]&=static_cast<std::uint16_t>(~0x08u);
+            pending_known_[target]|=0x08u;
+        }
+    }
     std::uint16_t enable(unsigned target)const{return target<2u?enable_[target]:0u;}
     std::uint16_t enable_known_mask(unsigned target)const{return target<2u?enable_known_[target]:0u;}
     std::uint16_t pending(unsigned target)const{return target<2u?pending_[target]:0u;}

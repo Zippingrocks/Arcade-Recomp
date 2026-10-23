@@ -5,6 +5,7 @@
 #include "scsp_common_control.hpp"
 #include "scsp_dsp_coefficients.hpp"
 #include "scsp_interrupt_control.hpp"
+#include "scsp_midi_input.hpp"
 #include "scsp_prohibited_window.hpp"
 #include "scsp_slot_key.hpp"
 #include "scsp_slot_mixer.hpp"
@@ -20,12 +21,14 @@ class SoundROMBus final : public Bus {
     std::vector<std::uint8_t> samples_;
     bool sound_ram_enabled_ = false;
     bool common_control_enabled_ = false;
+    bool midi_input_enabled_ = false;
     bool slot_mixer_enabled_ = false;
     bool dsp_registers_enabled_ = false;
     bool hotd_sound_control_enabled_ = false;
     arcaderecomp::scsp::CommonControl common_control_;
     arcaderecomp::scsp::DspMemoryControl dsp_memory_control_;
     arcaderecomp::scsp::InterruptControl interrupt_control_;
+    arcaderecomp::scsp::MidiInput midi_input_;
     arcaderecomp::scsp::Timers timers_;
     arcaderecomp::scsp::SlotLoopKeyControl slot_loop_key_control_;
     arcaderecomp::scsp::SlotEnvelopeReleaseControl slot_envelope_release_control_;
@@ -59,7 +62,7 @@ public:
             throw std::invalid_argument("sample ROM region must be 8 MiB");
     }
     bool interrupt_level(unsigned& level) override {
-        if(!common_control_enabled_){level=0;return true;}
+        if(!common_control_enabled_&&!midi_input_enabled_){level=0;return true;}
         return interrupt_control_.sound_cpu_interrupt_level(level);
     }
     std::uint8_t read8(std::uint32_t address) override {
@@ -90,6 +93,11 @@ public:
                 dsp_microprogram_.read8(address - 0x100800u, value)) return value;
         if (common_control_enabled_ && address >= 0x100400u && address <= 0x100401u &&
                 common_control_.read8(address - 0x100400u, value)) return value;
+        if (midi_input_enabled_ && address == 0x100405u && midi_input_.read(value)) {
+            unsigned count=0;
+            if(midi_input_.occupancy(count)&&!count)interrupt_control_.release_midi_input();
+            return value;
+        }
         throw BusFault(address, false);
     }
     void read8_discard(std::uint32_t address) override {
@@ -233,6 +241,20 @@ public:
     // Caller opts into bounded architectural register semantics, NOT evidence
     // of physical reset completion or a working/timed SCSP audio device.
     void enable_common_control_research(bool enabled) { common_control_enabled_ = enabled; }
+    void enable_midi_input_research(bool enabled) { midi_input_enabled_ = enabled; }
+    bool establish_midi_input_empty_research(){
+        if(!midi_input_enabled_)return false;
+        midi_input_.establish_empty_research();interrupt_control_.release_midi_input();return true;
+    }
+    // A completed external byte must come from a caller's explicit event.
+    // No timer, reset value, CPU write, or fabricated cabinet reply feeds this.
+    bool receive_midi_byte_research(std::uint8_t value){
+        unsigned before=0;
+        if(!midi_input_enabled_||!midi_input_.occupancy(before)||!midi_input_.receive(value))return false;
+        if(!before)interrupt_control_.observe(3u);
+        return true;
+    }
+    const arcaderecomp::scsp::MidiInput& midi_input() const { return midi_input_; }
     void enable_slot_mixer_research(bool enabled) { slot_mixer_enabled_ = enabled; }
     void enable_dsp_registers_research(bool enabled) { dsp_registers_enabled_ = enabled; }
     void enable_sound_ram_research(bool enabled) { sound_ram_enabled_ = enabled; }

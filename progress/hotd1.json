@@ -343,7 +343,7 @@
       "id": "audio",
       "title": "Motorola 68000 & Yamaha SCSP audio",
       "percent": 0,
-      "next": "Run the identity-gated sound probe with legally supplied MPR-19721.32 and MPR-19722.34 sample chips to resolve the authenticated 0xA9D9F4 read; then recover physical reset wiring and implement RTE, level-7 edge history and continuous interrupt scheduling. Never invent sample bytes or suppress pending interrupts.",
+      "next": "Authenticated local sample chips resolve the 0xA9D9F4 read; all startup classes now stop at SCSP MIDI input 0x100405 after 498338..498341 instructions. Establish actual reset/empty-read behavior and Model 2C command transport without inventing receive bytes; then level-7 edge history, continuous scheduling and synthesis. Bounded FIFO and supervisor RTE are not physical reset or audible playback proof.",
       "tasks": [
         {
           "id": "audio.m68k",
@@ -2127,6 +2127,61 @@
         ".github/workflows/tests.yml"
       ],
       "note": "Made the progress guard's push base selection robust to rewritten non-default branches: if the event's prior SHA is no longer present after checkout, CI compares the branch against the repository default branch's merge-base. Rewritten default-branch pushes remain a hard failure because their lost prior state cannot be audited. This repairs CI evidence handling only and changes no emulation estimate; overall HOTD1 remains 10%."
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "review",
+      "scope": "audio.rom",
+      "percent_before": 10,
+      "percent_after": 10,
+      "evidence": [
+        "tools/experimental/hotdo_sound_signature_explorer.py",
+        "docs/SCSP_MIDI_INPUT.md",
+        "docs/M68000_INDIRECT_JUMP_TABLE.md"
+      ],
+      "note": "Corrected the earlier claim that private MPR-19721.32/MPR-19722.34 inputs were absent: both were present in the parent input directory and authenticate against manifest size/SHA-1. With the real reconstructed samples, all 257 startup classes (258 representative runs) advance from 313591..313594 to 498338/498340/498341 native instructions, with all 524288 RAM bytes known after execution under explicit startup-signature premises. The graph remains 795/795 and the next stop is byte read 0x100405 at PC 0x6001FC. Rerun with the new FIFO enabled supplies no occupancy/bytes and preserves this strict boundary. Original-byte execution uses explicit startup-state premises, not cabinet reset proof; inputs and generated game code remain private. Sound-ROM estimate stays 10%."
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "review",
+      "scope": "audio.scsp",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "runtime/scsp_midi_input.hpp",
+        "runtime/scsp_interrupt_control.hpp",
+        "runtime/m68k_sound_bus.hpp",
+        "tests/test_scsp_midi_input_native.py",
+        "docs/SCSP_MIDI_INPUT.md"
+      ],
+      "note": "Implemented the Sega-manual four-byte MIDI-input FIFO with explicit empty premise/completed-byte events, arrival order, consuming low-lane reads, unknown/empty/full refusal, empty-to-nonempty requests and drained-empty release for both interrupt targets. Five native synthetic tests cover every byte, wrap, occupancy, strict widths/lanes, discarded reads, selective request clearing and AOT reads with 0..4 supplied bytes. Independent review found no correctness issue; its additional edge-trigger regression was added. No fake startup byte, high-byte status, serial clock, overflow retention, main-CPU link or synthesis is implemented. SCSP stays 0%."
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "review",
+      "scope": "audio.m68k",
+      "percent_before": 5,
+      "percent_after": 5,
+      "evidence": [
+        "arcaderecomp/m68k.py",
+        "arcaderecomp/m68k_cpp.py",
+        "runtime/m68k_runtime.hpp",
+        "tests/test_m68k_rte_native.py",
+        "docs/M68000_RTE.md"
+      ],
+      "note": "Added bounded original MC68000 RTE decoding and native AOT return from a six-byte supervisor frame. Motorola architectural semantics and Hitachi HD68000 Figure 60 establish SR/PCH/PCL stack-read order. Static discovery stops at RTE; runtime consumes the actual frame. Unknown/odd stacks, privilege, refused cycles and unsupported restored user/trace/reserved state remain explicit stops. Six synthetic tests cover every saved SR, frame reads, wrap, partial bus effects, state/counts, untranslated targets and 896 interrupt-entry/return combinations. Independent review found no issue. No instruction prefetch, physical BERR recovery, USP switch, trace exception or timing is claimed; sound CPU stays 5%."
+    },
+    {
+      "date": "2026-10-13",
+      "kind": "review",
+      "scope": "audio",
+      "percent_before": 0,
+      "percent_after": 0,
+      "evidence": [
+        "docs/SCSP_MIDI_INPUT.md",
+        "docs/M68000_RTE.md"
+      ],
+      "note": "Reviewed the parent sound area independently of the sample-backed instruction-count advance, bounded FIFO and RTE. Current next-step now identifies unknown MIDI reset/empty-read behavior and Model 2C command transport, not absent samples or absent RTE. Physical reset, continuous timing, synthesis and audible output remain unverified or absent; audio stays 0%, with Gates A/B/C open."
     }
   ]
 }
