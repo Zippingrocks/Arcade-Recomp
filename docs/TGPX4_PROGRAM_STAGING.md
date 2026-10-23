@@ -48,6 +48,12 @@ or CPU/device side effects. The command line emits only counts and SHA-256
 fingerprints, no program bytes, inferred opcodes or proprietary content.
 The source note itself is hashed in exported metadata.
 
+The metadata also contains an eight-bin histogram of the Fujitsu-published
+three-bit format tag. Only tag `000` is labelled as the documented Type-1
+partition; tags `001` through `111` remain opaque. This aggregate can compare
+explicit host-word pairing hypotheses but is not an opcode decode or an
+authenticity test.
+
 The 16,384-word bound is a file safety limit, **not** a claim about TGPx4
 physical instruction RAM capacity. Published address spans are not a proof
 of accessible words, reset behavior or actual uploaded program length.
