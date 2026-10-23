@@ -9,7 +9,7 @@ import unittest
 
 from arcaderecomp.tgpx4_program import (
     MAX_DWORDS, SCHEMA, UploadError, analyze, main,
-    pack_candidate, read_bounded, write_report,
+    pack_candidate, read_bounded, summarize_format_tags, write_report,
 )
 
 
@@ -112,10 +112,47 @@ class TGPx4ProgramTests(unittest.TestCase):
         self.assertFalse(result["complete_original_upload_verified"])
         self.assertFalse(result["original_cabinet_verified"])
         self.assertFalse(result["mb86235_instruction_decoded"])
+        self.assertFalse(result["mb86235_instruction_semantics_decoded"])
+        self.assertTrue(result["mb86235_type1_partition_applied"])
+        self.assertEqual(sum(result["format_tag_histogram"].values()), 2)
         text = json.dumps(result)
         for word in ("11223344", "aabbccdd", "01020304", "55667788",
                      "Synthetic 32-bit"):
             self.assertNotIn(word, text)
+
+    def test_format_tag_summary_counts_every_tag_without_semantics(self):
+        candidate = b"".join(
+            (tag << 61).to_bytes(8, "little") for tag in range(8))
+        summary = summarize_format_tags(candidate)
+        self.assertEqual(summary["format_tag_histogram"], {
+            f"{tag:03b}": 1 for tag in range(8)})
+        self.assertEqual(summary["documented_type1_slot_count"], 1)
+        self.assertEqual(summary["undocumented_format_tag_slot_count"], 7)
+        self.assertFalse(summary["mb86235_instruction_semantics_decoded"])
+
+    def test_pair_order_can_change_format_distribution(self):
+        # The selected high dword supplies bits 63..32, so reversing each pair
+        # can produce a different structural signature.
+        raw = struct.pack("<4I", 0xe0000000, 0, 0, 0x60000000)
+        low = analyze(raw, expected_dwords=4, word_endian="little",
+                      pair_order="low-first", provenance="synthetic",
+                      source_note="Invented pairing discriminator")
+        high = analyze(raw, expected_dwords=4, word_endian="little",
+                       pair_order="high-first", provenance="synthetic",
+                       source_note="Invented pairing discriminator")
+        self.assertEqual(low["format_tag_histogram"]["000"], 1)
+        self.assertEqual(low["format_tag_histogram"]["011"], 1)
+        self.assertEqual(high["format_tag_histogram"]["111"], 1)
+        self.assertEqual(high["format_tag_histogram"]["000"], 1)
+        self.assertNotEqual(low["format_tag_histogram"],
+                            high["format_tag_histogram"])
+
+    def test_format_summary_refuses_partial_or_mutable_candidates(self):
+        for candidate in (b"", b"\0" * 7, b"\0" * 9,
+                          bytearray(8), memoryview(bytes(8)), None):
+            with self.subTest(candidate=type(candidate).__name__):
+                with self.assertRaises(UploadError):
+                    summarize_format_tags(candidate)
 
     def test_cli_requires_count_writes_metadata_and_refuses_truncation(self):
         with tempfile.TemporaryDirectory(prefix="arcade-tgpx4-") as directory:

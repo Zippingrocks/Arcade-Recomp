@@ -2195,6 +2195,20 @@
         "tests/test_tgpx4_isa.py"
       ],
       "note": "Recovered Fujitsu-authored MB86235 block diagrams and the published Type-1 64-bit partition (tag 000, ALU 60..42, multiply 41..27, transfer 26..0), then added a fail-closed ROM-free structural decoder with synthetic boundary tests. This is primary component documentation, not Sega board or cabinet evidence: numeric sub-opcodes, other formats, original HOTD1 upload ordering/content, execution, FIFO timing, MB86271/MB86272 packet semantics and rendering remain unknown. Graphics parent stays 0%, AOT stays 0%, and overall HOTD1 stays 10%."
+    },
+    {
+      "date": "2026-10-22",
+      "kind": "review",
+      "scope": "graphics.research",
+      "percent_before": 25,
+      "percent_after": 25,
+      "evidence": [
+        "arcaderecomp/tgpx4_program.py",
+        "tests/test_tgpx4_program.py",
+        "docs/MB86235_PRIMARY_ARCHITECTURE.md",
+        "docs/TGPX4_PROGRAM_STAGING.md"
+      ],
+      "note": "Added privacy-preserving MB86235 three-bit format-tag histograms to private candidate-upload reports so explicit low/high host-word pairing hypotheses can be compared without exporting program words or assigning numeric operation meanings. Synthetic tests cover every tag, pairing discrimination and malformed inputs. A same-author Fujitsu patent, the closed IEEE article record and the public 1996 Fujitsu catalog were audited; none supplies numeric MB86235 sub-opcodes. Research stays 25%, graphics/AOT 0%, Model2C 20%, overall HOTD1 10%."
     }
   ]
 }

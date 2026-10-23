@@ -52,6 +52,51 @@ the MB86235 performs slope calculations, and it sends packet data onward to
 the MB86271. This is useful architectural corroboration, not proof that Sega
 uses the identical board-level protocol or microcode.
 
+## Additional-source audit (2026-10-22)
+
+The following sources were checked after the initial architecture recovery:
+
+- [IEEE Micro 15(6), pages 37–45](https://doi.org/10.1109/40.476257), DOI
+  `10.1109/40.476257`, is the expanded
+  Fujitsu article **“3D graphics processor chip set.”** Crossref confirms the
+  bibliographic record. [OpenAlex](https://openalex.org/W2159857691) currently
+  marks it closed access, reports no
+  repository full text, and provides no open PDF. It has therefore not been
+  used as unseen opcode evidence. A lawfully obtained copy remains a useful
+  realistic input for this project.
+- Fujitsu patent family priority 1994-12-01, represented in English by
+  [US6388671B1](https://patents.google.com/patent/US6388671B1/en), shares
+  authors Hideki Yoshizawa, Tatsushi Ohtsuka, and Shigeru
+  Sasaki with the chip-set article. It describes a four-stage
+  fetch/decode/read/execute pipeline and a three-field instruction system
+  controlling main, auxiliary, and dedicated graphics units. The patent does
+  **not** identify that instruction as the MB86235 Type-1 word and publishes
+  no numeric MB86235 sub-opcode table. Its fields must not be conflated with
+  the Hot Chips ALU/multiply/transfer partition.
+- The public [Bitsavers Fujitsu archive](https://bitsavers.trailing-edge.com/components/fujitsu/)
+  and its [1996 North American IC catalog](https://bitsavers.trailing-edge.com/components/fujitsu/CD/1996_IC_Catalog/)
+  index were checked. The catalog does not list MB86235 or a DSP/graphics
+  programming-manual section. This is a documented negative result, not proof
+  that no manual was ever issued.
+
+These checks narrow the next source request to a complete MB86235 programming
+manual, a lawful copy of the IEEE article, a Fujitsu development-tool manual
+or assembler table, or an authentic program/cabinet capture. Patent
+architecture alone cannot safely fill the numeric opcode gap.
+
+## Privacy-preserving candidate triage
+
+The offline candidate analyzer now counts the published three-bit format tag
+for every packed 64-bit slot. Its metadata report contains an eight-bin
+`format_tag_histogram`, documented-Type-1 and undocumented-format counts, and
+an explicit false `mb86235_instruction_semantics_decoded` flag. It emits no
+program word, subfield value, disassembly, or operation name.
+
+This makes low-first/high-first host-word hypotheses mechanically comparable
+as soon as a private candidate upload is supplied. A plausible distribution
+can prioritize a hypothesis for further evidence; it cannot authenticate the
+capture or prove that either ordering is correct.
+
 ## Implemented evidence boundary
 
 [`arcaderecomp/tgpx4_isa.py`](../arcaderecomp/tgpx4_isa.py) accepts only an

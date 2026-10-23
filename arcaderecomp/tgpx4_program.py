@@ -17,6 +17,8 @@ from pathlib import Path
 import sys
 import tempfile
 
+from .tgpx4_isa import FORMAT_TAG_BITS, FORMAT_TAG_SHIFT, TYPE1_TAG
+
 MAX_DWORDS = 16384  # Analysis safety cap, NOT claimed physical program RAM.
 SCHEMA = "model2c-tgpx4-program-candidate-v1"
 PROVENANCE = ("synthetic", "external_capture_unverified")
@@ -26,6 +28,30 @@ PAIR_ORDER = ("low-first", "high-first")
 
 class UploadError(ValueError):
     """Malformed/incomplete host stream or unsupported evidence claim."""
+
+
+def summarize_format_tags(candidate: bytes) -> dict:
+    """Count only the published three-bit MB86235 format tags.
+
+    The packed candidate uses canonical little-endian 64-bit slots. Tag
+    ``000`` is the sole format whose field partition is documented by the
+    located Fujitsu material. The other values stay opaque.
+    """
+    if type(candidate) is not bytes or not candidate or len(candidate) % 8:
+        raise UploadError("candidate must contain complete 64-bit slots")
+    counts = {f"{tag:03b}": 0 for tag in range(1 << FORMAT_TAG_BITS)}
+    for offset in range(0, len(candidate), 8):
+        word = int.from_bytes(candidate[offset:offset + 8], "little")
+        tag = word >> FORMAT_TAG_SHIFT
+        counts[f"{tag:03b}"] += 1
+    documented = counts[f"{TYPE1_TAG:03b}"]
+    return {
+        "format_tag_histogram": counts,
+        "documented_type1_slot_count": documented,
+        "undocumented_format_tag_slot_count": len(candidate) // 8 - documented,
+        "mb86235_type1_partition_applied": True,
+        "mb86235_instruction_semantics_decoded": False,
+    }
 
 
 def pack_candidate(raw: bytes, *, expected_dwords: int,
@@ -67,7 +93,7 @@ def analyze(raw: bytes, *, expected_dwords: int, word_endian: str,
     candidate = pack_candidate(
         raw, expected_dwords=expected_dwords,
         word_endian=word_endian, pair_order=pair_order)
-    return {
+    report = {
         "schema": SCHEMA,
         "provenance": provenance,
         "source_note_sha256": hashlib.sha256(
@@ -82,6 +108,8 @@ def analyze(raw: bytes, *, expected_dwords: int, word_endian: str,
         "original_cabinet_verified": False,
         "mb86235_instruction_decoded": False,
     }
+    report.update(summarize_format_tags(candidate))
+    return report
 
 
 def read_bounded(path: Path) -> bytes:
