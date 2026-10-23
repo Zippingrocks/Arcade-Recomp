@@ -42,6 +42,8 @@ def decode(image: bytes, pc: int, base: int = 0) -> Instruction:
         return Instruction(pc, 2, "nop")
     if op == 0x4e75:
         return Instruction(pc, 2, "rts")
+    if op == 0x4e73:
+        return Instruction(pc, 2, "rte")
     if op & 0xfff8 == 0x4ed0:
         # JMP (An).  The register value remains a run-time fact; static graph
         # discovery may only translate targets supplied as explicit roots.
@@ -482,12 +484,12 @@ def discover(image: bytes, entry: int, base: int = 0, limit: int = 4096,
             found[pc] = Instruction(pc, 0, "invalid_fetch")
             continue
         found[pc] = ins
-        if ins.mnemonic in ("unsupported", "rts", "jmp_a"):
+        if ins.mnemonic in ("unsupported", "rts", "rte", "jmp_a"):
             continue
         if ins.target is not None:
             pending.append(ins.target)
-        # BSR discovers the callee and the possible continuation. RTS uses the
-        # actual bus-supplied return address at run time, never guessed flow.
+        # BSR discovers the callee and the possible continuation. RTS/RTE use
+        # the actual bus-supplied return address at run time, never guessed flow.
         if ins.mnemonic != "bcc" or ins.operands[0] != 0:
             pending.append(ins.next_pc)
     return tuple(found[k] for k in sorted(found)), bool(pending)

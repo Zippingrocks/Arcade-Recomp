@@ -59,9 +59,11 @@ the direct `0x00800000..0x009fffff` sample window and the separate sound-RAM,
 SCSP, control and audio-program regions.  Source:
 [MAME Model 2 sound address map](https://github.com/mamedev/mame/blob/master/src/mame/sega/model2.cpp#L2292-L2305).
 The target manifest identifies the required original HOTD sample chips as
-`mpr-19721.32` and `mpr-19722.34`; neither private chip is present in this
-workspace.  The strict bus therefore correctly stops rather than returning
-zeros or mirroring unrelated data.
+`mpr-19721.32` and `mpr-19722.34`. The original run did not supply them, so the
+strict bus stopped rather than returning zeros or mirroring unrelated data.
+Correction (2026-10-13): both private chips were already present in the parent
+input directory, contrary to this document's earlier assertion. Both now
+authenticate and resolve this read; see the [sample-backed result](SCSP_MIDI_INPUT.md).
 
 ## Identity-gated sample-ROM provider
 
@@ -82,8 +84,9 @@ region is unauthenticated.  Synthetic native tests cover every aperture edge,
 physical 24-bit address masking, word endianness, absent/wrong-sized regions
 and write refusal.
 
-The next evidence blocker is therefore the two private original sample chips,
-followed by rerunning this same authenticated state partition with
-`--sample-chips`.  Their bytes are not downloaded, substituted or committed.
+The sample-backed rerun now completes 498338..498341 instructions and reaches
+unknown SCSP MIDI input at `0x100405`. Their bytes are not downloaded,
+substituted or committed. Reset/empty-read evidence and board command transport
+are the next sound boundary, not missing sample chips.
 Sample playback, DSP execution, timing and audible output remain absent.
 Estimates and Gates A/B/C do not change.

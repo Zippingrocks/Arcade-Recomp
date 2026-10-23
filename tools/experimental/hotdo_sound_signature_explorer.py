@@ -82,6 +82,9 @@ static Key run(const std::vector<std::uint8_t>& image,const std::vector<std::uin
     bus.enable_hotd_sound_control_research(true);bus.enable_sound_ram_research(true);
     bus.enable_slot_mixer_research(true);
     bus.enable_dsp_registers_research(true);
+    // Model receive semantics, but supply no reset occupancy or external bytes.
+    // Unknown/empty MIDI input still stops rather than producing filler data.
+    bus.enable_midi_input_research(true);
     if(kind==0)word(bus,0xc08u,0u);
     else {word(bus,0xc08u,0x4572726fu);word(bus,0xc0cu,kind==1?0u:0x72536574u);if(kind==2)byte(bus,0xc04u,saved);}
     while(cpu.completed<500000u&&step(cpu,bus)){}

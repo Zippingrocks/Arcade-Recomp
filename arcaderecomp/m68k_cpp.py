@@ -26,6 +26,8 @@ def _emit(ins):
         return f"return branch_subroutine(cpu, bus, {_u(ins.target)}, {next_pc});"
     if op == "rts":
         return "return return_subroutine(cpu, bus);"
+    if op == "rte":
+        return "return return_exception(cpu, bus);"
     if op == "jmp_a":
         reg = args[0]
         return (f"if (!cpu.a_known[{reg}]) return stop(cpu, Stop::undefined_state); "

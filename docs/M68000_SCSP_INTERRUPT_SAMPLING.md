@@ -60,9 +60,14 @@ PC 0x00600280: MOVE.B D0,(A0)+
 denied write: 0x00100700, width 1
 ```
 
-Later work resolved the COEF upload and bounded jump table; authenticated sound
-startup now stops at the identity-gated sample-ROM read at `0x00a9d9f4` until
-the legally supplied MPR-19721/MPR-19722 chips are available. Level-7 edge
-history, interrupt-acknowledge electrical timing, RTE, continuous timing,
-synthesis and audio remain absent. Percentages stay unchanged and Gates A/B/C
-remain open.
+Later work resolved the COEF upload and bounded jump table. The 2026-10-13
+[authenticated sample-backed rerun](SCSP_MIDI_INPUT.md) also resolved the
+sample-ROM read at `0x00a9d9f4`: both chips were already present in the parent
+input directory, correcting the earlier missing-input claim. All startup
+classes now stop at unknown MIDI input `0x100405` after 498338..498341
+instructions. The bounded FIFO does not fabricate bytes to pass this read.
+
+[Supervisor-frame RTE](M68000_RTE.md) now restores SR/PC through ordered
+SR/PCH/PCL reads; synthetic entry/return roundtrips pass. Level-7 edge history,
+interrupt-acknowledge electrical timing, continuous timing, synthesis and
+audio remain absent. Percentages stay unchanged and Gates A/B/C remain open.

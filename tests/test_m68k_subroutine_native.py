@@ -77,7 +77,8 @@ class M68kSubroutineTests(unittest.TestCase):
         ins = decode(words(0x6100, 4), 0xfffffffc, 0xfffffffc)
         self.assertEqual((ins.target, ins.next_pc), (2, 0))
         self.assertEqual(decode(words(0x4e75), 0).mnemonic, "rts")
-        for opcode in (0x4e74, 0x4e73, 0x4e77, 0x4e90):
+        self.assertEqual(decode(words(0x4e73), 0).mnemonic, "rte")
+        for opcode in (0x4e74, 0x4e77, 0x4e90):
             self.assertEqual(decode(words(opcode, 0), 0).mnemonic, "unsupported")
 
     def test_discovery_follows_calls_and_continuations_but_never_rts_fallthrough(self):
