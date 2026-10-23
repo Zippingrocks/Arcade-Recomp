@@ -280,7 +280,7 @@
         {
           "id": "graphics.research",
           "title": "MB86235/TGPx4 architecture research",
-          "percent": 15
+          "percent": 25
         },
         {
           "id": "graphics.aot",
@@ -2182,6 +2182,19 @@
         "docs/M68000_RTE.md"
       ],
       "note": "Reviewed the parent sound area independently of the sample-backed instruction-count advance, bounded FIFO and RTE. Current next-step now identifies unknown MIDI reset/empty-read behavior and Model 2C command transport, not absent samples or absent RTE. Physical reset, continuous timing, synthesis and audible output remain unverified or absent; audio stays 0%, with Gates A/B/C open."
+    },
+    {
+      "date": "2026-10-22",
+      "kind": "estimate",
+      "scope": "graphics.research",
+      "percent_before": 15,
+      "percent_after": 25,
+      "evidence": [
+        "docs/MB86235_PRIMARY_ARCHITECTURE.md",
+        "arcaderecomp/tgpx4_isa.py",
+        "tests/test_tgpx4_isa.py"
+      ],
+      "note": "Recovered Fujitsu-authored MB86235 block diagrams and the published Type-1 64-bit partition (tag 000, ALU 60..42, multiply 41..27, transfer 26..0), then added a fail-closed ROM-free structural decoder with synthetic boundary tests. This is primary component documentation, not Sega board or cabinet evidence: numeric sub-opcodes, other formats, original HOTD1 upload ordering/content, execution, FIFO timing, MB86271/MB86272 packet semantics and rendering remain unknown. Graphics parent stays 0%, AOT stays 0%, and overall HOTD1 stays 10%."
     }
   ]
 }

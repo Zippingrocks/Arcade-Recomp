@@ -1,8 +1,10 @@
 # Model 2C MB86235 / TGPx4 — candidate program upload staging
 
-**Status (2026-10-10): independently implemented offline word packing,
-ROM-free synthetic tests only. No geometry DSP instruction has been decoded,
-translated or run. No original-cabinet TGPx4 program capture has been checked.**
+**Status (2026-10-22): independently implemented offline word packing and a
+primary-source structural decoder for the published Type-1 field partition,
+with ROM-free synthetic tests only. No geometry DSP operation has been
+decoded, translated or run. No original-cabinet TGPx4 program capture has
+been checked.**
 
 ## Why this is a separate program
 
@@ -23,6 +25,7 @@ reconstruction of the ROM data nor packing 32-bit host writes is TGPx4
 instruction decoding.
 
 References (research only; implementation written independently):
+- [Fujitsu MB86235 primary architecture evidence](MB86235_PRIMARY_ARCHITECTURE.md)
 - https://wiki.mamedev.org/index.php/TGP:Index (distinguishes TGPx4 from TGP)
 - https://github.com/mamedev/mame/blob/master/src/mame/sega/model2.cpp
   (public Model 2C host upload arrangement and coprocessor memory map)
@@ -189,9 +192,10 @@ committed.
    region), preserving ordering and start/end conditions.
 2. Confirm observed half ordering, program RAM range, entry point and
    control-register semantics against original hardware.
-3. Establish the **MB86235's own 64-bit opcode fields** with independent
-   instruction documentation and mutation tests. Unknown encodings must
-   fail closed.
+3. Extend the Fujitsu-documented **MB86235 64-bit Type-1 field partition**
+   with primary numeric sub-opcode tables and the remaining instruction
+   formats. The current structural decoder assigns no operation semantics;
+   unknown formats fail closed.
 4. Implement a separate ahead-of-time MB86235 decoder/translator and
    compare its geometry command output with original-cabinet captures.
 
